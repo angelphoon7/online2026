@@ -68,7 +68,7 @@ export default function ConnectWalletButton() {
       <button
         type="button"
         onClick={connect}
-        className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-solid border-black/[.08] px-5 text-base font-medium transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[180px]"
+        className="flex h-9 items-center justify-center gap-2 rounded-full border border-solid border-black/[.08] px-4 text-sm font-medium transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
       >
         <span className="h-2 w-2 rounded-full bg-green-500" />
         {truncateAddress(account)}
@@ -82,7 +82,7 @@ export default function ConnectWalletButton() {
         type="button"
         onClick={connect}
         disabled={isConnecting}
-        className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-base font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-60 dark:hover:bg-[#ccc] md:w-[180px]"
+        className="flex h-9 items-center justify-center gap-2 rounded-full bg-foreground px-4 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-60 dark:hover:bg-[#ccc]"
       >
         {isConnecting ? "Connecting..." : "Connect Wallet"}
       </button>
