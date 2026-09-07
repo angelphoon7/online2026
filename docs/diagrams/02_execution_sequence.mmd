@@ -1,0 +1,63 @@
+%%{init: {
+  "theme": "dark",
+  "themeVariables": {
+    "background": "#0b0f14",
+    "primaryColor": "#1f2937",
+    "primaryTextColor": "#f8fafc",
+    "primaryBorderColor": "#64748b",
+    "lineColor": "#94a3b8",
+    "secondaryColor": "#111827",
+    "tertiaryColor": "#0f172a",
+    "fontFamily": "Inter, ui-sans-serif, system-ui, sans-serif"
+  }
+}}%%
+sequenceDiagram
+    autonumber
+    participant T as Taker / Solver
+    participant R as AquaValveRouter
+    participant V as ACTIVENESS_XD
+    participant D as DECAY_XD (optional)
+    participant X as XYC_SWAP
+    participant A as 1inch Aqua
+    participant M as Maker Wallet
+
+    T->>R: quote/swap(order, amount)
+    R->>A: safeBalances(maker, orderHash, tokenIn/Out)
+    A-->>R: full virtual reserves
+
+    rect rgb(6,78,59)
+        Note over V: Local λ Phase
+        R->>V: run ACTIVENESS_XD
+        V->>V: load localState[orderHash][token]
+        alt same block
+            V->>V: continue on consumed active curve
+        else new block
+            V->>V: repartition from total state
+        end
+    end
+
+    rect rgb(22,78,99)
+        Note over V: Shared Γ Phase
+        V->>M: read balanceOf(maker) + allowance(maker, Aqua)
+        M-->>V: coverage = min(balance, allowance)
+        V->>V: load groupState[maker][groupId][token]
+        alt coverage dropped
+            V->>V: scale down proportionally (shrink quote)
+        end
+        alt remaining Γ < needed
+            V-->>R: GroupActiveLiquidityExceeded
+        else ok
+            V-->>R: final effective reserves
+        end
+    end
+
+    R->>D: optional DECAY_XD
+    D-->>R: adjusted reserves
+    R->>X: XYC_SWAP pricing
+    X-->>R: amountIn / amountOut
+
+    alt swap path (not quote)
+        R->>V: persist local + group state
+        R->>A: pull/push settlement
+        A->>M: safeTransferFrom(maker, taker, amountOut)
+    end

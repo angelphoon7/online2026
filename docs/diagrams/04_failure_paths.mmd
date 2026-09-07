@@ -1,0 +1,52 @@
+%%{init: {
+  "theme": "dark",
+  "themeVariables": {
+    "background": "#0b0f14",
+    "primaryColor": "#1f2937",
+    "primaryTextColor": "#f8fafc",
+    "primaryBorderColor": "#64748b",
+    "lineColor": "#94a3b8",
+    "secondaryColor": "#111827",
+    "tertiaryColor": "#0f172a",
+    "fontFamily": "Inter, ui-sans-serif, system-ui, sans-serif"
+  }
+}}%%
+flowchart TD
+    START[Taker calls quote or swap]:::user --> LOCAL{Local λ check}
+
+    LOCAL -->|amountOut < effective active| GAMMA{Shared Γ check}
+    LOCAL -->|amountOut >= effective active| F1[ActiveLiquidityExceeded<br/>revert]:::risk
+
+    GAMMA -->|remaining >= needed| COV{Coverage check}
+    GAMMA -->|remaining < needed| F2[GroupActiveLiquidityExceeded<br/>revert]:::risk
+
+    COV -->|coverage stable| DECAY[DECAY_XD + XYC_SWAP]:::swapvm
+    COV -->|balance dropped| SHRINK_B[Scale quote down<br/>proportionally]:::warn
+    COV -->|allowance dropped| SHRINK_A[Scale quote down<br/>proportionally]:::warn
+
+    SHRINK_B --> RECHECK_B{Scaled output<br/>still viable?}
+    SHRINK_A --> RECHECK_A{Scaled output<br/>still viable?}
+
+    RECHECK_B -->|yes| DECAY
+    RECHECK_B -->|no| F3[Effective reserve<br/>too small — revert]:::risk
+    RECHECK_A -->|yes| DECAY
+    RECHECK_A -->|no| F4[Effective reserve<br/>too small — revert]:::risk
+
+    DECAY --> PRICING[XYC computes<br/>amountIn / amountOut]:::swapvm
+
+    PRICING --> ISQUOTE{quote or swap?}
+    ISQUOTE -->|quote| RETURN[Return amounts<br/>no state mutation]:::data
+    ISQUOTE -->|swap| PERSIST[Persist local λ<br/>+ group Γ state]:::core
+
+    PERSIST --> SETTLE[Aqua settlement<br/>safeTransferFrom]:::sponsor
+    SETTLE --> SUCCESS[Transfer complete]:::core
+
+    SETTLE -->|underfunded<br/>wallet fails| F5[ERC-20 transfer<br/>reverts — Aqua-level]:::risk
+
+    classDef sponsor fill:#312e81,stroke:#818cf8,color:#ffffff,stroke-width:2px;
+    classDef core fill:#064e3b,stroke:#34d399,color:#ffffff,stroke-width:2px;
+    classDef swapvm fill:#065f46,stroke:#6ee7b7,color:#ffffff,stroke-width:2px;
+    classDef risk fill:#7f1d1d,stroke:#f87171,color:#ffffff,stroke-width:2px;
+    classDef data fill:#164e63,stroke:#22d3ee,color:#ffffff,stroke-width:2px;
+    classDef user fill:#3f3f46,stroke:#d4d4d8,color:#ffffff,stroke-width:2px;
+    classDef warn fill:#78350f,stroke:#fbbf24,color:#ffffff,stroke-width:2px;

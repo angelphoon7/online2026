@@ -1,5 +1,5 @@
-import ConnectWalletButton from "../connectWallet/ConnectWalletButton";
-import WorldVerifyButton from "../world_verif_button/WorldVerifyButton";
+import ConnectWalletButton from "@/component/connectWallet/ConnectWalletButton";
+import WorldVerifyButton from "@/component/world_verif_button/WorldVerifyButton";
 
 export default function Home() {
   return (

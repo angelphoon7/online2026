@@ -1,0 +1,44 @@
+%%{init: {
+  "theme": "dark",
+  "themeVariables": {
+    "background": "#0b0f14",
+    "primaryColor": "#1f2937",
+    "primaryTextColor": "#f8fafc",
+    "primaryBorderColor": "#64748b",
+    "lineColor": "#94a3b8",
+    "secondaryColor": "#111827",
+    "tertiaryColor": "#0f172a",
+    "fontFamily": "Inter, ui-sans-serif, system-ui, sans-serif"
+  }
+}}%%
+flowchart TD
+    OPEN["OPEN<br/>Liquidity doesn't have to be all-in"]:::user
+
+    OPEN --> SETUP["1 — Setup<br/>Maker wallet with 100 ETH<br/>Two Aqua positions, λ = 20%<br/>Same group, shared Γ"]:::core
+
+    SETUP --> SHOW_LOCAL["2 — Show Local λ<br/>Position A: 20 ETH / 80k USDC active<br/>Position B: 20 ETH / 80k USDC active<br/>Both look fully executable"]:::data
+
+    SHOW_LOCAL --> EXEC_A["3 — Execute Position A<br/>Exact-in swap consumes<br/>group budget partially"]:::swapvm
+
+    EXEC_A --> ATTEMPT_B["4 — Attempt Position B<br/>Exact-out above remaining Γ<br/>→ GroupActiveLiquidityExceeded"]:::risk
+
+    ATTEMPT_B --> PUNCHLINE["DEMO SENTENCE<br/>This second order looks locally<br/>executable, but the shared wallet<br/>envelope has already been consumed.<br/>AquaValve tells the solver before<br/>settlement would revert."]:::highlight
+
+    PUNCHLINE --> RETRY["5 — Retry B smaller<br/>Exact-out within remaining Γ<br/>→ Real ERC-20 transfer succeeds"]:::core
+
+    RETRY --> COV_DROP["6 — Coverage Drop<br/>Maker transfers some ETH out<br/>→ Quote shrinks proportionally<br/>→ quote() still returns, no brick"]:::warn
+
+    COV_DROP --> DECAY_COMP["7 — Decay Composition<br/>Run same sequence through:<br/>XYC only → DECAY+XYC<br/>→ ACTIVENESS+XYC<br/>→ ACTIVENESS+DECAY+XYC"]:::swapvm
+
+    DECAY_COMP --> GRAPH_LAYER["8 — The Graph Layer (if ready)<br/>Query live capacity surface<br/>Show active vs inactive reserves<br/>per block"]:::data
+
+    GRAPH_LAYER --> CLOSE["CLOSE<br/>AquaValve turns Aqua shared<br/>liquidity from soft virtual promises<br/>into programmable live capacity"]:::user
+
+    classDef sponsor fill:#312e81,stroke:#818cf8,color:#ffffff,stroke-width:2px;
+    classDef core fill:#064e3b,stroke:#34d399,color:#ffffff,stroke-width:2px;
+    classDef swapvm fill:#065f46,stroke:#6ee7b7,color:#ffffff,stroke-width:2px;
+    classDef risk fill:#7f1d1d,stroke:#f87171,color:#ffffff,stroke-width:2px;
+    classDef data fill:#164e63,stroke:#22d3ee,color:#ffffff,stroke-width:2px;
+    classDef user fill:#3f3f46,stroke:#d4d4d8,color:#ffffff,stroke-width:2px;
+    classDef warn fill:#78350f,stroke:#fbbf24,color:#ffffff,stroke-width:2px;
+    classDef highlight fill:#581c87,stroke:#c084fc,color:#ffffff,stroke-width:3px;

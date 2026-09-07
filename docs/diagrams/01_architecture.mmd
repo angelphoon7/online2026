@@ -1,0 +1,65 @@
+%%{init: {
+  "theme": "dark",
+  "themeVariables": {
+    "background": "#0b0f14",
+    "primaryColor": "#1f2937",
+    "primaryTextColor": "#f8fafc",
+    "primaryBorderColor": "#64748b",
+    "lineColor": "#94a3b8",
+    "secondaryColor": "#111827",
+    "tertiaryColor": "#0f172a",
+    "fontFamily": "Inter, ui-sans-serif, system-ui, sans-serif"
+  }
+}}%%
+flowchart TB
+    subgraph Frontend ["Frontend (Next.js)"]
+        CW[ConnectWalletButton<br/>MetaMask]:::user
+        WV[WorldVerifyButton<br/>Selfie Check]:::user
+        UI[Capacity Dashboard<br/>planned]:::planned
+    end
+
+    subgraph SwapVM ["SwapVM Instruction Pipeline"]
+        ACT[ACTIVENESS_XD<br/>local λ + shared Γ]:::core
+        DEC[DECAY_XD<br/>optional]:::swapvm
+        XYC[XYC_SWAP<br/>pricing]:::swapvm
+    end
+
+    subgraph Aqua ["1inch Aqua"]
+        AQ[Aqua Protocol<br/>virtual balances]:::sponsor
+        POS_A[Position A<br/>local λ]:::core
+        POS_B[Position B<br/>local λ]:::core
+        GRP[Shared Γ<br/>wallet envelope]:::core
+        SETTLE[Settlement<br/>real ERC-20 transfer]:::sponsor
+    end
+
+    subgraph Discovery ["The Graph (planned)"]
+        SG[Live Capacity<br/>Subgraph]:::data
+        IDX[Block-indexed<br/>active reserves]:::data
+    end
+
+    MW[Maker Wallet<br/>ERC-20 balance + allowance]:::user
+
+    MW -->|backs| AQ
+    AQ --> POS_A
+    AQ --> POS_B
+    POS_A --> GRP
+    POS_B --> GRP
+    GRP --> ACT
+    ACT --> DEC
+    DEC --> XYC
+    XYC --> SETTLE
+    SETTLE -->|safeTransferFrom| MW
+
+    ACT -.->|index events| SG
+    SG -.->|query| UI
+
+    CW -.->|connect| MW
+    WV -.->|step-up gate<br/>stretch only| ACT
+
+    classDef sponsor fill:#312e81,stroke:#818cf8,color:#ffffff,stroke-width:2px;
+    classDef core fill:#064e3b,stroke:#34d399,color:#ffffff,stroke-width:2px;
+    classDef swapvm fill:#065f46,stroke:#6ee7b7,color:#ffffff,stroke-width:2px;
+    classDef risk fill:#7f1d1d,stroke:#f87171,color:#ffffff,stroke-width:2px;
+    classDef data fill:#164e63,stroke:#22d3ee,color:#ffffff,stroke-width:2px;
+    classDef user fill:#3f3f46,stroke:#d4d4d8,color:#ffffff,stroke-width:2px;
+    classDef planned fill:#1e1b4b,stroke:#6366f1,color:#a5b4fc,stroke-width:1px,stroke-dasharray: 5 5;

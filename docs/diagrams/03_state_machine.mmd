@@ -1,0 +1,78 @@
+%%{init: {
+  "theme": "dark",
+  "themeVariables": {
+    "background": "#0b0f14",
+    "primaryColor": "#1f2937",
+    "primaryTextColor": "#f8fafc",
+    "primaryBorderColor": "#64748b",
+    "lineColor": "#94a3b8",
+    "secondaryColor": "#111827",
+    "tertiaryColor": "#0f172a",
+    "fontFamily": "Inter, ui-sans-serif, system-ui, sans-serif"
+  }
+}}%%
+stateDiagram-v2
+    state "Local λ State Machine" as LocalLambda {
+        [*] --> Fresh: deploy / first interaction
+
+        Fresh --> ActiveBlock: quote or swap in block N
+        note right of ActiveBlock
+            activeReserve = totalReserve × λ
+            blockNumber = N
+        end note
+
+        ActiveBlock --> ConsumedCurve: exact-in trade executes
+        note right of ConsumedCurve
+            activeReserve moves along curve
+            no fresh slice this block
+        end note
+
+        ConsumedCurve --> ConsumedCurve: another exact-in same block
+        ConsumedCurve --> ActiveBlock: block N+1 arrives
+        ActiveBlock --> ActiveBlock: block N+1 arrives (repartition)
+
+        state ExactOutCheck <<choice>>
+        ActiveBlock --> ExactOutCheck: exact-out requested
+        ExactOutCheck --> ConsumedCurve: amountOut < effective active
+        ExactOutCheck --> Reverted: amountOut >= effective active
+        Reverted --> ActiveBlock: next block repartitions
+
+        note left of Reverted
+            ActiveLiquidityExceeded
+        end note
+    }
+
+    state "Shared Γ State Machine" as SharedGamma {
+        [*] --> Idle: no group activity
+
+        Idle --> Open: first sibling quotes in block N
+        note right of Open
+            openingCoverage = min(balance, allowance)
+            remaining = openingCoverage × Γ_fraction
+            blockNumber = N
+        end note
+
+        Open --> Consuming: sibling order fills
+        note right of Consuming
+            remaining -= consumed
+        end note
+
+        Consuming --> Consuming: another sibling fills (same block)
+        Consuming --> GroupExceeded: remaining < requested
+        note left of GroupExceeded
+            GroupActiveLiquidityExceeded
+        end note
+
+        Consuming --> Open: block N+1 (refresh from new coverage)
+        Open --> Open: block N+1 (refresh)
+        GroupExceeded --> Open: block N+1 (refresh)
+
+        state CoverageDrop <<choice>>
+        Open --> CoverageDrop: balance or allowance drops
+        CoverageDrop --> ShrunkQuote: scale remaining proportionally
+        note right of ShrunkQuote
+            quote shrinks, does not brick
+        end note
+        ShrunkQuote --> Consuming: fill within shrunk capacity
+        ShrunkQuote --> Open: block N+1 (refresh)
+    }
