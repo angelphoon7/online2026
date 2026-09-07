@@ -8,7 +8,7 @@ import { SwapVM } from "@1inch/swap-vm/src/SwapVM.sol";
 import { AquaValveOpcodes } from "./AquaValveOpcodes.sol";
 
 /// @title AquaValveRouter
-/// @notice Aqua SwapVM Router extended with ACTIVENESS_XD for programmable live liquidity
+/// @notice SwapVM Router extended with ACTIVENESS_XD for programmable live liquidity
 contract AquaValveRouter is Simulator, SwapVM, AquaValveOpcodes {
     constructor(
         address aqua,

@@ -3,12 +3,12 @@ pragma solidity 0.8.30;
 
 import { Context } from "@1inch/swap-vm/src/libs/VM.sol";
 import { Opcode, OpcodeOps } from "@1inch/swap-vm/src/libs/OpcodeList.sol";
-import { AquaOpcodes } from "@1inch/swap-vm/src/opcodes/AquaOpcodes.sol";
+import { Opcodes } from "@1inch/swap-vm/src/opcodes/Opcodes.sol";
 
 import { Activeness } from "./Activeness.sol";
 
-/// @notice Extended Aqua opcodes with ACTIVENESS_XD
-contract AquaValveOpcodes is AquaOpcodes {
+/// @notice Extended opcodes with ACTIVENESS_XD added to the full instruction set
+contract AquaValveOpcodes is Opcodes {
     using OpcodeOps for Opcode;
 
     function _runOpcode(Context memory ctx, uint256 opcode_, bytes calldata args) internal virtual override {

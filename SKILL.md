@@ -1,198 +1,318 @@
 ---
 name: aquavalve-build
-summary: Build and test AquaValve — a custom 1inch Aqua SwapVM extension with programmable live liquidity (local λ + shared Γ).
-description: Use this skill to build the AquaValve Solidity contracts, run test gates, generate documentation, and prepare a hackathon demo. Covers Foundry setup, real Aqua/SwapVM integration, ACTIVENESS_XD instruction, local λ scaling, shared Γ wallet envelope, coverage-drop quote shrinking, Decay composition, The Graph subgraph, and all required diagrams.
+summary: Build and test AquaValve — a custom 1inch Aqua + SwapVM extension with programmable live liquidity.
+description: Use this skill to build AquaValve against the real 1inch Aqua and SwapVM sources. Covers Foundry setup, ACTIVENESS_XD, local λ, shared Γ wallet envelope, quote-time capacity, coverage-drop quote shrinking, Decay composition, The Graph capacity layer, diagrams, and hackathon demo discipline.
 ---
 
-# AquaValve Build Skill
+# AquaValve Build Skill — M0-Safe Verified Version
+
+## Accuracy Contract
+
+This skill is written against the currently inspected public 1inch sources:
+
+- `1inch/aqua`
+- `1inch/swap-vm`
+- `1inch/sdks/tree/master/typescript/aqua`
+
+Do not treat GitHub `main` as stable. At the start of implementation, record the exact commit SHAs used for `aqua`, `swap-vm`, `solidity-utils`, and `openzeppelin-contracts` in `README.md` or `IMPLEMENTATION_STATUS.md`.
+
+Do **not** claim compile, test, deploy, or demo success unless command output proves it.
 
 ## Mission
 
-Build a working AquaValve — a custom Aqua app and SwapVM extension where liquidity liveness is programmable. The output must compile, pass test gates, and demonstrate the core claim:
+Build a working AquaValve: a custom Aqua app and SwapVM extension where liquidity liveness is programmable.
+
+Core claim:
 
 > Liquidity doesn't have to be all-in. AquaValve lets a maker decide how much goes live each block.
 
+Technical claim:
+
+> AMMs made price programmable. AquaValve makes liveness programmable.
+
+## Scope Guard
+
+Whenever this skill is active, if the user proposes any feature not in the gates below, respond with:
+
+> "Noted in IDEAS.md. Not doing it before Gate N+1."
+
+Do not analyze the merit of the proposal. Do not start exploratory code. Log it and move on.
+
 ## First Actions
 
-Before writing any code:
+Before writing code:
 
-1. Read `AGENTS.md` for non-negotiable technical semantics and test gates.
-2. Check if Foundry is installed: `forge --version`.
-3. Check the repo tree: identify what exists (frontend, docs) vs what is missing (contracts, tests).
-4. Install the **real** 1inch repos as Foundry dependencies:
+1. Read `AGENTS.md` for non-negotiable project semantics and test gates.
+2. Check Foundry:
    ```bash
+   forge --version
+   ```
+3. Check the repo tree and identify existing frontend/docs/contracts/tests.
+4. Install real dependencies or verify they already exist:
+   ```bash
+   forge install foundry-rs/forge-std --no-git --no-commit
    forge install 1inch/swap-vm --no-git --no-commit
    forge install 1inch/aqua --no-git --no-commit
+   forge install 1inch/solidity-utils --no-git --no-commit
+   forge install OpenZeppelin/openzeppelin-contracts --no-git --no-commit
    ```
-5. Read `lib/swap-vm/src/instructions/Decay.sol` and `lib/swap-vm/src/instructions/XYCSwap.sol` to understand the instruction pattern before writing `Activeness.sol`.
-6. Do **not** claim compile/test/deploy success unless command output proves it.
+5. **Log the resolved versions before pinning.** Record the actual commit SHAs and opcode count:
+   ```bash
+   git -C lib/swap-vm rev-parse HEAD
+   git -C lib/aqua rev-parse HEAD
+   grep -c "Opcode\." lib/swap-vm/src/libs/OpcodeList.sol
+   ```
+   From this point on, read the opcode table from **that installed source**, not from docs or READMEs.
+6. Inspect the exact local source files before coding:
+   ```text
+   lib/aqua/src/interfaces/IAqua.sol
+   lib/aqua/src/Aqua.sol
+   lib/swap-vm/src/SwapVM.sol
+   lib/swap-vm/src/libs/VM.sol
+   lib/swap-vm/src/libs/OpcodeList.sol
+   lib/swap-vm/src/opcodes/AquaOpcodes.sol
+   lib/swap-vm/src/routers/AquaSwapVMRouter.sol
+   lib/swap-vm/src/instructions/Decay.sol
+   lib/swap-vm/src/instructions/XYCSwap.sol
+   ```
+7. Do not redesign the project during M0. The first objective is `forge build`.
 
 ## Phase 1 — Foundry Setup
 
-### 1.1 Initialize Foundry (alongside existing Next.js)
+### 1.1 Initialize Foundry beside an existing Next.js app
 
 ```bash
 forge init --no-git --no-commit
 ```
 
-### 1.2 Configure foundry.toml
+If the repo already has Foundry files, do not reinitialize. Merge configuration instead.
+
+### 1.2 Configure `foundry.toml`
+
+Use Solidity `0.8.30` and `via_ir = true` because the current Aqua and SwapVM sources use Solidity `0.8.30`.
 
 ```toml
 [profile.default]
 src = "contracts"
 out = "out"
-libs = ["lib"]
+libs = ["lib", "node_modules"]
 solc = "0.8.30"
 optimizer = true
-optimizer_runs = 200
+optimizer_runs = 700
 via_ir = true
 
 [profile.default.fuzz]
 runs = 256
+
+[fmt]
+single_line_statement_blocks = "multi"
+multiline_func_header = "all"
+override_spacing = false
+bracket_spacing = true
+int_types = "long"
+number_underscore = "thousands"
 ```
 
-Use `solc = "0.8.30"` to match the official SwapVM contracts.
+Notes:
 
-### 1.3 Install dependencies
+- `optimizer_runs = 700` follows the current SwapVM project style. Do not claim bytecode equivalence to official deployments unless the exact compiler settings and commits match.
+- If the starter generated `src/`, either move it to `contracts/` or change `src = "src"` consistently.
 
-```bash
-forge install foundry-rs/forge-std --no-git --no-commit
-forge install 1inch/swap-vm --no-git --no-commit
-forge install 1inch/aqua --no-git --no-commit
+### 1.3 Configure remappings
+
+Use package-root remappings, not `/src` remappings. The official imports include paths such as `@1inch/aqua/src/interfaces/IAqua.sol`.
+
+`remappings.txt`:
+
+```text
+forge-std/=lib/forge-std/src/
+@1inch/swap-vm/=lib/swap-vm/
+@1inch/aqua/=lib/aqua/
+@1inch/solidity-utils/=lib/solidity-utils/
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
 ```
 
-### 1.4 Configure remappings
-
-In `foundry.toml` or `remappings.txt`:
-
-```
-@1inch/swap-vm/=lib/swap-vm/src/
-@1inch/aqua/=lib/aqua/src/
-```
-
-### 1.5 Verify
+### 1.4 Verify baseline
 
 ```bash
 forge build
 ```
 
-Must compile with zero errors before proceeding.
+If this fails before adding AquaValve code, fix dependency/remapping/compiler issues first.
 
-## Phase 2 — Aqua Interface
+## Phase 2 — Real Aqua / SwapVM Integration
 
-Aqua and SwapVM are open-source. Use the **real** repos installed in `lib/`.
+### 2.1 Use official Aqua functions
 
-### 2.1 Real Aqua interface
-
-The official Aqua core uses `ship`, `dock`, `pull`, `push` — **not** a single `settle()` call.
+Do not invent a fake `settle()` API as the core implementation. Aqua uses:
 
 ```solidity
-interface IAqua {
-    function safeBalances(
-        address maker,
-        address app,
-        bytes32 strategyHash,
-        address token0,
-        address token1
-    ) external view returns (uint256 balance0, uint256 balance1);
-
-    function ship(
-        address app,
-        bytes calldata strategy,
-        address[] calldata tokens,
-        uint256[] calldata amounts
-    ) external returns (bytes32 strategyHash);
-
-    function dock(
-        address app,
-        bytes32 strategyHash,
-        address[] calldata tokens
-    ) external;
-
-    function pull(
-        address maker,
-        bytes32 strategyHash,
-        address token,
-        uint256 amount,
-        address to
-    ) external;
-
-    function push(
-        address maker,
-        address app,
-        bytes32 strategyHash,
-        address token,
-        uint256 amount
-    ) external;
-}
+import { IAqua } from "@1inch/aqua/src/interfaces/IAqua.sol";
 ```
 
-Token movement goes through `pull()` / `push()`, not a single `settle()`. If writing mock tests, a `MockAqua.settle()` convenience is fine, but **never describe it as the Aqua interface**.
-
-### 2.2 SwapVM instruction pattern
-
-Every SwapVM instruction is a **library** with:
+Relevant functions in the official interface:
 
 ```solidity
-library MyInstruction {
-    Opcode constant opcode = Opcode.SomeSlot;
+function rawBalances(
+    address maker, address app, bytes32 strategyHash, address token
+) external view returns (uint248 balance, uint8 tokensCount);
 
-    function exec(Context memory ctx, bytes calldata args) internal { ... }
-    function build(...) internal pure returns (bytes memory) { ... }
-    function sizeOf(...) internal pure returns (uint256) { ... }
-}
+function safeBalances(
+    address maker, address app, bytes32 strategyHash, address token0, address token1
+) external view returns (uint256 balance0, uint256 balance1);
+
+function ship(
+    address app, bytes calldata strategy, address[] calldata tokens, uint256[] calldata amounts
+) external returns (bytes32 strategyHash);
+
+function dock(
+    address app, bytes32 strategyHash, address[] calldata tokens
+) external;
+
+function pull(
+    address maker, bytes32 strategyHash, address token, uint256 amount, address to
+) external;
+
+function push(
+    address maker, address app, bytes32 strategyHash, address token, uint256 amount
+) external;
 ```
 
-Instructions modify `ctx.swap.balanceIn / balanceOut` (to scale reserves) or compute `ctx.swap.amountIn / amountOut`. State persistence is gated by `ctx.vm.isStaticContext` (false = quote, true = swap).
+Aqua stores virtual balances by `maker → app/router → strategyHash/orderHash → token`. Token transfer happens through `pull()` (maker→taker) and `push()` (taker→maker). Tokens never sit in the Aqua contract.
 
-Study `lib/swap-vm/src/instructions/Decay.sol` — it is the closest pattern to what Activeness needs (stateful, per-order, per-token storage).
+### 2.2 Use official SwapVM order/hash semantics
 
-### 2.3 Key types from SwapVM
+Import official SwapVM types:
 
 ```solidity
-// from lib/swap-vm/src/libs/VM.sol
-struct Context {
-    VM vm;
-    SwapQuery query;       // orderHash, maker, taker, tokenIn, tokenOut, isExactIn
-    SwapRegisters swap;    // balanceIn, balanceOut, amountIn, amountOut
-    ProtocolFee fee;
-}
+import { ISwapVM } from "@1inch/swap-vm/src/interfaces/ISwapVM.sol";
+import { SwapVM } from "@1inch/swap-vm/src/SwapVM.sol";
+import { Context, ContextLib } from "@1inch/swap-vm/src/libs/VM.sol";
+import { Opcode } from "@1inch/swap-vm/src/libs/OpcodeList.sol";
+import { AquaOpcodes } from "@1inch/swap-vm/src/opcodes/AquaOpcodes.sol";
+import { Simulator } from "@1inch/solidity-utils/contracts/mixins/Simulator.sol";
 ```
 
-`ACTIVENESS_XD` scales `ctx.swap.balanceIn` and `ctx.swap.balanceOut` before downstream instructions (Decay, XYC) run.
+For Aqua-mode orders, `router.hash(order)` is the canonical hash. Use it as the source of truth. Do not independently reimplement order hashing off-chain.
+
+### 2.3 SwapVM context semantics
+
+`quote()` sets `ctx.vm.isStaticContext = true`. `swap()` sets it `false`.
+
+- `true` = quote/static execution path, do not persist state.
+- `false` = swap/state-changing path, may persist local and group state.
+
+Your custom instruction must obey `isStaticContext` and never write during quote.
+
+### 2.4 Real SwapVM instruction pattern
+
+Study `lib/swap-vm/src/instructions/Decay.sol` — it is the closest pattern to what Activeness needs (stateful, per-order, per-token storage, wraps `ctx.runLoop()`).
+
+Instructions are wired through `_runOpcode(...)` in the opcode dispatcher, dispatching by comparing the opcode to `Opcode.X`.
+
+## Invariants
+
+These are non-negotiable. Every invariant must have at least one Foundry test that fails if violated.
+
+**Invariant 1 — λ = 100% is a no-op.** Output must match vanilla XYC exactly.
+
+**Invariant 2 — Same-block trades never get a fresh active slice.** They continue on the consumed curve.
+
+**Invariant 3 — Coverage drops shrink quotes, never brick them.** `quote()` must return a smaller amount, not revert.
+
+**Invariant 4 — Same-block inflows do not reopen the group envelope.** New deposits in the same block are ignored until next block.
+
+**Invariant 5 — Group state is shared across order hashes in the same transaction.** Order B must see Order A's consumption within the same outer tx. Group state is keyed by `maker + groupId + token` in ordinary storage (not by orderHash, not transient). In M0, `groupId` defaults to `orderHash` — each position has its own envelope. Explicit cross-position grouping (multiple positions sharing one `groupId`) is a post-M4 feature.
+
+**Invariant 6 — quote() has zero state side effects.** All state slots must be unchanged after any number of quote calls.
+
+**Invariant 7 — Proportional scaling preserves spot ratio.** When Γ, coverage, or headroom clamps `effectiveOut` below `localActiveOut`, scale `effectiveIn` proportionally: `effectiveIn = floor(localActiveIn × effectiveOut / localActiveOut)`. Clamping only the output side silently distorts the spot price and forces the maker to quote at a wrong ratio.
+
+**Invariant 8 — Tightening is unconditional; relaxation is a permission upgrade.** `headroomBps` can only tighten the envelope, never increase it beyond wallet coverage. Any relaxation path (λ increase, Γ expansion, groupId change) is not implemented in V1 — it requires Aqua `dock()` + `ship()`. The router cannot intercept or implement relaxation. Do not attempt to add relaxation logic to the router.
+
+**Invariant 9 — Foundry tests are the only proof.** The `two_orders_same_tx_share_group_budget` test and all other gate tests must pass in Foundry against the pinned source. Model tests, JS tests, and "the logic looks right" do not count as green.
 
 ## Phase 3 — Core Contracts
 
 Build in this order. Each contract must compile before starting the next.
 
-### 3.1 Activeness.sol — the ACTIVENESS_XD instruction
+### 3.1 `Activeness.sol` — ACTIVENESS_XD
 
-This is the core. It does two things:
+`ACTIVENESS_XD` is a balances-tuning wrapper instruction. It must run before downstream pricing computes the missing swap amount.
 
-**Local λ — per-position active reserves:**
+Recommended opcode slot for the vendored source:
 
+```solidity
+uint256 internal constant ACTIVENESS_OPCODE = uint256(Opcode._92);
 ```
-effectiveReserve = totalReserve × λ / 1e18
+
+Current `OpcodeList.sol` places `_92` and `_93` in the `0x90-0xaf` Balances tuning bank. Do not hard-code raw numeric `0x92` or `146` in builders/tests. Expose:
+
+```solidity
+function activenessOpcode() external pure returns (uint8) {
+    return uint8(ACTIVENESS_OPCODE);
+}
 ```
 
-State per position per token:
+If the installed SwapVM version changes, re-check `OpcodeList.sol` before using `_92`.
+
+#### Args encoding
+
+Use compact BPS values:
+
+```text
+args = abi.encodePacked(lambdaBps, headroomBps, groupId)
+```
+
+Where:
+
+```text
+lambdaBps   uint16, 1..10000
+headroomBps uint16, 1..10000  (10000 = no tightening)
+groupId     bytes32
+```
+
+#### Required errors
+
+```solidity
+error ActivenessArgsInvalidLength(uint256 length);
+error ActivenessLambdaOutOfRange(uint256 lambdaBps);
+error ActivenessHeadroomOutOfRange(uint256 headroomBps);
+error ActivenessShouldBeBeforeSwapAmountComputation(uint256 amountIn, uint256 amountOut);
+error ActiveLiquidityExceeded(uint256 requestedOut, uint256 effectiveActiveOut);
+error ActivenessNoExecutableLiquidity(address tokenOut);
+```
+
+#### Local λ state
+
+Track per-order, per-token active reserves:
 
 ```solidity
 struct LocalTokenState {
     uint256 blockNumber;
     uint256 activeReserve;
 }
-mapping(bytes32 orderHash => mapping(address token => LocalTokenState)) public localState;
+mapping(bytes32 orderHash => mapping(address token => LocalTokenState)) internal _localState;
 ```
 
-Each token's active reserve is tracked independently. Both directions (ETH→USDC and USDC→ETH) read the same per-token state.
-
 Rules:
-- `λ = 1e18` (100%) must behave identically to vanilla XYC.
-- Same-block trades continue on consumed active curve — no fresh slice.
-- Next block repartitions from current total state.
 
-**Shared Γ — wallet-level envelope:**
+- `lambdaBps = 10000` must behave like vanilla XYC.
+- `lambdaBps < 10000` creates a shallower effective reserve curve.
+- Same-block trades continue along the consumed active curve; they never get a fresh slice.
+- Next block repartitions from current Aqua virtual balances.
+- Reverse direction must read the same per-token state.
+
+On a new block:
+
+```text
+active = floor(totalReserve × lambdaBps / 10000)
+if totalReserve > 0 and active == 0, active = 1   // dust liveness exception
+```
+
+#### Shared Γ / group envelope
+
+Group state is per maker, group, and maker-outflow token:
 
 ```solidity
 struct GroupState {
@@ -200,122 +320,97 @@ struct GroupState {
     uint256 openingCoverage;
     uint256 remaining;
 }
-mapping(bytes32 => GroupState) public groupState;
-// key: keccak256(maker, groupId, token)
+mapping(bytes32 groupKey => GroupState) internal _groupState;
 ```
 
-Coverage:
+The group envelope applies to `ctx.query.tokenOut` (the token the maker sends out). Do not consume group budget for `tokenIn`.
+
+Executable coverage:
 
 ```solidity
-uint256 coverage = min(
-    IERC20(token).balanceOf(maker),
-    IERC20(token).allowance(maker, aqua)
+uint256 coverage = Math.min(
+    IERC20(tokenOut).balanceOf(ctx.query.maker),
+    IERC20(tokenOut).allowance(ctx.query.maker, address(AQUA))
 );
 ```
 
-Group envelope is **objective coverage**. The `headroomBps` parameter can only tighten it, never increase executable capacity:
+`headroomBps` can only tighten:
 
-```solidity
-uint256 headroomBps; // optional tightening cap, <= 10000 (100%)
+```text
+positionHeadroom = floor(currentCoverage × headroomBps / 10000)
 ```
-
-If `headroomBps < 10000`, the effective envelope is `coverage * headroomBps / 10000`. A position cannot use `headroomBps` to exceed the wallet's actual coverage.
 
 Rules:
-- Coverage drops shrink quotes proportionally. Never brick `quote()`.
-- Same-block inflows do not reopen envelope until next block.
-- Group state uses ordinary storage (not transient).
-- Same outer transaction must share group consumption across different order hashes.
 
-**ExactOut guard:**
+- Coverage drops shrink quotes; they must not brick `quote()`.
+- Same-block inflows do not reopen the envelope until the next block.
+- Group state uses ordinary storage, not transient storage.
+- Different order hashes in the same outer transaction must share group consumption.
 
-```solidity
-require(amountOut < finalEffectiveActiveOut, "ActiveLiquidityExceeded");
+#### Scaling after group/coverage clamp (Invariant 7)
+
+Compute local active reserves first. Then compute final effective output:
+
+```text
+effectiveOut = min(localActiveOut, groupRemaining, currentCoverage, positionHeadroom)
 ```
 
-Use the final scaled output reserve after both local λ and group coverage scaling. Do not rely on downstream XYC arithmetic panic.
+If `effectiveOut < localActiveOut`, scale both sides proportionally:
 
-**Opcode index:**
-
-Use a free slot in the "Balances tuning" bank (0x90-0xaf). The real `OpcodeList.sol` has `_92` through `_93` free. Do not hard-code — claim a `_XX` slot from the enum and expose:
-
-```solidity
-function activenessOpcode() external pure returns (uint8);
+```text
+effectiveIn = floor(localActiveIn × effectiveOut / localActiveOut)
 ```
 
-**State persistence gate:**
+Do not clamp only `balanceOut` — that changes the implied spot price.
 
-Follow the Decay pattern — only write state when `!ctx.vm.isStaticContext`:
+If the final reserves are zero, return no executable liquidity or revert with a named error; do not underflow or panic.
+
+#### ExactOut guard
 
 ```solidity
-if (!ctx.vm.isStaticContext) {
-    // persist local and group state
+if (!ctx.query.isExactIn && ctx.swap.amountOut >= effectiveOut) {
+    revert ActiveLiquidityExceeded(ctx.swap.amountOut, effectiveOut);
 }
 ```
 
-### 3.2 AquaValveOpcodes.sol — extended opcode dispatcher
+#### Wrapper execution pattern
 
-Extend `AquaOpcodes` to add the Activeness instruction:
+Follow the Decay wrapper pattern:
+
+1. Check that swap amounts have not already been computed.
+2. Load/initialize local active reserves.
+3. Load/initialize group envelope for `tokenOut`.
+4. Compute final effective reserves (with proportional scaling).
+5. Set `ctx.swap.balanceIn` and `ctx.swap.balanceOut`.
+6. Call `ctx.runLoop()` so downstream instructions run.
+7. If `!ctx.vm.isStaticContext`, persist:
+   - post-trade local active reserves,
+   - group remaining reduced by `ctx.swap.amountOut`.
+
+State writes must not happen during quote.
+
+### 3.2 `AquaValveOpcodes.sol`
+
+Extend the opcode set and add Activeness dispatch:
 
 ```solidity
-contract AquaValveOpcodes is AquaOpcodes {
-    function _runOpcode(Context memory ctx, uint256 opcode, bytes calldata args) internal override {
-        if (opcode == Activeness.opcode.asU8()) Activeness.exec(ctx, args);
-        else super._runOpcode(ctx, opcode, args);
-    }
+function _runOpcode(Context memory ctx, uint256 opcode, bytes calldata args) internal virtual override {
+    if (opcode == ACTIVENESS_OPCODE) _activenessXD(ctx, args);
+    else super._runOpcode(ctx, opcode, args);
 }
 ```
 
-### 3.3 AquaValveRouter.sol — extended router
+### 3.3 `AquaValveRouter.sol`
 
-Extend `AquaSwapVMRouter` pattern with our custom opcodes:
+Mirror the official `AquaSwapVMRouter` constructor and dispatch structure. Expose `activenessOpcode()`.
 
-```solidity
-contract AquaValveRouter is Simulator, SwapVM, AquaValveOpcodes {
-    constructor(address aqua, address weth, address owner, string memory name, string memory version)
-        SwapVM(aqua, weth, owner, name, version) { }
+### 3.4 `AquaValveOrderBuilder.sol`
 
-    function _dispatch(Context memory ctx, uint256 opcode, bytes calldata args) internal override {
-        _runOpcode(ctx, opcode, args);
-    }
-}
-```
+The builder only encodes program bytes. It does not call `router.hash()` and it does not ship. Hash preflight belongs in tests/scripts.
 
-### 3.4 AquaValveOrderBuilder.sol — strategy builder
+### 3.5 `DemoTaker.sol`
 
-Encodes activeness parameters into strategy bytes:
-
-```solidity
-function buildStrategy(
-    uint256 activenessNumerator,
-    bytes32 groupId,
-    uint256 headroomBps
-) external pure returns (bytes memory strategyBytes);
-```
-
-The builder is `pure` — it only encodes bytes. Hash preflight belongs in tests/scripts:
-
-```solidity
-// In test or script — NOT in the builder
-bytes32 strategyHash = router.hash(order);
-bytes32 shippedHash = aqua.ship(address(router), abi.encode(order), tokens, amounts);
-assertEq(shippedHash, strategyHash);
-```
-
-### 3.5 DemoTaker.sol — multi-order test helper
-
-A contract that fills two orders in a single transaction to prove shared Γ works:
-
-```solidity
-function fillTwoOrders(
-    Order calldata orderA,
-    uint256 amountInA,
-    Order calldata orderB,
-    uint256 amountInB
-) external;
-```
-
-This is critical for Gate 2 — it proves that order B sees the group state consumed by order A within the same transaction.
+Fills two different Aqua orders in one outer transaction. Mandatory for proving group state persistence across order hashes.
 
 ## Phase 4 — Test Gates
 
@@ -327,125 +422,118 @@ Run gates in order. Do not skip ahead.
 forge build
 ```
 
-Zero errors. Zero warnings about the core contracts.
+Zero errors. If warnings exist, document them and fix any touching core contracts.
 
 ### Gate 1 — Local λ
 
 File: `test/ActivenessSinglePosition.t.sol`
 
-Write these 7 tests:
-
-| Test | Setup | Assert |
-|---|---|---|
-| `test_lambda_100_equals_XYC` | λ = 1e18, exact-in | Output == vanilla XYC output |
-| `test_same_block_does_not_refresh_lambda` | Two trades, same block | Second trade uses consumed curve |
-| `test_split_trade_does_not_reactivate_liquidity` | Split exact-in, same block | Combined == single trade on active curve |
-| `test_next_block_repartitions` | Trade block N, trade block N+1 | Block N+1 gets fresh active reserves |
-| `test_exact_in_continues_on_consumed_curve` | Sequential exact-in, same block | Each faces moved curve |
-| `test_exact_out_above_effective_active_reverts` | exactOut >= effective | Reverts `ActiveLiquidityExceeded` |
-| `test_quote_does_not_mutate_state` | Call quote, snapshot state | State unchanged after quote |
-
-To advance blocks in Foundry:
-
-```solidity
-vm.roll(block.number + 1);
+```text
+test_lambda_100_equals_XYC
+test_same_block_does_not_refresh_lambda
+test_split_trade_does_not_reactivate_liquidity
+test_next_block_repartitions
+test_exact_in_continues_on_consumed_curve
+test_exact_out_above_effective_active_reverts
+test_quote_does_not_mutate_state
+test_reverse_direction_uses_same_local_token_state
 ```
 
-Run:
-
-```bash
-forge test --match-contract ActivenessSinglePosition -vvv
-```
+Run: `forge test --match-contract ActivenessSinglePosition -vvv`
 
 ### Gate 2 — Shared Γ
 
 File: `test/ActivenessGroupEnvelope.t.sol`
 
-Write these 4 tests using `DemoTaker`:
-
-| Test | Setup | Assert |
-|---|---|---|
-| `test_two_orders_same_tx_share_group_budget` | DemoTaker fills A then B | B capacity reflects A consumption |
-| `test_coverage_drop_shrinks_quote_not_reverts` | Reduce maker balance | Quote shrinks, no revert |
-| `test_allowance_drop_shrinks_quote_not_reverts` | Reduce maker allowance | Quote shrinks, no revert |
-| `test_same_block_inflow_does_not_reopen_envelope` | Deposit in same block | Group remaining unchanged |
-
-Use **tight coverage** (maker balance close to effective reserves) so group envelope is binding.
-
-Run:
-
-```bash
-forge test --match-contract ActivenessGroupEnvelope -vvv
+```text
+test_two_orders_same_tx_share_group_budget
+test_coverage_drop_shrinks_quote_not_reverts
+test_allowance_drop_shrinks_quote_not_reverts
+test_same_block_inflow_does_not_reopen_envelope
+test_group_applies_to_tokenOut_only
 ```
 
-### Gate 3 — Decay Composition
+Use tight coverage so the group envelope is binding.
+
+**"Green" for Gate 2 means:** `test_two_orders_same_tx_share_group_budget` passes in Foundry against the pinned template. Not model tests. Not "the logic looks right." If this test is not green by the deadline, delete all Γ-related code and update the pitch to local-only version. No middle state.
+
+Run: `forge test --match-contract ActivenessGroupEnvelope -vvv`
+
+### Gate 3 — Hash integrity
+
+```text
+test_aqua_strategy_hash_matches_router_order_hash
+```
+
+`router.hash(order)` is the **only** source of truth. It uses EIP-712 structured encoding (ORDER_TYPEHASH + maker + traits + keccak256(data)), NOT `abi.encode(order)`.
+
+The correct test flow:
+
+1. Compute `bytes32 orderHash = router.hash(order)`.
+2. Use `orderHash` as the key when shipping to Aqua.
+3. Assert that `router.swap()` can fill the position — proving the hash the router uses at swap time matches the hash used at ship time.
+
+Do **not** independently recompute the hash formula. Do **not** pass `abi.encode(order)` as `strategy` to `aqua.ship()` and compare with `router.hash()` — they use different encoding and will never match. A wrong hash silently produces a position no one can ever fill while tests appear green.
+
+### Gate 4 — Decay composition
 
 File: `test/ActivenessDecayComposition.t.sol`
 
-Run the same swap through 4 pipelines and compare:
-
-1. XYC only
-2. DECAY + XYC
-3. ACTIVENESS + XYC
-4. ACTIVENESS + DECAY + XYC
-
-```bash
-forge test --match-contract ActivenessDecayComposition -vvv
+```text
+XYC only
+DECAY + XYC
+ACTIVENESS + XYC
+ACTIVENESS + DECAY + XYC
 ```
 
-### Gate 4 — Demo
+**Block vs time advancement:** λ epoch uses `block.number` — use `vm.roll`. Decay uses `block.timestamp` — use `vm.warp`. In composition tests, advance both:
 
-This is the live demo. Requires all prior gates green.
-
-1. Deploy contracts to a local Anvil fork or testnet.
-2. Fund maker wallet.
-3. Ship two positions via `aqua.ship()`.
-4. Execute the demo script from `FULL_EXECUTION.md` Section 9.
-
-### Hash Integrity
-
-```bash
-forge test --match-test test_aqua_strategy_hash_matches_router_order_hash -vvv
+```solidity
+vm.roll(block.number + 1);
+vm.warp(block.timestamp + decayPeriod);
 ```
 
-## Phase 5 — The Graph (Secondary Sponsor)
+Using only `vm.roll` in decay tests will silently produce zero-decay results (timestamp unchanged), making it look like decay has no effect.
+
+Run: `forge test --match-contract ActivenessDecayComposition -vvv`
+
+### Gate 5 — Demo
+
+Requires prior gates green. Must show:
+
+```text
+real Aqua ship
+real token transfer
+local λ visualization
+shared Γ failure path
+coverage-drop quote shrink
+optional Decay composition
+```
+
+## Phase 5 — The Graph Secondary Layer
 
 Only after Gate 2 passes.
-
-### 5.1 Event to emit from Activeness.sol
 
 ```solidity
 event ActivenessApplied(
     bytes32 indexed orderHash,
     address indexed maker,
     bytes32 indexed groupId,
-    address token,
-    uint256 effectiveActive,
-    uint256 totalReserve,
+    address tokenOut,
+    uint256 effectiveActiveOut,
+    uint256 localActiveOut,
     uint256 groupRemaining,
     uint256 blockNumber
 );
 ```
 
-### 5.2 Subgraph entities
-
-```
-ActivePosition    — per-order active reserves per block
-GroupEnvelope     — per-maker per-group remaining capacity
-CoverageSnapshot  — balance/allowance readings
-```
-
-### 5.3 Subgraph role
-
-The Graph provides **live-capacity discovery and prefiltering**. It helps solvers avoid obviously exhausted sibling positions.
-
-**The subgraph is not the source of truth.** It may have block-level lag. The authoritative executable amount is always `router.quote()` at the current chain state. SwapVM quote path reads Aqua balances and runs the full instruction program; settlement goes through `pull()` / `push()`.
+The Graph is a discovery/prefilter layer, not the source of truth. The authoritative executable amount is still `router.quote()` at current chain state.
 
 ## Phase 6 — Documentation
 
-After contracts compile and tests pass, generate or update:
+After actual command output proves status, update:
 
-```
+```text
 README.md
 FULL_EXECUTION.md
 PITCH.md
@@ -453,112 +541,74 @@ TEST_PLAN.md
 docs/diagrams/*.mmd
 ```
 
-### Required diagrams (Mermaid source)
+Every feature must be labelled:
 
-```
-docs/diagrams/01_architecture.mmd
-docs/diagrams/02_execution_sequence.mmd
-docs/diagrams/03_state_machine.mmd
-docs/diagrams/04_failure_paths.mmd
-docs/diagrams/05_sponsor_layers.mmd
-docs/diagrams/06_demo_flow.mmd
-```
-
-### Mermaid style
-
-Use dark theme with colored classDefs:
-
-```mermaid
-%%{init: {
-  "theme": "dark",
-  "themeVariables": {
-    "background": "#0b0f14",
-    "primaryColor": "#1f2937",
-    "primaryTextColor": "#f8fafc",
-    "primaryBorderColor": "#64748b",
-    "lineColor": "#94a3b8",
-    "fontFamily": "Inter, ui-sans-serif, system-ui, sans-serif"
-  }
-}}%%
-```
-
-```mermaid
-classDef sponsor fill:#312e81,stroke:#818cf8,color:#ffffff,stroke-width:2px;
-classDef core fill:#064e3b,stroke:#34d399,color:#ffffff,stroke-width:2px;
-classDef risk fill:#7f1d1d,stroke:#f87171,color:#ffffff,stroke-width:2px;
-classDef data fill:#164e63,stroke:#22d3ee,color:#ffffff,stroke-width:2px;
-classDef user fill:#3f3f46,stroke:#d4d4d8,color:#ffffff,stroke-width:2px;
-```
-
-### Status labels
-
-Every feature in docs must use one of:
-
-- `Implemented` — code exists and tests pass (with command output proof)
+- `Implemented` — code exists and tests pass with command output
 - `In progress` — code exists, tests not yet green
 - `Planned` — no code yet
 - `Stretch` — depends on core being green first
 
-## Phase 7 — Sponsor Mapping
+## Sponsor Priority
 
-Each sponsor must own a distinct structural layer:
-
-```
-1inch / SwapVM  → execution primitive (ACTIVENESS_XD)    — mandatory
-Aqua            → shared wallet position layer            — mandatory
-The Graph       → live capacity discovery layer           — preferred secondary
-World           → human step-up for exposure relaxation   — stretch only
-Ledger          → hardware approval for exposure increase — stretch only
-Chainlink CRE   → private runtime headroom policy        — stretch only
-Uniswap v4      → portability proof for local λ          — stretch only
+```text
+1inch / SwapVM  → execution primitive ACTIVENESS_XD       — mandatory
+Aqua            → shared wallet position layer             — mandatory
+The Graph       → live capacity discovery / prefiltering   — preferred secondary
+World           → human step-up for exposure relaxation    — stretch only
+Ledger          → hardware approval for exposure increase  — stretch only
+Chainlink CRE   → private runtime headroom policy          — stretch only
+Uniswap v4      → portability proof for local λ            — stretch only
 ```
 
 Do not add stretch sponsors until Gate 2 passes.
 
 ## Cut Lines
 
-If **Gate 2 fails** by deadline → ship local-λ only:
+If Gate 2 fails by the deadline, ship local λ only:
 
-```
+```text
 ACTIVENESS_XD + Decay composition + benchmark
 ```
 
 Do not ship half-working Γ.
 
-If **Decay composition fails** → ship:
+If Decay composition fails, ship:
 
-```
+```text
 ACTIVENESS_XD + local λ + shared Γ + failure-path tests
 ```
 
 ## Forbidden
 
 - Do not claim tests pass without `forge test` output.
-- Do not hard-code opcode `0x92`.
-- Do not reimplement order-hash off-chain.
+- Do not hard-code raw opcode `0x92` / `146` in builders, frontend, or tests.
+- Do not rely on an `_instructions()` array; current SwapVM uses enum-based opcode dispatch.
+- Do not reimplement order hash off-chain.
 - Do not claim AquaValve guarantees solvency.
 - Do not use World ID to secure swaps.
 - Do not add sponsors as stickers.
 - Do not use transient storage for group state.
 - Do not ship half-working Γ.
-- Do not describe `settle()` as the Aqua interface. Aqua uses `ship / dock / pull / push`.
+- Do not describe `settle()` as the Aqua interface.
 - Do not let `headroomBps` increase executable capacity beyond wallet coverage.
+- Do not mutate Activeness state during quote/static execution.
+- Do not implement relaxation paths (λ increase, Γ expand) in the router. V1 relaxation goes through Aqua dock+reship.
+- Do not cite unverifiable paper references. Base claims on code and test output only.
 
-## Quality Bar
+## Completion Bar
 
-The build is complete when:
+```text
+forge build                              green
+Gate 1 local λ tests                     green
+Gate 2 shared Γ tests                    green
+Hash integrity test                      green
+Gate 4 Decay composition                 green or explicitly documented fallback
+README status                            matches command output
+Mermaid diagrams                         checked into repo as .mmd source
+Demo script                              runnable from README/FULL_EXECUTION
+```
 
-- `forge build` compiles with zero errors.
-- Gate 1 (local λ) has 7 green tests with output.
-- Gate 2 (shared Γ) has 4 green tests with output.
-- Gate 3 (decay composition) runs 4 pipeline configurations.
-- README reflects actual implementation status, not aspirational claims.
-- Every diagram has Mermaid `.mmd` source.
-- Demo can be rehearsed from the README alone.
-
-## Execution Command
-
-After following this skill:
+Final command:
 
 ```bash
 forge build && forge test -vvv
