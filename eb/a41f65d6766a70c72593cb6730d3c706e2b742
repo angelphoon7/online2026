@@ -1,0 +1,28 @@
+note.txt
+  1e98be8f7ca30c0e 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2-bit.10+672fbf0",
+  "base_commit_sha": "eba41f65d6766a70c72593cb6730d3c706e2b742",
+  "prompts": {
+    "1e98be8f7ca30c0e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "efc878dd-cd0f-44e5-81c8-6213bbb2ca53",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "angel.phoon",
+      "messages": [],
+      "total_additions": 22,
+      "total_deletions": 0,
+      "accepted_lines": 22,
+      "overriden_lines": 0
+    }
+  },
+  "humans": {
+    "h_bdccacbe896d8c": {
+      "author": "angel.phoon"
+    }
+  }
+}
