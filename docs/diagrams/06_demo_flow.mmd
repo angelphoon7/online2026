@@ -14,27 +14,22 @@
 flowchart TD
     OPEN["OPEN<br/>Liquidity doesn't have to be all-in"]:::user
 
-    OPEN --> SETUP["1 — Setup<br/>Maker wallet with 100 ETH<br/>Two Aqua positions, λ = 20%<br/>Same group, shared Γ"]:::core
+    OPEN --> SETUP["1 — Setup<br/>Maker wallet with 100k USDC<br/>Two Aqua positions, λ = 50%<br/>Same group, shared Γ"]:::core
 
-    SETUP --> SHOW_LOCAL["2 — Show Local λ<br/>Position A: 20 ETH / 80k USDC active<br/>Position B: 20 ETH / 80k USDC active<br/>Both look fully executable"]:::data
+    SETUP --> SHOW["2 — Show Local λ<br/>Both positions: 50k active<br/>Both look executable"]:::data
 
-    SHOW_LOCAL --> EXEC_A["3 — Execute Position A<br/>Exact-in swap consumes<br/>group budget partially"]:::swapvm
+    SHOW --> EXEC_A["3 — Execute Position A<br/>Swap consumes group budget"]:::swapvm
 
-    EXEC_A --> ATTEMPT_B["4 — Attempt Position B<br/>Exact-out above remaining Γ<br/>→ GroupActiveLiquidityExceeded"]:::risk
+    EXEC_A --> ATTEMPT_B["4 — Attempt Position B<br/>Above remaining Γ<br/>→ GroupActiveLiquidityExceeded"]:::risk
 
-    ATTEMPT_B --> PUNCHLINE["DEMO SENTENCE<br/>This second order looks locally<br/>executable, but the shared wallet<br/>envelope has already been consumed.<br/>AquaValve tells the solver before<br/>settlement would revert."]:::highlight
+    ATTEMPT_B --> PUNCHLINE["DEMO SENTENCE<br/>This second order looks locally<br/>executable, but the shared wallet<br/>envelope has already been consumed"]:::highlight
 
-    PUNCHLINE --> RETRY["5 — Retry B smaller<br/>Exact-out within remaining Γ<br/>→ Real ERC-20 transfer succeeds"]:::core
+    PUNCHLINE --> RETRY["5 — Retry B smaller<br/>Within remaining Γ<br/>→ Real ERC-20 transfer"]:::core
 
-    RETRY --> COV_DROP["6 — Coverage Drop<br/>Maker transfers some ETH out<br/>→ Quote shrinks proportionally<br/>→ quote() still returns, no brick"]:::warn
+    RETRY --> COV_DROP["6 — Coverage Drop<br/>Maker balance decreases<br/>→ Quote shrinks, no brick"]:::warn
 
-    COV_DROP --> DECAY_COMP["7 — Decay Composition<br/>Run same sequence through:<br/>XYC only → DECAY+XYC<br/>→ ACTIVENESS+XYC<br/>→ ACTIVENESS+DECAY+XYC"]:::swapvm
+    COV_DROP --> CLOSE["CLOSE<br/>AquaValve turns soft virtual promises<br/>into programmable live capacity"]:::user
 
-    DECAY_COMP --> GRAPH_LAYER["8 — The Graph Layer (if ready)<br/>Query live capacity surface<br/>Show active vs inactive reserves<br/>per block"]:::data
-
-    GRAPH_LAYER --> CLOSE["CLOSE<br/>AquaValve turns Aqua shared<br/>liquidity from soft virtual promises<br/>into programmable live capacity"]:::user
-
-    classDef sponsor fill:#312e81,stroke:#818cf8,color:#ffffff,stroke-width:2px;
     classDef core fill:#064e3b,stroke:#34d399,color:#ffffff,stroke-width:2px;
     classDef swapvm fill:#065f46,stroke:#6ee7b7,color:#ffffff,stroke-width:2px;
     classDef risk fill:#7f1d1d,stroke:#f87171,color:#ffffff,stroke-width:2px;

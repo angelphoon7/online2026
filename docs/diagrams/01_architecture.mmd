@@ -15,7 +15,6 @@ flowchart TB
     subgraph Frontend ["Frontend (Next.js)"]
         CW[ConnectWalletButton<br/>MetaMask]:::user
         WV[WorldVerifyButton<br/>Selfie Check]:::user
-        UI[Capacity Dashboard<br/>planned]:::planned
     end
 
     subgraph SwapVM ["SwapVM Instruction Pipeline"]
@@ -34,7 +33,6 @@ flowchart TB
 
     subgraph Discovery ["The Graph (planned)"]
         SG[Live Capacity<br/>Subgraph]:::data
-        IDX[Block-indexed<br/>active reserves]:::data
     end
 
     MW[Maker Wallet<br/>ERC-20 balance + allowance]:::user
@@ -50,8 +48,7 @@ flowchart TB
     XYC --> SETTLE
     SETTLE -->|safeTransferFrom| MW
 
-    ACT -.->|index events| SG
-    SG -.->|query| UI
+    ACT -.->|emit events| SG
 
     CW -.->|connect| MW
     WV -.->|step-up gate<br/>stretch only| ACT
@@ -59,7 +56,5 @@ flowchart TB
     classDef sponsor fill:#312e81,stroke:#818cf8,color:#ffffff,stroke-width:2px;
     classDef core fill:#064e3b,stroke:#34d399,color:#ffffff,stroke-width:2px;
     classDef swapvm fill:#065f46,stroke:#6ee7b7,color:#ffffff,stroke-width:2px;
-    classDef risk fill:#7f1d1d,stroke:#f87171,color:#ffffff,stroke-width:2px;
     classDef data fill:#164e63,stroke:#22d3ee,color:#ffffff,stroke-width:2px;
     classDef user fill:#3f3f46,stroke:#d4d4d8,color:#ffffff,stroke-width:2px;
-    classDef planned fill:#1e1b4b,stroke:#6366f1,color:#a5b4fc,stroke-width:1px,stroke-dasharray: 5 5;

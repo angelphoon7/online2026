@@ -22,24 +22,15 @@ stateDiagram-v2
         end note
 
         ActiveBlock --> ConsumedCurve: exact-in trade executes
-        note right of ConsumedCurve
-            activeReserve moves along curve
-            no fresh slice this block
-        end note
-
         ConsumedCurve --> ConsumedCurve: another exact-in same block
-        ConsumedCurve --> ActiveBlock: block N+1 arrives
-        ActiveBlock --> ActiveBlock: block N+1 arrives (repartition)
+        ConsumedCurve --> ActiveBlock: block N+1 (repartition)
+        ActiveBlock --> ActiveBlock: block N+1 (repartition)
 
         state ExactOutCheck <<choice>>
         ActiveBlock --> ExactOutCheck: exact-out requested
         ExactOutCheck --> ConsumedCurve: amountOut < effective active
         ExactOutCheck --> Reverted: amountOut >= effective active
         Reverted --> ActiveBlock: next block repartitions
-
-        note left of Reverted
-            ActiveLiquidityExceeded
-        end note
     }
 
     state "Shared Γ State Machine" as SharedGamma {
@@ -48,31 +39,14 @@ stateDiagram-v2
         Idle --> Open: first sibling quotes in block N
         note right of Open
             openingCoverage = min(balance, allowance)
-            remaining = openingCoverage × Γ_fraction
-            blockNumber = N
+            remaining = openingCoverage
         end note
 
         Open --> Consuming: sibling order fills
-        note right of Consuming
-            remaining -= consumed
-        end note
-
         Consuming --> Consuming: another sibling fills (same block)
         Consuming --> GroupExceeded: remaining < requested
-        note left of GroupExceeded
-            GroupActiveLiquidityExceeded
-        end note
 
-        Consuming --> Open: block N+1 (refresh from new coverage)
+        Consuming --> Open: block N+1 (refresh)
         Open --> Open: block N+1 (refresh)
         GroupExceeded --> Open: block N+1 (refresh)
-
-        state CoverageDrop <<choice>>
-        Open --> CoverageDrop: balance or allowance drops
-        CoverageDrop --> ShrunkQuote: scale remaining proportionally
-        note right of ShrunkQuote
-            quote shrinks, does not brick
-        end note
-        ShrunkQuote --> Consuming: fill within shrunk capacity
-        ShrunkQuote --> Open: block N+1 (refresh)
     }

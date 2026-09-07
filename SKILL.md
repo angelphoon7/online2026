@@ -1,163 +1,405 @@
 ---
-name: hackathon-execution-docs
-summary: Generate hackathon-grade README.md, FULL_EXECUTION.md, sponsor mapping, and Mermaid diagrams for a build-from-scratch Web3 project.
-description: Use this skill when the user asks for full execution docs, README.md, AGENT.md/agent.md, architecture diagrams, sequence diagrams, sponsor-track positioning, demo flow, or generated diagrams for a hackathon project. Optimized for AquaValve-style projects using 1inch Aqua/SwapVM with optional The Graph, World, Chainlink, Ledger, or Uniswap extensions.
+name: aquavalve-build
+summary: Build and test AquaValve — a custom 1inch Aqua SwapVM extension with programmable live liquidity (local λ + shared Γ).
+description: Use this skill to build the AquaValve Solidity contracts, run test gates, generate documentation, and prepare a hackathon demo. Covers Foundry setup, Aqua/SwapVM interfaces, ACTIVENESS_XD instruction, local λ scaling, shared Γ wallet envelope, coverage-drop quote shrinking, Decay composition, The Graph subgraph, and all required diagrams.
 ---
 
-# Hackathon Execution Docs Skill
+# AquaValve Build Skill
 
 ## Mission
-Create documentation that helps judges understand the project in one pass and helps builders execute without redesigning the idea.
 
-The output must make clear:
-
-1. **What the project is.**
-2. **What problem it solves.**
-3. **Which sponsor primitive is load-bearing.**
-4. **What is implemented now vs planned later.**
-5. **How to run the demo and tests.**
-6. **What claims must not be made.**
-
-For AquaValve, the core sentence is:
+Build a working AquaValve — a custom Aqua app and SwapVM extension where liquidity liveness is programmable. The output must compile, pass test gates, and demonstrate the core claim:
 
 > Liquidity doesn't have to be all-in. AquaValve lets a maker decide how much goes live each block.
 
 ## First Actions
-Before writing or editing docs:
 
-1. Read project-specific instructions in `AGENT.md`, `agent.md`, `CLAUDE.md`, or `README.md` if present.
-2. Read `PITCH.md`, `TEST_PLAN.md`, existing docs, and relevant contract names.
-3. Inspect the repository tree.
-4. Identify what is actually implemented.
-5. Do **not** claim compile/test/deploy success unless logs or commands prove it.
+Before writing any code:
 
-If implementation status is unclear, label it explicitly as:
+1. Read `AGENTS.md` for non-negotiable technical semantics and test gates.
+2. Check if Foundry is installed: `forge --version`.
+3. Check the repo tree: identify what exists (frontend, docs) vs what is missing (contracts, tests).
+4. Do **not** claim compile/test/deploy success unless command output proves it.
 
-- `Implemented`
-- `In progress`
-- `Planned`
-- `Stretch`
-- `Not implemented`
+## Phase 1 — Foundry Setup
 
-## Required Outputs
-When asked to create full project docs, generate or update:
+### 1.1 Initialize Foundry (alongside existing Next.js)
 
-```text
+```bash
+forge init --no-git --no-commit
+```
+
+This creates:
+
+```
+foundry.toml
+src/              # Solidity source (rename or symlink to contracts/ if preferred)
+test/             # Foundry tests
+script/           # deploy scripts
+lib/              # dependencies (forge-std)
+```
+
+### 1.2 Configure foundry.toml
+
+```toml
+[profile.default]
+src = "contracts"
+out = "out"
+libs = ["lib"]
+solc = "0.8.24"
+optimizer = true
+optimizer_runs = 200
+
+[profile.default.fuzz]
+runs = 256
+```
+
+Move the default `src/` to `contracts/` if using that convention:
+
+```bash
+mv src contracts
+```
+
+### 1.3 Install forge-std
+
+```bash
+forge install foundry-rs/forge-std --no-git --no-commit
+```
+
+### 1.4 Verify
+
+```bash
+forge build
+```
+
+Must compile with zero errors before proceeding.
+
+## Phase 2 — Aqua/SwapVM Interfaces
+
+1inch Aqua is not a public Foundry package. Build minimal interfaces that model the parts AquaValve needs.
+
+### 2.1 Files to create
+
+```
+contracts/interfaces/IAqua.sol
+contracts/interfaces/ISwapVM.sol
+contracts/interfaces/IERC20.sol
+contracts/lib/SwapVMTypes.sol
+```
+
+### 2.2 IAqua.sol — what we need from Aqua
+
+```solidity
+interface IAqua {
+    function safeBalances(
+        address maker,
+        bytes32 orderHash,
+        address tokenIn,
+        address tokenOut
+    ) external view returns (uint256 reserveIn, uint256 reserveOut);
+
+    function settle(
+        address maker,
+        address taker,
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 amountOut,
+        bytes32 orderHash
+    ) external;
+}
+```
+
+### 2.3 SwapVMTypes.sol — shared types
+
+```solidity
+struct Order {
+    address maker;
+    address tokenIn;
+    address tokenOut;
+    uint256 reserveIn;
+    uint256 reserveOut;
+    bytes32 groupId;
+    uint256 activenessNumerator;   // λ as fraction of 1e18
+    uint256 activenessGroupCap;    // Γ envelope cap
+    bytes   strategyBytes;
+}
+```
+
+### 2.4 Key constraint
+
+Do **not** reimplement order-hash logic off-chain. Use `router.hash(order)` as the source of truth.
+
+## Phase 3 — Core Contracts
+
+Build in this order. Each contract must compile before starting the next.
+
+### 3.1 Activeness.sol — the ACTIVENESS_XD instruction
+
+This is the core. It does two things:
+
+**Local λ — per-position active reserves:**
+
+```
+effectiveReserve = totalReserve × λ / 1e18
+```
+
+State per position per token:
+
+```solidity
+struct LocalState {
+    uint256 blockNumber;
+    uint256 activeReserveIn;
+    uint256 activeReserveOut;
+}
+mapping(bytes32 => mapping(address => LocalState)) public localState;
+// key: orderHash => token => state
+```
+
+Rules:
+- `λ = 1e18` (100%) must behave identically to vanilla XYC.
+- Same-block trades continue on consumed active curve — no fresh slice.
+- Next block repartitions from current total state.
+
+**Shared Γ — wallet-level envelope:**
+
+```solidity
+struct GroupState {
+    uint256 blockNumber;
+    uint256 openingCoverage;
+    uint256 remaining;
+}
+mapping(bytes32 => GroupState) public groupState;
+// key: keccak256(maker, groupId, token)
+```
+
+Coverage:
+
+```solidity
+uint256 coverage = min(
+    IERC20(token).balanceOf(maker),
+    IERC20(token).allowance(maker, aqua)
+);
+```
+
+Rules:
+- Coverage drops shrink quotes proportionally. Never brick `quote()`.
+- Same-block inflows do not reopen envelope until next block.
+- Group state uses ordinary storage (not transient).
+- Same outer transaction must share group consumption across different order hashes.
+
+**ExactOut guard:**
+
+```solidity
+require(amountOut < finalEffectiveActiveOut, "ActiveLiquidityExceeded");
+```
+
+Use the final scaled output reserve after both local λ and group coverage scaling. Do not rely on downstream XYC arithmetic panic.
+
+**Opcode index:**
+
+Do not hard-code `0x92`. Append to the actual `_instructions()` table and expose:
+
+```solidity
+function activenessOpcode() external view returns (uint8);
+```
+
+### 3.2 AquaValveRouter.sol — modified SwapVM router
+
+Instruction pipeline:
+
+```
+ACTIVENESS_XD → optional DECAY_XD → XYC_SWAP → settlement
+```
+
+Two paths:
+- `quote(order, amountIn)` → returns amountOut, **zero state writes**.
+- `swap(order, amountIn)` → persists local + group state, calls Aqua settlement.
+
+The router must:
+- Call `IAqua.safeBalances()` for full virtual reserves.
+- Run `ACTIVENESS_XD` (scales reserves, checks group envelope).
+- Optionally run `DECAY_XD` (time-based price impact recovery).
+- Run `XYC_SWAP` (constant-product pricing).
+- On swap path: persist state, call `IAqua.settle()`.
+
+Expose `hash(order)` as the canonical order-hash source.
+
+### 3.3 AquaValveOrderBuilder.sol — strategy builder
+
+Encodes activeness parameters into strategy bytes for Aqua orders:
+
+```solidity
+function buildStrategy(
+    uint256 activenessNumerator,
+    bytes32 groupId,
+    uint256 groupCap
+) external pure returns (bytes memory strategyBytes);
+```
+
+Uses `router.hash(order)` — no independent hash reimplementation.
+
+### 3.4 DemoTaker.sol — multi-order test helper
+
+A contract that calls two orders in a single transaction to prove shared Γ works:
+
+```solidity
+function fillTwoOrders(
+    Order calldata orderA,
+    uint256 amountInA,
+    Order calldata orderB,
+    uint256 amountInB
+) external;
+```
+
+This is critical for Gate 2 — it proves that order B sees the group state consumed by order A within the same transaction.
+
+## Phase 4 — Test Gates
+
+Run gates in order. Do not skip ahead.
+
+### Gate 0 — Compile
+
+```bash
+forge build
+```
+
+Zero errors. Zero warnings about the core contracts.
+
+### Gate 1 — Local λ
+
+File: `test/ActivenessSinglePosition.t.sol`
+
+Write these 7 tests:
+
+| Test | Setup | Assert |
+|---|---|---|
+| `test_lambda_100_equals_XYC` | λ = 1e18, exact-in | Output == vanilla XYC output |
+| `test_same_block_does_not_refresh_lambda` | Two trades, same block | Second trade uses consumed curve |
+| `test_split_trade_does_not_reactivate_liquidity` | Split exact-in, same block | Combined == single trade on active curve |
+| `test_next_block_repartitions` | Trade block N, trade block N+1 | Block N+1 gets fresh active reserves |
+| `test_exact_in_continues_on_consumed_curve` | Sequential exact-in, same block | Each faces moved curve |
+| `test_exact_out_above_effective_active_reverts` | exactOut >= effective | Reverts `ActiveLiquidityExceeded` |
+| `test_quote_does_not_mutate_state` | Call quote, snapshot state | State unchanged after quote |
+
+To advance blocks in Foundry:
+
+```solidity
+vm.roll(block.number + 1);
+```
+
+Run:
+
+```bash
+forge test --match-contract ActivenessSinglePosition -vvv
+```
+
+### Gate 2 — Shared Γ
+
+File: `test/ActivenessGroupEnvelope.t.sol`
+
+Write these 4 tests using `DemoTaker`:
+
+| Test | Setup | Assert |
+|---|---|---|
+| `test_two_orders_same_tx_share_group_budget` | DemoTaker fills A then B | B capacity reflects A consumption |
+| `test_coverage_drop_shrinks_quote_not_reverts` | Reduce maker balance | Quote shrinks, no revert |
+| `test_allowance_drop_shrinks_quote_not_reverts` | Reduce maker allowance | Quote shrinks, no revert |
+| `test_same_block_inflow_does_not_reopen_envelope` | Deposit in same block | Group remaining unchanged |
+
+Run:
+
+```bash
+forge test --match-contract ActivenessGroupEnvelope -vvv
+```
+
+### Gate 3 — Decay Composition
+
+File: `test/ActivenessDecayComposition.t.sol`
+
+Run the same swap through 4 pipelines and compare:
+
+1. XYC only
+2. DECAY + XYC
+3. ACTIVENESS + XYC
+4. ACTIVENESS + DECAY + XYC
+
+```bash
+forge test --match-contract ActivenessDecayComposition -vvv
+```
+
+### Gate 4 — Demo
+
+This is the live demo. Requires all prior gates green.
+
+1. Deploy contracts to a local Anvil fork or testnet.
+2. Fund maker wallet.
+3. Create two positions.
+4. Execute the demo script from `FULL_EXECUTION.md` Section 9.
+
+### Hash Integrity
+
+```bash
+forge test --match-test test_aqua_strategy_hash_matches_router_order_hash -vvv
+```
+
+## Phase 5 — The Graph (Secondary Sponsor)
+
+Only after Gate 2 passes.
+
+### 5.1 Event to emit from Activeness.sol
+
+```solidity
+event ActivenessApplied(
+    bytes32 indexed orderHash,
+    address indexed maker,
+    bytes32 indexed groupId,
+    address token,
+    uint256 effectiveActive,
+    uint256 totalReserve,
+    uint256 groupRemaining,
+    uint256 blockNumber
+);
+```
+
+### 5.2 Subgraph entities
+
+```
+ActivePosition    — per-order active reserves per block
+GroupEnvelope     — per-maker per-group remaining capacity
+CoverageSnapshot  — balance/allowance readings
+```
+
+### 5.3 Subgraph purpose
+
+Solvers query the subgraph to discover which positions have remaining capacity before routing. This avoids wasted gas on positions that will revert.
+
+## Phase 6 — Documentation
+
+After contracts compile and tests pass, generate or update:
+
+```
 README.md
 FULL_EXECUTION.md
 PITCH.md
 TEST_PLAN.md
-SUBMISSION.md
-FEEDBACK.md                 # only if a sponsor explicitly requires it
-docs/diagrams/*.mmd         # Mermaid source of every diagram
-public/diagrams/*.svg       # rendered diagrams, if mermaid-cli is available
-scripts/render-diagrams.mjs # optional helper to render diagrams
+docs/diagrams/*.mmd
 ```
 
-Never embed only screenshots. The source `.mmd` files must exist so diagrams are reproducible.
+### Required diagrams (Mermaid source)
 
-## README.md Structure
-Use this order unless the user asks otherwise:
-
-1. Project name + one-line pitch.
-2. The problem in plain language.
-3. What the project does.
-4. Why the sponsor primitive is load-bearing.
-5. Architecture diagram.
-6. Core execution flow.
-7. Key contracts / files.
-8. How to run tests.
-9. Demo script.
-10. Sponsor alignment.
-11. Security boundaries / non-claims.
-12. Current status.
-13. Roadmap / stretch tracks.
-
-The README must be judge-readable in under 5 minutes.
-
-## FULL_EXECUTION.md Structure
-This document is for builders and reviewers. Include:
-
-1. System overview.
-2. Actor list.
-3. Contract responsibilities.
-4. State machine.
-5. Exact transaction flow.
-6. Quote vs swap behavior.
-7. Failure paths.
-8. Test gates.
-9. Demo sequence.
-10. Deployment steps.
-11. Known limitations.
-12. Cut lines: what gets removed if time runs out.
-
-## AquaValve-Specific Ground Rules
-For AquaValve docs, preserve these claims exactly:
-
-### Correct Claims
-- AMMs made price programmable; AquaValve makes liquidity liveness programmable.
-- `ACTIVENESS_XD` controls how much inventory is live for a block.
-- Local `λ` controls per-position active reserves.
-- Shared `Γ` / group envelope turns settlement-time overcommitment into quote-time deterministic capacity.
-- Aqua's final ERC-20 transfer is still the hard payment constraint.
-- AquaValve does **not** make an insolvent wallet solvent.
-- Same-block exact-in trades may still execute; they continue on the consumed active curve.
-- Same-block trades do not receive a fresh active slice.
-- Exact-out must revert only when requested output is greater than or equal to the final effective output reserve after local λ and group coverage scaling.
-- Coverage drops should shrink quotes, not brick quote calls.
-- Decay controls how quickly price impact recovers; AquaValve controls how much inventory participates in repricing. They are orthogonal and composable.
-
-### Forbidden Claims
-Do not claim:
-
-- AquaValve guarantees solvency.
-- Selfie Check secures swaps or proves wallet ownership.
-- Uniswap is required to make the Aqua project complete.
-- A hard-coded opcode such as `0x92` is safe across deployments.
-- Model tests equal Solidity integration tests.
-- The project has passed compile/tests/deployment unless logs prove it.
-
-## Sponsor Mapping Rules
-Use sponsor integrations only when each sponsor owns a distinct structural layer.
-
-Good mapping:
-
-```text
-1inch / SwapVM  -> execution primitive
-Aqua            -> shared wallet position layer
-The Graph       -> live capacity discovery layer
-World           -> human step-up for exposure relaxation only
-Ledger          -> hardware approval for exposure-increasing actions only
-Chainlink CRE   -> private runtime headroom policy only
-Uniswap v4      -> portability proof for local λ only
+```
+docs/diagrams/01_architecture.mmd
+docs/diagrams/02_execution_sequence.mmd
+docs/diagrams/03_state_machine.mmd
+docs/diagrams/04_failure_paths.mmd
+docs/diagrams/05_sponsor_layers.mmd
+docs/diagrams/06_demo_flow.mmd
 ```
 
-Bad mapping:
+### Mermaid style
 
-```text
-World before every swap
-ENS name badge only
-Privy login only
-Uniswap duplicate implementation with no shared state
-Generic dashboard with no execution consequence
-```
-
-## Diagram Requirements
-Every major README or FULL_EXECUTION document should include Mermaid diagrams. Use generated source files, not manually edited screenshots.
-
-Recommended diagrams:
-
-1. `01_architecture.mmd` — system architecture.
-2. `02_execution_sequence.mmd` — transaction sequence.
-3. `03_state_machine.mmd` — local λ and shared Γ state machine.
-4. `04_failure_paths.mmd` — exactOut, coverage drop, group exceeded.
-5. `05_sponsor_layers.mmd` — sponsor mapping.
-6. `06_demo_flow.mmd` — 3-minute demo path.
-
-### Mermaid Style
-Use dark theme and clear colors. Prefer readable blocks over decorative complexity.
-
-Default Mermaid header:
+Use dark theme with colored classDefs:
 
 ```mermaid
 %%{init: {
@@ -168,14 +410,10 @@ Default Mermaid header:
     "primaryTextColor": "#f8fafc",
     "primaryBorderColor": "#64748b",
     "lineColor": "#94a3b8",
-    "secondaryColor": "#111827",
-    "tertiaryColor": "#0f172a",
     "fontFamily": "Inter, ui-sans-serif, system-ui, sans-serif"
   }
 }}%%
 ```
-
-Use `classDef` for colored flowcharts:
 
 ```mermaid
 classDef sponsor fill:#312e81,stroke:#818cf8,color:#ffffff,stroke-width:2px;
@@ -185,27 +423,74 @@ classDef data fill:#164e63,stroke:#22d3ee,color:#ffffff,stroke-width:2px;
 classDef user fill:#3f3f46,stroke:#d4d4d8,color:#ffffff,stroke-width:2px;
 ```
 
-## Rendering Diagrams
-If `@mermaid-js/mermaid-cli` is available:
+### Status labels
 
-```bash
-npm install --save-dev @mermaid-js/mermaid-cli
-node scripts/render-diagrams.mjs
+Every feature in docs must use one of:
+
+- `Implemented` — code exists and tests pass (with command output proof)
+- `In progress` — code exists, tests not yet green
+- `Planned` — no code yet
+- `Stretch` — depends on core being green first
+
+## Phase 7 — Sponsor Mapping
+
+Each sponsor must own a distinct structural layer:
+
+```
+1inch / SwapVM  → execution primitive (ACTIVENESS_XD)    — mandatory
+Aqua            → shared wallet position layer            — mandatory
+The Graph       → live capacity discovery layer           — preferred secondary
+World           → human step-up for exposure relaxation   — stretch only
+Ledger          → hardware approval for exposure increase — stretch only
+Chainlink CRE   → private runtime headroom policy        — stretch only
+Uniswap v4      → portability proof for local λ          — stretch only
 ```
 
-If rendering fails, leave `.mmd` files and embed Mermaid code blocks directly in Markdown. Do not block the main submission on PNG/SVG rendering.
+Do not add stretch sponsors until Gate 2 passes.
 
-## Output Quality Bar
-A document is complete only when:
+## Cut Lines
 
-- The first sentence is memorable.
-- The problem is clear without jargon.
-- Every sponsor integration has a removal test.
-- All diagrams have Mermaid source.
-- Test status is honest.
-- Failure cases are documented.
-- The demo can be rehearsed from the README alone.
-- No sponsor is used as a sticker.
+If **Gate 2 fails** by deadline → ship local-λ only:
 
-## Final Response Pattern
-When done, summarize changed files and give the next execution command. Do not redesign unless asked.
+```
+ACTIVENESS_XD + Decay composition + benchmark
+```
+
+Do not ship half-working Γ.
+
+If **Decay composition fails** → ship:
+
+```
+ACTIVENESS_XD + local λ + shared Γ + failure-path tests
+```
+
+## Forbidden
+
+- Do not claim tests pass without `forge test` output.
+- Do not hard-code opcode `0x92`.
+- Do not reimplement order-hash off-chain.
+- Do not claim AquaValve guarantees solvency.
+- Do not use World ID to secure swaps.
+- Do not add sponsors as stickers.
+- Do not use transient storage for group state.
+- Do not ship half-working Γ.
+
+## Quality Bar
+
+The build is complete when:
+
+- `forge build` compiles with zero errors.
+- Gate 1 (local λ) has 7 green tests with output.
+- Gate 2 (shared Γ) has 4 green tests with output.
+- Gate 3 (decay composition) runs 4 pipeline configurations.
+- README reflects actual implementation status, not aspirational claims.
+- Every diagram has Mermaid `.mmd` source.
+- Demo can be rehearsed from the README alone.
+
+## Execution Command
+
+After following this skill:
+
+```bash
+forge build && forge test -vvv
+```
