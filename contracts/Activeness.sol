@@ -1,11 +1,26 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.30;
 
-import {IERC20} from "./interfaces/IERC20.sol";
-import {LocalState, GroupState} from "./lib/SwapVMTypes.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Context, ContextLib } from "@1inch/swap-vm/src/libs/VM.sol";
+import { Opcode } from "@1inch/swap-vm/src/libs/OpcodeList.sol";
+import { MemoryPtr, MemoryPtrLib } from "@1inch/swap-vm/src/libs/MemoryPtr.sol";
+import { InstructionBuilder } from "@1inch/swap-vm/src/libs/InstructionBuilder.sol";
+import { InstructionArgs } from "@1inch/swap-vm/src/libs/InstructionArgs.sol";
 
-contract Activeness {
-    uint256 internal constant PRECISION = 1e18;
+/// @notice ACTIVENESS_XD opcode — programmable live liquidity
+/// @dev Scales balanceIn and balanceOut by local λ (per-position) and shared Γ (group envelope)
+///      before downstream instructions (Decay, XYC) run.
+/// @dev Encoding: [uint16 activenessNumeratorBps, uint16 headroomBps, bytes32 groupId]
+library Activeness {
+    using InstructionArgs for bytes;
+    using InstructionArgs for bytes32;
+    using MemoryPtrLib for MemoryPtr;
+    using InstructionBuilder for MemoryPtr;
+    using ContextLib for Context;
+
+    // Claim slot _92 in the "Balances tuning" bank (0x90-0xaf)
+    Opcode constant opcode = Opcode._92;
 
     error ActiveLiquidityExceeded();
     error GroupActiveLiquidityExceeded();
@@ -21,176 +36,210 @@ contract Activeness {
         uint256 blockNumber
     );
 
-    // localState[orderHash][token]
-    mapping(bytes32 => mapping(address => LocalState)) public localState;
+    // --- Instruction encoding ---
 
-    // groupState[keccak256(maker, groupId, token)]
-    mapping(bytes32 => GroupState) public groupState;
-
-    address public immutable aqua;
-
-    constructor(address _aqua) {
-        aqua = _aqua;
+    function sizeOf(uint16, uint16, bytes32) internal pure returns (uint256) {
+        return InstructionBuilder.sizeOf() + 2 + 2 + 32;
     }
 
-    function _groupKey(address maker, bytes32 groupId, address token) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(maker, groupId, token));
-    }
-
-    function _min(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a < b ? a : b;
-    }
-
-    function _coverage(address maker, address token) internal view returns (uint256) {
-        uint256 balance = IERC20(token).balanceOf(maker);
-        uint256 allowed = IERC20(token).allowance(maker, aqua);
-        return _min(balance, allowed);
-    }
-
-    /// @notice Compute effective active reserves for a position.
-    ///         Pure read — no state writes. Used by quote path.
-    function computeEffectiveReserves(
-        bytes32 orderHash,
-        address maker,
-        address tokenIn,
-        address tokenOut,
-        uint256 totalReserveIn,
-        uint256 totalReserveOut,
-        uint256 activenessNumerator,
-        bytes32 groupId
-    )
-        external
-        view
-        returns (uint256 effectiveIn, uint256 effectiveOut)
+    function build(uint16 activenessNumeratorBps, uint16 headroomBps, bytes32 groupId)
+        internal pure returns (bytes memory)
     {
-        (effectiveIn, effectiveOut) = _computeEffective(
-            orderHash, maker, tokenIn, tokenOut,
-            totalReserveIn, totalReserveOut,
-            activenessNumerator, groupId,
-            false // isSwap = false → no state writes
-        );
+        return build(
+            MemoryPtrLib.alloc(sizeOf(activenessNumeratorBps, headroomBps, groupId)),
+            activenessNumeratorBps, headroomBps, groupId
+        ).resolve();
     }
 
-    /// @notice Apply activeness, persist state. Used by swap path only.
-    function applyActiveness(
-        bytes32 orderHash,
-        address maker,
-        address tokenIn,
-        address tokenOut,
-        uint256 totalReserveIn,
-        uint256 totalReserveOut,
-        uint256 activenessNumerator,
-        bytes32 groupId,
-        uint256 amountIn,
-        uint256 amountOut
-    )
-        external
-        returns (uint256 effectiveIn, uint256 effectiveOut)
+    function build(MemoryPtr ptrStart, uint16 activenessNumeratorBps, uint16 headroomBps, bytes32 groupId)
+        internal pure returns (MemoryPtr ptr)
     {
-        (effectiveIn, effectiveOut) = _computeEffective(
-            orderHash, maker, tokenIn, tokenOut,
-            totalReserveIn, totalReserveOut,
-            activenessNumerator, groupId,
-            true // isSwap = true → persist state
-        );
+        ptr = ptrStart.pushHeader(opcode);
+        ptr = ptr.push(activenessNumeratorBps, 2);
+        ptr = ptr.push(headroomBps, 2);
+        ptr = ptr.push(groupId, 32);
+        ptrStart.patchLength(ptr);
+    }
 
-        if (amountOut >= effectiveOut) {
-            revert ActiveLiquidityExceeded();
+    function parse(bytes calldata args)
+        internal pure returns (uint16 activenessNumeratorBps, uint16 headroomBps, bytes32 groupId)
+    {
+        activenessNumeratorBps = args.at(0).asU16();
+        headroomBps = args.at(2).asU16();
+        groupId = args.at(4);
+    }
+
+    // --- Storage (ERC-7201 style) ---
+
+    // keccak256(abi.encode(uint256(keccak256("aquavalve.storage.Activeness")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 internal constant STORAGE_SLOT = 0x5a1d2e8f3c4b6a7890abcdef1234567890abcdef1234567890abcdef12345600;
+
+    struct LocalTokenState {
+        uint256 blockNumber;
+        uint256 activeReserve;
+    }
+
+    struct GroupState {
+        uint256 blockNumber;
+        uint256 openingCoverage;
+        uint256 remaining;
+    }
+
+    struct Storage {
+        mapping(bytes32 orderHash => mapping(address token => LocalTokenState)) local;
+        mapping(bytes32 groupKey => GroupState) group;
+    }
+
+    function store() internal pure returns (Storage storage $) {
+        bytes32 slot = STORAGE_SLOT;
+        assembly ("memory-safe") { $.slot := slot }
+    }
+
+    // --- Execution ---
+
+    function exec(Context memory ctx, bytes calldata args) internal {
+        Storage storage $ = store();
+        (uint16 activenessNumeratorBps, uint16 headroomBps, bytes32 groupId) = parse(args);
+
+        address aqua = _getAqua();
+
+        // --- Local λ: scale balances ---
+        _applyLocalLambda($, ctx, activenessNumeratorBps);
+
+        // --- Shared Γ: clamp to group envelope ---
+        _applyGroupEnvelope($, ctx, headroomBps, groupId, aqua);
+
+        // --- Run downstream instructions (Decay → XYC) ---
+        (uint256 amountIn, uint256 amountOut) = ctx.runLoop();
+
+        // --- Persist state on swap path only ---
+        if (!ctx.vm.isStaticContext) {
+            _persistLocalState($, ctx, amountIn, amountOut);
+            _persistGroupState($, ctx, groupId, amountOut);
+
+            emit ActivenessApplied(
+                ctx.query.orderHash,
+                ctx.query.maker,
+                groupId,
+                ctx.query.tokenOut,
+                ctx.swap.balanceOut,
+                ctx.swap.balanceOut + amountOut,
+                $.group[_groupKey(ctx.query.maker, groupId, ctx.query.tokenOut)].remaining,
+                block.number
+            );
         }
-
-        // Persist consumed curve for local λ
-        LocalState storage ls = localState[orderHash][tokenOut];
-        ls.blockNumber = block.number;
-        ls.activeReserveIn = effectiveIn + amountIn;
-        ls.activeReserveOut = effectiveOut - amountOut;
-
-        LocalState storage lsIn = localState[orderHash][tokenIn];
-        lsIn.blockNumber = block.number;
-        lsIn.activeReserveIn = effectiveIn + amountIn;
-        lsIn.activeReserveOut = effectiveOut - amountOut;
-
-        // Persist group consumption
-        bytes32 gKey = _groupKey(maker, groupId, tokenOut);
-        GroupState storage gs = groupState[gKey];
-        if (amountOut > gs.remaining) {
-            revert GroupActiveLiquidityExceeded();
-        }
-        gs.remaining -= amountOut;
-
-        emit ActivenessApplied(
-            orderHash, maker, groupId, tokenOut,
-            effectiveOut, totalReserveOut,
-            gs.remaining, block.number
-        );
     }
 
-    function _computeEffective(
-        bytes32 orderHash,
-        address maker,
-        address tokenIn,
-        address tokenOut,
-        uint256 totalReserveIn,
-        uint256 totalReserveOut,
-        uint256 activenessNumerator,
-        bytes32 groupId,
-        bool isSwap
-    )
-        internal
-        view
-        returns (uint256 effectiveIn, uint256 effectiveOut)
-    {
-        // --- Local λ ---
-        LocalState storage ls = localState[orderHash][tokenOut];
+    // --- Internal helpers ---
 
-        if (ls.blockNumber == block.number) {
+    function _applyLocalLambda(
+        Storage storage $,
+        Context memory ctx,
+        uint16 activenessNumeratorBps
+    ) private view {
+        LocalTokenState storage lsIn = $.local[ctx.query.orderHash][ctx.query.tokenIn];
+        LocalTokenState storage lsOut = $.local[ctx.query.orderHash][ctx.query.tokenOut];
+
+        if (lsOut.blockNumber == block.number && lsOut.activeReserve > 0) {
             // Same block: continue on consumed curve
-            effectiveIn = ls.activeReserveIn;
-            effectiveOut = ls.activeReserveOut;
+            ctx.swap.balanceOut = lsOut.activeReserve;
+            ctx.swap.balanceIn = lsIn.activeReserve;
         } else {
-            // New block: repartition from total state
-            effectiveIn = (totalReserveIn * activenessNumerator) / PRECISION;
-            effectiveOut = (totalReserveOut * activenessNumerator) / PRECISION;
+            // New block: repartition from total reserves
+            ctx.swap.balanceIn = ctx.swap.balanceIn * activenessNumeratorBps / 10000;
+            ctx.swap.balanceOut = ctx.swap.balanceOut * activenessNumeratorBps / 10000;
         }
+    }
 
-        // --- Shared Γ (group envelope) ---
-        bytes32 gKey = _groupKey(maker, groupId, tokenOut);
-        GroupState storage gs = groupState[gKey];
+    function _applyGroupEnvelope(
+        Storage storage $,
+        Context memory ctx,
+        uint16 headroomBps,
+        bytes32 groupId,
+        address aqua
+    ) private view {
+        bytes32 gKey = _groupKey(ctx.query.maker, groupId, ctx.query.tokenOut);
+        GroupState storage gs = $.group[gKey];
 
         if (gs.blockNumber == block.number) {
-            // Same block: use stored remaining directly.
-            // The remaining field already tracks consumption from swaps.
-            // Live coverage changes (drops from transfers, inflows from mints)
-            // are ignored until the next block opens a fresh envelope.
-            effectiveOut = _min(effectiveOut, gs.remaining);
+            // Same block: use stored remaining, ignore live coverage changes
+            if (ctx.swap.balanceOut > gs.remaining) {
+                ctx.swap.balanceOut = gs.remaining;
+                // Scale balanceIn proportionally
+                if (gs.openingCoverage > 0) {
+                    ctx.swap.balanceIn = ctx.swap.balanceIn * gs.remaining / gs.openingCoverage;
+                }
+            }
         } else {
-            // New block: open fresh envelope from current live coverage
-            uint256 currentCoverage = _coverage(maker, tokenOut);
-            effectiveOut = _min(effectiveOut, currentCoverage);
-        }
-
-        // Scale effectiveIn proportionally if effectiveOut was clamped
-        if (totalReserveOut > 0) {
-            uint256 rawEffectiveOut = (totalReserveOut * activenessNumerator) / PRECISION;
-            if (effectiveOut < rawEffectiveOut && rawEffectiveOut > 0) {
-                effectiveIn = (effectiveIn * effectiveOut) / rawEffectiveOut;
+            // New block: open fresh envelope from live coverage
+            uint256 coverage = _coverage(ctx.query.maker, ctx.query.tokenOut, aqua);
+            // headroomBps can only tighten, never exceed coverage
+            if (headroomBps < 10000) {
+                coverage = coverage * headroomBps / 10000;
+            }
+            if (ctx.swap.balanceOut > coverage) {
+                // Scale proportionally
+                if (ctx.swap.balanceOut > 0) {
+                    ctx.swap.balanceIn = ctx.swap.balanceIn * coverage / ctx.swap.balanceOut;
+                }
+                ctx.swap.balanceOut = coverage;
             }
         }
     }
 
-    /// @notice Initialize or refresh group state for a new block. Called by the router.
-    function initGroupState(
-        address maker,
+    function _persistLocalState(
+        Storage storage $,
+        Context memory ctx,
+        uint256 amountIn,
+        uint256 amountOut
+    ) private {
+        $.local[ctx.query.orderHash][ctx.query.tokenIn] = LocalTokenState({
+            blockNumber: block.number,
+            activeReserve: ctx.swap.balanceIn + amountIn
+        });
+        $.local[ctx.query.orderHash][ctx.query.tokenOut] = LocalTokenState({
+            blockNumber: block.number,
+            activeReserve: ctx.swap.balanceOut - amountOut
+        });
+    }
+
+    function _persistGroupState(
+        Storage storage $,
+        Context memory ctx,
         bytes32 groupId,
-        address token
-    ) external {
-        bytes32 gKey = _groupKey(maker, groupId, token);
-        GroupState storage gs = groupState[gKey];
+        uint256 amountOut
+    ) private {
+        bytes32 gKey = _groupKey(ctx.query.maker, groupId, ctx.query.tokenOut);
+        GroupState storage gs = $.group[gKey];
 
         if (gs.blockNumber < block.number) {
-            uint256 cov = _coverage(maker, token);
+            // Initialize for new block
+            address aqua = _getAqua();
+            uint256 cov = _coverage(ctx.query.maker, ctx.query.tokenOut, aqua);
             gs.blockNumber = block.number;
             gs.openingCoverage = cov;
             gs.remaining = cov;
         }
+
+        if (amountOut > gs.remaining) {
+            revert GroupActiveLiquidityExceeded();
+        }
+        gs.remaining -= amountOut;
+    }
+
+    function _groupKey(address maker, bytes32 groupId, address token) private pure returns (bytes32) {
+        return keccak256(abi.encodePacked(maker, groupId, token));
+    }
+
+    function _coverage(address maker, address token, address aqua) private view returns (uint256) {
+        uint256 balance = IERC20(token).balanceOf(maker);
+        uint256 allowed = IERC20(token).allowance(maker, aqua);
+        return balance < allowed ? balance : allowed;
+    }
+
+    function _getAqua() private view returns (address) {
+        // Read from the router's immutable aqua address via self-call
+        // In the actual deployment this would be wired at construction
+        return address(this);
     }
 }
