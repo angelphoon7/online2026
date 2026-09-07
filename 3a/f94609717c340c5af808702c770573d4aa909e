@@ -1,0 +1,2749 @@
+lib/openzeppelin-contracts/scripts/release/workflow/exit-prerelease.sh
+  0db9e05318d9af65 1-8
+lib/swap-vm/foundry.toml
+  0db9e05318d9af65 1-23
+lib/openzeppelin-contracts/test/account/AccountP256.test.js
+  0db9e05318d9af65 1-58
+lib/openzeppelin-contracts/test/token/ERC20/ERC20.test.js
+  0db9e05318d9af65 1-199
+lib/swap-vm/.cursor/BUGBOT.md
+  0db9e05318d9af65 1-98
+lib/openzeppelin-contracts/contracts/mocks/token/ERC20Reentrant.sol
+  0db9e05318d9af65 1-39
+lib/swap-vm/src/SwapVM.sol
+  0db9e05318d9af65 1-369
+lib/openzeppelin-contracts/.github/actions/gas-compare/action.yml
+  0db9e05318d9af65 1-51
+lib/openzeppelin-contracts/test/account/examples/AccountERC7702WithModulesMock.test.js
+  0db9e05318d9af65 1-99
+lib/openzeppelin-contracts/certora/specs/methods/IERC3156FlashBorrower.spec
+  0db9e05318d9af65 1-3
+lib/openzeppelin-contracts/test/token/ERC721/extensions/ERC721Royalty.test.js
+  0db9e05318d9af65 1-57
+lib/aqua/test/utils/StorageAccesses.sol
+  0db9e05318d9af65 1-23
+lib/openzeppelin-contracts/contracts/interfaces/IERC2309.sol
+  0db9e05318d9af65 1-19
+lib/openzeppelin-contracts/contracts/interfaces/draft-IERC7802.sol
+  0db9e05318d9af65 1-31
+lib/openzeppelin-contracts/lib/forge-std/README.md
+  0db9e05318d9af65 1-266
+lib/openzeppelin-contracts/certora/harnesses/Ownable2StepHarness.sol
+  0db9e05318d9af65 1-10
+lib/openzeppelin-contracts/test/token/ERC20/extensions/ERC20Pausable.test.js
+  0db9e05318d9af65 1-129
+lib/solidity-utils/contracts/libraries/BytesStorage.sol
+  0db9e05318d9af65 1-96
+lib/solidity-utils/test/contracts/CalldataPtr.test.ts
+  0db9e05318d9af65 1-73
+lib/solidity-utils/contracts/tests/mocks/WethReceiverMock.sol
+  0db9e05318d9af65 1-10
+lib/openzeppelin-contracts/lib/forge-std/src/StdChains.sol
+  0db9e05318d9af65 1-287
+lib/openzeppelin-contracts/test/proxy/Clones.t.sol
+  0db9e05318d9af65 1-91
+lib/openzeppelin-contracts/contracts/interfaces/IERC5313.sol
+  0db9e05318d9af65 1-16
+lib/openzeppelin-contracts/scripts/release/workflow/start.sh
+  0db9e05318d9af65 1-35
+lib/openzeppelin-contracts/logo.svg
+  0db9e05318d9af65 1-15
+lib/openzeppelin-contracts/test/utils/Address.test.js
+  0db9e05318d9af65 1-281
+lib/swap-vm/.npmrc
+  0db9e05318d9af65 1
+lib/swap-vm/test/mocks/InvalidProtocolFeeProviderMock.sol
+  0db9e05318d9af65 1-23
+lib/swap-vm/test/invariants/TWAPLimitSwapInvariants.t.sol
+  0db9e05318d9af65 1-555
+lib/solidity-utils/docs/js/src/functions/decompressPermit.md
+  0db9e05318d9af65 1-37
+lib/solidity-utils/README.md
+  0db9e05318d9af65 1-26
+lib/openzeppelin-contracts/scripts/release/workflow/pack.sh
+  0db9e05318d9af65 1-26
+lib/openzeppelin-contracts/scripts/generate/templates/MerkleProof.opts.js
+  0db9e05318d9af65 1-11
+lib/swap-vm/test/invariants/ConcentrateXYCDecayFeesInvariants.t.sol
+  0db9e05318d9af65 1-266
+lib/openzeppelin-contracts/certora/specs/AccessManager.spec
+  0db9e05318d9af65 1-826
+lib/openzeppelin-contracts/test/utils/cryptography/EIP712.test.js
+  0db9e05318d9af65 1-105
+lib/openzeppelin-contracts/contracts/utils/cryptography/signers/SignerERC7702.sol
+  0db9e05318d9af65 1-25
+lib/openzeppelin-contracts/.solcover.js
+  0db9e05318d9af65 1-21
+lib/openzeppelin-contracts/test/access/manager/AccessManager.predicate.js
+  0db9e05318d9af65 1-456
+lib/openzeppelin-contracts/test/proxy/Clones.test.js
+  0db9e05318d9af65 1-177
+lib/solidity-utils/docs/contracts/interfaces/ICreate3Deployer.md
+  0db9e05318d9af65 1-49
+lib/swap-vm/test/invariants/xyc/DustAmounts.t.sol
+  0db9e05318d9af65 1-78
+lib/swap-vm/.editorconfig
+  0db9e05318d9af65 1-32
+lib/openzeppelin-contracts/certora/specs/Nonces.spec
+  0db9e05318d9af65 1-92
+lib/swap-vm/THIRD_PARTY_NOTICES
+  0db9e05318d9af65 1-41
+lib/solidity-utils/docgen/templates/enum.hbs
+  0db9e05318d9af65 1-9
+lib/swap-vm/package.json
+  0db9e05318d9af65 1-47
+lib/solidity-utils/docs/contracts/interfaces/IWETH.md
+  0db9e05318d9af65 1-49
+lib/swap-vm/LICENSES/MIT-Forge-Std.txt
+  0db9e05318d9af65 1-25
+lib/swap-vm/LICENSES/MIT-OpenZeppelin.txt
+  0db9e05318d9af65 1-22
+lib/swap-vm/src/interfaces/ISwapVM.sol
+  0db9e05318d9af65 1-54
+lib/openzeppelin-contracts/test/utils/Bytes.t.sol
+  0db9e05318d9af65 1-117
+lib/openzeppelin-contracts/test/governance/utils/ERC6372.behavior.js
+  0db9e05318d9af65 1-28
+lib/openzeppelin-contracts/test/helpers/access-manager.js
+  0db9e05318d9af65 1-85
+lib/openzeppelin-contracts/contracts/mocks/EIP712Verifier.sol
+  0db9e05318d9af65 1-16
+lib/openzeppelin-contracts/docs/templates/properties.js
+  0db9e05318d9af65 1-88
+lib/openzeppelin-contracts/test/token/ERC20/extensions/ERC4626.test.js
+  0db9e05318d9af65 1-888
+lib/solidity-utils/contracts/mixins/OnlyWethReceiver.sol
+  0db9e05318d9af65 1-31
+lib/openzeppelin-contracts/scripts/release/workflow/publish.sh
+  0db9e05318d9af65 1-26
+lib/openzeppelin-contracts/test/token/ERC20/extensions/ERC20Burnable.test.js
+  0db9e05318d9af65 1-105
+lib/aqua/examples/apps/interfaces/IXYCSwapCallback.sol
+  0db9e05318d9af65 1-31
+lib/openzeppelin-contracts/scripts/upgradeable/patch-apply.sh
+  0db9e05318d9af65 1-19
+lib/openzeppelin-contracts/contracts/governance/IGovernor.sol
+  0db9e05318d9af65 1-454
+lib/openzeppelin-contracts/contracts/mocks/token/ERC1363ReturnFalseMock.sol
+  0db9e05318d9af65 1-34
+lib/openzeppelin-contracts/certora/harnesses/AccessManagerHarness.sol
+  0db9e05318d9af65 1-116
+lib/openzeppelin-contracts/contracts/mocks/governance/GovernorSequentialProposalIdMock.sol
+  0db9e05318d9af65 1-39
+lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol
+  0db9e05318d9af65 1-212
+lib/openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Metadata.sol
+  0db9e05318d9af65 1-27
+lib/openzeppelin-contracts/test/token/ERC1155/extensions/ERC1155Supply.test.js
+  0db9e05318d9af65 1-119
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/10/run-latest.json
+  0db9e05318d9af65 1-77
+lib/swap-vm/test/BaseFeeAdjuster.t.sol
+  0db9e05318d9af65 1-407
+lib/openzeppelin-contracts/test/proxy/beacon/BeaconProxy.test.js
+  0db9e05318d9af65 1-141
+lib/openzeppelin-contracts/certora/Makefile
+  0db9e05318d9af65 1-54
+lib/aqua/src/AquaApp.sol
+  0db9e05318d9af65 1-69
+lib/solidity-utils/contracts/mixins/PermitAndCall.sol
+  0db9e05318d9af65 1-39
+lib/solidity-utils/docs/contracts/mixins/SelfdestructEthSender.md
+  0db9e05318d9af65 1-37
+lib/openzeppelin-contracts/contracts/interfaces/IERC1155MetadataURI.sol
+  0db9e05318d9af65 1-6
+lib/openzeppelin-contracts/contracts/mocks/docs/access-control/AccessManagedERC20MintBase.sol
+  0db9e05318d9af65 1-16
+lib/openzeppelin-contracts/lib/forge-std/test/StdAssertions.t.sol
+  0db9e05318d9af65 1-141
+lib/solidity-utils/docs/contracts/mixins/Multicall.md
+  0db9e05318d9af65 1-26
+lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Pausable.sol
+  0db9e05318d9af65 1-33
+lib/swap-vm/test/RunLoop.t.sol
+  0db9e05318d9af65 1-362
+lib/openzeppelin-contracts/scripts/gen-nav.js
+  0db9e05318d9af65 1-81
+lib/swap-vm/LICENSE
+  0db9e05318d9af65 1-3
+lib/solidity-utils/test/contracts/RevertReasonForwarder.test.ts
+  0db9e05318d9af65 1-30
+lib/openzeppelin-contracts/test/helpers/random.js
+  0db9e05318d9af65 1-24
+lib/openzeppelin-contracts/contracts/interfaces/IERC3156FlashBorrower.sol
+  0db9e05318d9af65 1-27
+lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol
+  0db9e05318d9af65 1-160
+lib/aqua/src/libs/Balance.sol
+  0db9e05318d9af65 1-43
+lib/openzeppelin-contracts/contracts/utils/structs/Checkpoints.sol
+  0db9e05318d9af65 1-630
+lib/openzeppelin-contracts/contracts/mocks/governance/GovernorVoteMock.sol
+  0db9e05318d9af65 1-20
+lib/swap-vm/LICENSES/Apache-2.0-Forge-Std.txt
+  0db9e05318d9af65 1-203
+lib/openzeppelin-contracts/test/utils/math/SignedMath.test.js
+  0db9e05318d9af65 1-53
+lib/swap-vm/test/invariants/pegged/VeryLinear.t.sol
+  0db9e05318d9af65 1-33
+lib/swap-vm/test/invariants/xyc/HugeLiquidity.t.sol
+  0db9e05318d9af65 1-37
+lib/openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol
+  0db9e05318d9af65 1-59
+lib/openzeppelin-contracts/contracts/mocks/token/ERC721ConsecutiveMock.sol
+  0db9e05318d9af65 1-61
+lib/openzeppelin-contracts/contracts/mocks/governance/GovernorProposalGuardianMock.sol
+  0db9e05318d9af65 1-27
+lib/openzeppelin-contracts/test/utils/introspection/ERC165.test.js
+  0db9e05318d9af65 1-18
+lib/swap-vm/src/libs/MakerTraits.sol
+  0db9e05318d9af65 1-264
+lib/openzeppelin-contracts/contracts/mocks/proxy/ClashingImplementation.sol
+  0db9e05318d9af65 1-19
+lib/openzeppelin-contracts/contracts/interfaces/draft-IERC7674.sol
+  0db9e05318d9af65 1-17
+lib/openzeppelin-contracts/contracts/mocks/token/ERC721ConsecutiveEnumerableMock.sol
+  0db9e05318d9af65 1-42
+lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Capped.sol
+  0db9e05318d9af65 1-54
+lib/openzeppelin-contracts/contracts/utils/cryptography/signers/MultiSignerERC7913.sol
+  0db9e05318d9af65 1-252
+lib/solidity-utils/contracts/libraries/SafeERC20.sol
+  0db9e05318d9af65 1-514
+lib/solidity-utils/docs/contracts/interfaces/IERC20MetadataUppercase.md
+  0db9e05318d9af65 1-36
+lib/solidity-utils/test/contracts/BySigTraits.test.ts
+  0db9e05318d9af65 1-88
+lib/openzeppelin-contracts/test/utils/types/Time.test.js
+  0db9e05318d9af65 1-135
+lib/openzeppelin-contracts/lib/halmos-cheatcodes/LICENSE
+  0db9e05318d9af65 1-661
+lib/swap-vm/test/mocks/MockTaker.sol
+  0db9e05318d9af65 1-72
+lib/swap-vm/test/utils/OrderHasher.sol
+  0db9e05318d9af65 1-41
+lib/openzeppelin-contracts/certora/specs/DoubleEndedQueue.spec
+  0db9e05318d9af65 1-300
+lib/openzeppelin-contracts/certora/specs/methods/IAccessControlDefaultAdminRules.spec
+  0db9e05318d9af65 1-36
+lib/openzeppelin-contracts/test/utils/Packing.t.sol
+  0db9e05318d9af65 1-993
+lib/openzeppelin-contracts/lib/forge-std/test/StdJson.t.sol
+  0db9e05318d9af65 1-49
+lib/solidity-utils/test/contracts/ECDSA.test.ts
+  0db9e05318d9af65 1-1257
+lib/swap-vm/test/DynamicProtocolFee.t.sol
+  0db9e05318d9af65 1-422
+lib/swap-vm/test/invariants/concentrate/LargeAmounts.t.sol
+  0db9e05318d9af65 1-51
+lib/swap-vm/src/libs/Power.sol
+  0db9e05318d9af65 1-24
+lib/openzeppelin-contracts/test/governance/extensions/GovernorERC721.test.js
+  0db9e05318d9af65 1-131
+lib/aqua/LICENSE
+  0db9e05318d9af65 1-3
+lib/aqua/test/mock/ERC20.sol
+  0db9e05318d9af65 1-13
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/account-abstraction.adoc
+  0db9e05318d9af65 1-100
+lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC4626.sol
+  0db9e05318d9af65 1-282
+lib/solidity-utils/docs/contracts/interfaces/IERC7597Permit.md
+  0db9e05318d9af65 1-28
+lib/swap-vm/test/TakerCallbackAquaNegative.t.sol
+  0db9e05318d9af65 1-162
+lib/openzeppelin-contracts/contracts/utils/Errors.sol
+  0db9e05318d9af65 1-34
+lib/solidity-utils/.editorconfig
+  0db9e05318d9af65 1-12
+lib/openzeppelin-contracts/contracts/mocks/compound/CompTimelock.sol
+  0db9e05318d9af65 1-174
+lib/swap-vm/src/instructions/DutchAuction.sol
+  0db9e05318d9af65 1-117
+lib/openzeppelin-contracts/scripts/generate/templates/TransientSlot.js
+  0db9e05318d9af65 1-80
+lib/openzeppelin-contracts/test/access/AccessControl.behavior.js
+  0db9e05318d9af65 1-874
+lib/openzeppelin-contracts/contracts/token/ERC721/ERC721.sol
+  0db9e05318d9af65 1-430
+lib/openzeppelin-contracts/contracts/proxy/Clones.sol
+  0db9e05318d9af65 1-294
+lib/swap-vm/ignition/modules/_router.ts
+  0db9e05318d9af65 1-20
+lib/swap-vm/src/interfaces/IMakerHooks.sol
+  0db9e05318d9af65 1-103
+lib/openzeppelin-contracts/contracts/interfaces/IERC777Recipient.sol
+  0db9e05318d9af65 1-35
+lib/openzeppelin-contracts/test/token/ERC20/extensions/draft-ERC20TemporaryApproval.test.js
+  0db9e05318d9af65 1-142
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/1/run-1774630670595.json
+  0db9e05318d9af65 1-69
+lib/solidity-utils/hardhat-setup/networks.ts
+  0db9e05318d9af65 1-201
+lib/solidity-utils/docgen/templates/variable.hbs
+  0db9e05318d9af65 1
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/56/run-latest.json
+  0db9e05318d9af65 1-69
+lib/openzeppelin-contracts/test/helpers/storage.js
+  0db9e05318d9af65 1-48
+lib/openzeppelin-contracts/.github/actions/setup/action.yml
+  0db9e05318d9af65 1-22
+lib/openzeppelin-contracts/certora/specs/ERC20.spec
+  0db9e05318d9af65 1-352
+lib/openzeppelin-contracts/contracts/interfaces/IERC7913.sol
+  0db9e05318d9af65 1-18
+lib/openzeppelin-contracts/contracts/mocks/ReentrancyTransientMock.sol
+  0db9e05318d9af65 1-50
+lib/swap-vm/test/invariants/concentrate/HugeLiquidity.t.sol
+  0db9e05318d9af65 1-44
+lib/swap-vm/test/invariants/xyc/ImbalancedPoolHighFees.t.sol
+  0db9e05318d9af65 1-50
+lib/openzeppelin-contracts/test/token/ERC20/extensions/ERC20Votes.test.js
+  0db9e05318d9af65 1-546
+lib/swap-vm/src/opcodes/LimitOpcodesDebug.sol
+  0db9e05318d9af65 1-26
+lib/swap-vm/test/invariants/pegged/PureSquareRoot.t.sol
+  0db9e05318d9af65 1-33
+lib/solidity-utils/docgen/templates/signature.hbs
+  0db9e05318d9af65 1
+lib/openzeppelin-contracts/test/utils/Blockhash.test.js
+  0db9e05318d9af65 1-76
+lib/openzeppelin-contracts/contracts/token/ERC1155/ERC1155.sol
+  0db9e05318d9af65 1-389
+lib/openzeppelin-contracts/contracts/utils/cryptography/signers/SignerRSA.sol
+  0db9e05318d9af65 1-65
+lib/openzeppelin-contracts/test/governance/extensions/GovernorTimelockAccess.test.js
+  0db9e05318d9af65 1-864
+lib/openzeppelin-contracts/contracts/utils/TransientSlot.sol
+  0db9e05318d9af65 1-183
+lib/solidity-utils/contracts/tests/libraries/StringUtilNaive.sol
+  0db9e05318d9af65 1-24
+lib/openzeppelin-contracts/contracts/interfaces/IERC721Receiver.sol
+  0db9e05318d9af65 1-6
+lib/openzeppelin-contracts/lib/forge-std/LICENSE-APACHE
+  0db9e05318d9af65 1-203
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/146/run-1774631056201.json
+  0db9e05318d9af65 1-69
+lib/openzeppelin-contracts/certora/specs/AccessManaged.spec
+  0db9e05318d9af65 1-34
+lib/openzeppelin-contracts/contracts/mocks/token/ERC721URIStorageMock.sol
+  0db9e05318d9af65 1-17
+lib/openzeppelin-contracts/contracts/token/ERC721/extensions/ERC721Enumerable.sol
+  0db9e05318d9af65 1-164
+lib/swap-vm/.cursor/rules/solidity-style.mdc
+  0db9e05318d9af65 1-92
+lib/openzeppelin-contracts/lib/forge-std/test/StdMath.t.sol
+  0db9e05318d9af65 1-202
+lib/solidity-utils/contracts/libraries/CalldataPtr.sol
+  0db9e05318d9af65 1-41
+lib/swap-vm/test/SwapVmAccounting.t.sol
+  0db9e05318d9af65 1-536
+lib/openzeppelin-contracts/.gitignore
+  0db9e05318d9af65 1-67
+lib/swap-vm/snapshots/OpcodeGas.json
+  0db9e05318d9af65 1-25
+lib/openzeppelin-contracts/contracts/mocks/AuthorityMock.sol
+  0db9e05318d9af65 1-69
+lib/openzeppelin-contracts/contracts/token/ERC721/extensions/ERC721Wrapper.sol
+  0db9e05318d9af65 1-102
+lib/openzeppelin-contracts/lib/forge-std/test/StdChains.t.sol
+  0db9e05318d9af65 1-227
+lib/openzeppelin-contracts/contracts/token/ERC1155/extensions/ERC1155Supply.sol
+  0db9e05318d9af65 1-88
+lib/openzeppelin-contracts/scripts/generate/templates/Arrays.opts.js
+  0db9e05318d9af65 1-9
+lib/openzeppelin-contracts/README.md
+  0db9e05318d9af65 1-108
+lib/swap-vm/test/gas/OpcodeGas.t.sol
+  0db9e05318d9af65 1-172
+lib/openzeppelin-contracts/test/token/ERC6909/extensions/ERC6909TokenSupply.test.js
+  0db9e05318d9af65 1-53
+lib/openzeppelin-contracts/test/account/AccountERC7702.t.sol
+  0db9e05318d9af65 1-97
+lib/solidity-utils/test/contracts/Transient.test.ts
+  0db9e05318d9af65 1-231
+lib/openzeppelin-contracts/contracts/interfaces/IERC1155.sol
+  0db9e05318d9af65 1-6
+lib/openzeppelin-contracts/scripts/set-max-old-space-size.sh
+  0db9e05318d9af65 1-10
+lib/openzeppelin-contracts/contracts/package.json
+  0db9e05318d9af65 1-32
+lib/openzeppelin-contracts/contracts/finance/README.adoc
+  0db9e05318d9af65 1-14
+lib/openzeppelin-contracts/scripts/release/format-changelog.js
+  0db9e05318d9af65 1-33
+lib/solidity-utils/docgen/templates/contract.hbs
+  0db9e05318d9af65 1-73
+lib/openzeppelin-contracts/contracts/mocks/docs/token/ERC721/GameItem.sol
+  0db9e05318d9af65 1-19
+lib/swap-vm/test/invariants/DutchAuctionLimitSwapInvariants.t.sol
+  0db9e05318d9af65 1-201
+lib/aqua/examples/test/XYCNestedSwaps.t.sol
+  0db9e05318d9af65 1-509
+lib/openzeppelin-contracts/scripts/generate/templates/StorageSlotMock.js
+  0db9e05318d9af65 1-57
+lib/swap-vm/test/invariants/pegged/LargeAmounts.t.sol
+  0db9e05318d9af65 1-37
+lib/openzeppelin-contracts/test/proxy/ERC1967/ERC1967Proxy.test.js
+  0db9e05318d9af65 1-23
+lib/openzeppelin-contracts/test/utils/Nonces.behavior.js
+  0db9e05318d9af65 1-189
+lib/openzeppelin-contracts/contracts/utils/Bytes.sol
+  0db9e05318d9af65 1-113
+lib/solidity-utils/contracts/tests/mocks/MulticallMock.sol
+  0db9e05318d9af65 1-32
+lib/swap-vm/test/invariants/pegged/BalancedPoolEdgeFees.t.sol
+  0db9e05318d9af65 1-49
+lib/openzeppelin-contracts/contracts/metatx/README.adoc
+  0db9e05318d9af65 1-17
+lib/openzeppelin-contracts/test/account/extensions/ERC7821.behavior.js
+  0db9e05318d9af65 1-145
+lib/aqua/README.md
+  0db9e05318d9af65 1-508
+lib/solidity-utils/contracts/libraries/RevertReasonParser.sol
+  0db9e05318d9af65 1-72
+lib/openzeppelin-contracts/contracts/mocks/ERC165/ERC165NotSupported.sol
+  0db9e05318d9af65 1-5
+lib/openzeppelin-contracts/contracts/utils/cryptography/SignatureChecker.sol
+  0db9e05318d9af65 1-135
+lib/openzeppelin-contracts/contracts/access/manager/AccessManager.sol
+  0db9e05318d9af65 1-740
+lib/openzeppelin-contracts/contracts/token/ERC721/extensions/ERC721Pausable.sol
+  0db9e05318d9af65 1-37
+lib/openzeppelin-contracts/scripts/generate/templates/Checkpoints.opts.js
+  0db9e05318d9af65 1-17
+lib/openzeppelin-contracts/contracts/mocks/docs/account/MyAccountERC7702.sol
+  0db9e05318d9af65 1-20
+lib/openzeppelin-contracts/test/helpers/eip712-types.js
+  0db9e05318d9af65 1-61
+lib/openzeppelin-contracts/certora/specs/EnumerableSet.spec
+  0db9e05318d9af65 1-246
+lib/openzeppelin-contracts/test/governance/Governor.t.sol
+  0db9e05318d9af65 1-59
+lib/swap-vm/snapshots/AMMGas.json
+  0db9e05318d9af65 1-24
+lib/swap-vm/test/mocks/BestRouteSelector.sol
+  0db9e05318d9af65 1-124
+lib/openzeppelin-contracts/test/helpers/strings.js
+  0db9e05318d9af65 1-5
+lib/openzeppelin-contracts/contracts/utils/cryptography/README.adoc
+  0db9e05318d9af65 1-67
+lib/openzeppelin-contracts/certora/specs/AccessControlDefaultAdminRules.spec
+  0db9e05318d9af65 1-464
+lib/openzeppelin-contracts/lib/forge-std/test/StdStyle.t.sol
+  0db9e05318d9af65 1-110
+lib/openzeppelin-contracts/contracts/governance/extensions/GovernorCountingFractional.sol
+  0db9e05318d9af65 1-190
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/4663/run-latest.json
+  0db9e05318d9af65 1-71
+lib/openzeppelin-contracts/test/access/AccessControl.test.js
+  0db9e05318d9af65 1-19
+lib/solidity-utils/contracts/tests/mocks/ReentrancyGuardMock.sol
+  0db9e05318d9af65 1-91
+lib/swap-vm/test/invariants/PeggedFeesInvariants.t.sol
+  0db9e05318d9af65 1-418
+lib/openzeppelin-contracts/test/utils/math/Math.test.js
+  0db9e05318d9af65 1-713
+lib/openzeppelin-contracts/test/utils/Pausable.test.js
+  0db9e05318d9af65 1-90
+lib/openzeppelin-contracts/test/utils/structs/DoubleEndedQueue.test.js
+  0db9e05318d9af65 1-102
+lib/swap-vm/test/gas/Gas.t.sol
+  0db9e05318d9af65 1-607
+lib/openzeppelin-contracts/scripts/solhint-custom/package.json
+  0db9e05318d9af65 1-8
+lib/openzeppelin-contracts/contracts/utils/Calldata.sol
+  0db9e05318d9af65 1-25
+lib/solidity-utils/contracts/libraries/RevertReasonForwarder.sol
+  0db9e05318d9af65 1-37
+lib/solidity-utils/test/asserts.test.ts
+  0db9e05318d9af65 1-43
+lib/openzeppelin-contracts/GUIDELINES.md
+  0db9e05318d9af65 1-155
+lib/openzeppelin-contracts/contracts/governance/extensions/GovernorCountingOverridable.sol
+  0db9e05318d9af65 1-222
+lib/openzeppelin-contracts/test/token/ERC721/ERC721.behavior.js
+  0db9e05318d9af65 1-946
+lib/openzeppelin-contracts/contracts/interfaces/IERC5805.sol
+  0db9e05318d9af65 1-9
+lib/solidity-utils/contracts/interfaces/IRescuable.sol
+  0db9e05318d9af65 1-18
+lib/openzeppelin-contracts/scripts/release/workflow/integrity-check.sh
+  0db9e05318d9af65 1-20
+lib/openzeppelin-contracts/test/utils/math/SafeCast.test.js
+  0db9e05318d9af65 1-159
+lib/solidity-utils/contracts/tests/mocks/TransientLockMock.sol
+  0db9e05318d9af65 1-42
+lib/solidity-utils/docs/js/hardhat-setup/README.md
+  0db9e05318d9af65 1-42
+lib/openzeppelin-contracts/certora/.gitignore
+  0db9e05318d9af65 1
+lib/openzeppelin-contracts/contracts/account/extensions/draft-AccountERC7579Hooked.sol
+  0db9e05318d9af65 1-107
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/faq.adoc
+  0db9e05318d9af65 1-13
+lib/swap-vm/test/ProtocolSurplusPartialFill.t.sol
+  0db9e05318d9af65 1-438
+lib/openzeppelin-contracts/contracts/governance/extensions/GovernorStorage.sol
+  0db9e05318d9af65 1-125
+lib/openzeppelin-contracts/contracts/utils/ShortStrings.sol
+  0db9e05318d9af65 1-122
+lib/openzeppelin-contracts/test/utils/Arrays.t.sol
+  0db9e05318d9af65 1-31
+lib/swap-vm/test/invariants/pegged/LargeDifferentDecimals.t.sol
+  0db9e05318d9af65 1-93
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/erc20-supply.adoc
+  0db9e05318d9af65 1-71
+lib/openzeppelin-contracts/.editorconfig
+  0db9e05318d9af65 1-21
+lib/openzeppelin-contracts/test/utils/Context.behavior.js
+  0db9e05318d9af65 1-48
+lib/solidity-utils/contracts/tests/mocks/PermitAndCallMock.sol
+  0db9e05318d9af65 1-18
+lib/swap-vm/src/libs/MemoryPtr.sol
+  0db9e05318d9af65 1-150
+lib/openzeppelin-contracts/scripts/git-user-config.sh
+  0db9e05318d9af65 1-6
+lib/solidity-utils/docgen/templates.ts
+  0db9e05318d9af65 1-10
+lib/aqua/.gitignore
+  0db9e05318d9af65 1-14
+lib/openzeppelin-contracts/scripts/upgradeable/transpile-onto.sh
+  0db9e05318d9af65 1-54
+lib/openzeppelin-contracts/contracts/token/ERC721/IERC721.sol
+  0db9e05318d9af65 1-135
+lib/openzeppelin-contracts/test/proxy/beacon/UpgradeableBeacon.test.js
+  0db9e05318d9af65 1-55
+lib/solidity-utils/hardhat.config.ts
+  0db9e05318d9af65 1-52
+lib/openzeppelin-contracts/test/account/AccountMultiSignerWeighted.test.js
+  0db9e05318d9af65 1-312
+lib/openzeppelin-contracts/.github/ISSUE_TEMPLATE/bug_report.md
+  0db9e05318d9af65 1-21
+lib/openzeppelin-contracts/contracts/token/ERC1155/README.adoc
+  0db9e05318d9af65 1-43
+lib/openzeppelin-contracts/lib/forge-std/test/StdError.t.sol
+  0db9e05318d9af65 1-120
+lib/openzeppelin-contracts/contracts/mocks/token/ERC1363ReceiverMock.sol
+  0db9e05318d9af65 1-52
+lib/openzeppelin-contracts/hardhat/skip-foundry-tests.js
+  0db9e05318d9af65 1-6
+lib/openzeppelin-contracts/contracts/governance/extensions/GovernorSuperQuorum.sol
+  0db9e05318d9af65 1-58
+lib/openzeppelin-contracts/lib/forge-std/src/console.sol
+  0db9e05318d9af65 1-1560
+lib/openzeppelin-contracts/test/utils/cryptography/RSA.helper.js
+  0db9e05318d9af65 1-17
+lib/swap-vm/scope.txt
+  0db9e05318d9af65 1-15
+lib/solidity-utils/.github/workflows/ci.yml
+  0db9e05318d9af65 1-47
+lib/openzeppelin-contracts/contracts/proxy/utils/Initializable.sol
+  0db9e05318d9af65 1-238
+lib/solidity-utils/contracts/tests/mocks/RescuableMock.sol
+  0db9e05318d9af65 1-9
+lib/openzeppelin-contracts/lib/forge-std/src/interfaces/IERC721.sol
+  0db9e05318d9af65 1-164
+lib/openzeppelin-contracts/scripts/generate/templates/TransientSlotMock.js
+  0db9e05318d9af65 1-35
+lib/openzeppelin-contracts/test/governance/extensions/GovernorWithParams.test.js
+  0db9e05318d9af65 1-245
+lib/solidity-utils/src/profileEVM.ts
+  0db9e05318d9af65 1-208
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/100/run-1781623356501.json
+  0db9e05318d9af65 1-69
+lib/swap-vm/script/GasSnapshotE2E.s.sol
+  0db9e05318d9af65 1-433
+lib/solidity-utils/contracts/mixins/Simulator.sol
+  0db9e05318d9af65 1-30
+lib/swap-vm/src/interfaces/ITakerCallbacks.sol
+  0db9e05318d9af65 1-50
+SKILL.md
+  0db9e05318d9af65 4,22-28,45,48,54-56,59-61,64-66,68-70,73,81,83,85,87,93-118,120,122-125,130-134,137-142,146-160,162,181,183,185,188-189,216-223,240,243,246,248,250-253,255-266,269,271,273-282,284,286,292,296-303,305,307,373-374,402,438-440,442,544-545
+lib/swap-vm/.env.example
+  0db9e05318d9af65 1-22
+lib/swap-vm/test/invariants/pegged/ImbalancedPoolHighFees.t.sol
+  0db9e05318d9af65 1-40
+lib/swap-vm/test/mocks/WETHMock.sol
+  0db9e05318d9af65 1-27
+lib/openzeppelin-contracts/contracts/mocks/docs/access-control/AccessControlERC20MintMissing.sol
+  0db9e05318d9af65 1-24
+lib/swap-vm/src/instructions/XYCConcentrate.sol
+  0db9e05318d9af65 1-184
+lib/solidity-utils/contracts/interfaces/IPermit2.sol
+  0db9e05318d9af65 1-84
+lib/swap-vm/src/instructions/PiecewiseLinearScale.sol
+  0db9e05318d9af65 1-169
+lib/openzeppelin-contracts/eslint.config.mjs
+  0db9e05318d9af65 1-26
+lib/openzeppelin-contracts/contracts/utils/CAIP10.sol
+  0db9e05318d9af65 1-54
+lib/swap-vm/test/mocks/MockTakerFirstTransfer.sol
+  0db9e05318d9af65 1-39
+lib/openzeppelin-contracts/test/token/ERC6909/extensions/ERC6909Metadata.test.js
+  0db9e05318d9af65 1-58
+lib/openzeppelin-contracts/docs/README.md
+  0db9e05318d9af65 1-16
+lib/swap-vm/test/invariants/concentrate/DustAmounts.t.sol
+  0db9e05318d9af65 1-96
+lib/swap-vm/src/instructions/OraclePriceAdjuster.sol
+  0db9e05318d9af65 1-118
+lib/openzeppelin-contracts/test/helpers/erc4337.js
+  0db9e05318d9af65 1-217
+lib/swap-vm/src/instructions/PeggedSwap.sol
+  0db9e05318d9af65 1-204
+lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol
+  0db9e05318d9af65 1-79
+lib/aqua/test/base/AquaTestBase.sol
+  0db9e05318d9af65 1-45
+lib/openzeppelin-contracts/test/helpers/erc7579.js
+  0db9e05318d9af65 1-58
+lib/openzeppelin-contracts/contracts/mocks/token/ERC20NoReturnMock.sol
+  0db9e05318d9af65 1-28
+lib/solidity-utils/contracts/interfaces/IDaiLikePermit.sol
+  0db9e05318d9af65 1-29
+lib/aqua/LICENSES/MIT-OpenZeppelin.txt
+  0db9e05318d9af65 1-22
+lib/solidity-utils/docs/js/src/variables/EIP712Domain.md
+  0db9e05318d9af65 1-13
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/56/run-1781623329670.json
+  0db9e05318d9af65 1-69
+lib/openzeppelin-contracts/.codecov.yml
+  0db9e05318d9af65 1-16
+lib/openzeppelin-contracts/lib/forge-std/.github/workflows/sync.yml
+  0db9e05318d9af65 1-31
+lib/openzeppelin-contracts/contracts/finance/VestingWalletCliff.sol
+  0db9e05318d9af65 1-54
+lib/openzeppelin-contracts/scripts/generate/helpers/sanitize.js
+  0db9e05318d9af65 1-5
+lib/openzeppelin-contracts/scripts/remove-ignored-artifacts.js
+  0db9e05318d9af65 1-45
+lib/openzeppelin-contracts/test/governance/utils/Votes.behavior.js
+  0db9e05318d9af65 1-325
+lib/swap-vm/test/SeriesEpochManager.t.sol
+  0db9e05318d9af65 1-435
+lib/openzeppelin-contracts/lib/forge-std/src/interfaces/IERC1155.sol
+  0db9e05318d9af65 1-105
+lib/openzeppelin-contracts/scripts/generate/templates/Checkpoints.js
+  0db9e05318d9af65 1-242
+lib/swap-vm/test/MinRate.t.sol
+  0db9e05318d9af65 1-423
+lib/openzeppelin-contracts/certora/harnesses/ERC721Harness.sol
+  0db9e05318d9af65 1-33
+lib/solidity-utils/contracts/mixins/Multicall.sol
+  0db9e05318d9af65 1-28
+lib/openzeppelin-contracts/scripts/generate/templates/conversion.js
+  0db9e05318d9af65 1-30
+lib/openzeppelin-contracts/contracts/interfaces/draft-IERC6909.sol
+  0db9e05318d9af65 1-125
+lib/openzeppelin-contracts/contracts/mocks/docs/utilities/Multicall.sol
+  0db9e05318d9af65 1-15
+lib/openzeppelin-contracts/contracts/mocks/token/ERC20DecimalsMock.sol
+  0db9e05318d9af65 1-17
+lib/openzeppelin-contracts/contracts/token/ERC20/README.adoc
+  0db9e05318d9af65 1-78
+lib/solidity-utils/test/profileEVM.test.ts
+  0db9e05318d9af65 1-113
+lib/swap-vm/test/TransferModesCombinations.t.sol
+  0db9e05318d9af65 1-262
+lib/openzeppelin-contracts/test/token/ERC721/utils/ERC721Utils.test.js
+  0db9e05318d9af65 1-94
+lib/openzeppelin-contracts/test/governance/extensions/GovernorNoncesKeyed.test.js
+  0db9e05318d9af65 1-244
+lib/swap-vm/test/invariants/BaseFeeAdjusterInvariants.t.sol
+  0db9e05318d9af65 1-332
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/146/run-latest.json
+  0db9e05318d9af65 1-69
+lib/openzeppelin-contracts/contracts/mocks/token/ERC20VotesLegacyMock.sol
+  0db9e05318d9af65 1-253
+lib/swap-vm/LICENSES/Aqua-Source-1.1.txt
+  0db9e05318d9af65 1-105
+lib/swap-vm/test/invariants/pegged/HugeLiquidity.t.sol
+  0db9e05318d9af65 1-34
+lib/swap-vm/.gas-snapshot
+  0db9e05318d9af65 1-57
+lib/openzeppelin-contracts/test/governance/extensions/GovernorTimelockControl.test.js
+  0db9e05318d9af65 1-504
+lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol
+  0db9e05318d9af65 1-26
+lib/solidity-utils/contracts/libraries/StringUtil.sol
+  0db9e05318d9af65 1-95
+lib/swap-vm/test/ProtocolFee.t.sol
+  0db9e05318d9af65 1-416
+lib/solidity-utils/.prettierrc
+  0db9e05318d9af65 1-18
+lib/openzeppelin-contracts/certora/specs.json
+  0db9e05318d9af65 1-110
+lib/openzeppelin-contracts/audits/README.md
+  0db9e05318d9af65 1-20
+lib/openzeppelin-contracts/certora/specs/Ownable.spec
+  0db9e05318d9af65 1-77
+lib/solidity-utils/docs/js/src/variables/gasspectOptionsDefault.md
+  0db9e05318d9af65 1-27
+lib/openzeppelin-contracts/test/account/Account.test.js
+  0db9e05318d9af65 1-48
+lib/openzeppelin-contracts/slither.config.json
+  0db9e05318d9af65 1-4
+lib/openzeppelin-contracts/certora/specs/methods/IOwnable2Step.spec
+  0db9e05318d9af65 1-7
+lib/openzeppelin-contracts/contracts/mocks/token/ERC1155ReceiverMock.sol
+  0db9e05318d9af65 1-74
+lib/openzeppelin-contracts/test/helpers/constants.js
+  0db9e05318d9af65 1-5
+lib/openzeppelin-contracts/contracts/mocks/EtherReceiverMock.sol
+  0db9e05318d9af65 1-17
+lib/openzeppelin-contracts/contracts/account/extensions/draft-AccountERC7579.sol
+  0db9e05318d9af65 1-405
+lib/solidity-utils/contracts/tests/mocks/SafeERC20Helper.sol
+  0db9e05318d9af65 1-289
+lib/openzeppelin-contracts/test/governance/extensions/GovernorVotesSuperQuorumFraction.test.js
+  0db9e05318d9af65 1-160
+lib/openzeppelin-contracts/contracts/interfaces/IERC1363Receiver.sol
+  0db9e05318d9af65 1-32
+lib/openzeppelin-contracts/contracts/mocks/docs/utilities/Base64NFT.sol
+  0db9e05318d9af65 1-27
+lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol
+  0db9e05318d9af65 1-16
+lib/openzeppelin-contracts/contracts/interfaces/IERC165.sol
+  0db9e05318d9af65 1-6
+lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC1363.sol
+  0db9e05318d9af65 1-135
+lib/openzeppelin-contracts/contracts/mocks/ConstructorMock.sol
+  0db9e05318d9af65 1-34
+lib/openzeppelin-contracts/scripts/generate/format-lines.js
+  0db9e05318d9af65 1-16
+lib/swap-vm/test/XYCSwap.t.sol
+  0db9e05318d9af65 1-282
+lib/swap-vm/LICENSES/SwapVM-1.1.txt
+  0db9e05318d9af65 1-103
+lib/swap-vm/ignition/parameters/chain-1.json
+  0db9e05318d9af65 1-9
+lib/openzeppelin-contracts/contracts/token/ERC20/utils/ERC1363Utils.sol
+  0db9e05318d9af65 1-95
+lib/solidity-utils/contracts/mixins/Rescuable.sol
+  0db9e05318d9af65 1-30
+lib/openzeppelin-contracts/test/helpers/precompiles.js
+  0db9e05318d9af65 1-12
+lib/openzeppelin-contracts/contracts/mocks/UpgradeableBeaconMock.sol
+  0db9e05318d9af65 1-27
+lib/solidity-utils/test/contracts/PermitAndCall.test.ts
+  0db9e05318d9af65 1-75
+lib/aqua/.editorconfig
+  0db9e05318d9af65 1-27
+lib/openzeppelin-contracts/contracts/mocks/token/ERC20GetterHelper.sol
+  0db9e05318d9af65 1-38
+lib/swap-vm/src/instructions/SeriesEpochManager.sol
+  0db9e05318d9af65 1-97
+lib/openzeppelin-contracts/certora/specs/methods/IAccessControl.spec
+  0db9e05318d9af65 1-8
+lib/openzeppelin-contracts/test/proxy/utils/Initializable.test.js
+  0db9e05318d9af65 1-216
+lib/openzeppelin-contracts/test/utils/Create2.test.js
+  0db9e05318d9af65 1-190
+lib/swap-vm/test/invariants/ConcentrateXYCDecayInvariants.t.sol
+  0db9e05318d9af65 1-243
+lib/swap-vm/test/invariants/DutchAuctionLimitSwapFeesInvariants.t.sol
+  0db9e05318d9af65 1-309
+lib/openzeppelin-contracts/docs/modules/ROOT/images/access-manager-functions.svg
+  0db9e05318d9af65 1-47
+lib/openzeppelin-contracts/scripts/prepare-docs.sh
+  0db9e05318d9af65 1-26
+lib/swap-vm/test/TWAPSwap.t.sol
+  0db9e05318d9af65 1-606
+lib/swap-vm/test/invariants/DecayXYCFeesInvariants.t.sol
+  0db9e05318d9af65 1-359
+lib/openzeppelin-contracts/test/utils/cryptography/P256.t.sol
+  0db9e05318d9af65 1-65
+lib/solidity-utils/docs/js/src/functions/gasspectEVM.md
+  0db9e05318d9af65 1-37
+lib/openzeppelin-contracts/contracts/utils/Multicall.sol
+  0db9e05318d9af65 1-37
+lib/openzeppelin-contracts/scripts/upgradeable/upgradeable.patch
+  0db9e05318d9af65 1-398
+lib/aqua/test/AquaBalances.t.sol
+  0db9e05318d9af65 1-236
+lib/openzeppelin-contracts/renovate.json
+  0db9e05318d9af65 1-4
+lib/openzeppelin-contracts/test/helpers/deploy.js
+  0db9e05318d9af65 1-14
+lib/openzeppelin-contracts/contracts/proxy/beacon/UpgradeableBeacon.sol
+  0db9e05318d9af65 1-70
+lib/openzeppelin-contracts/lib/forge-std/src/interfaces/IERC20.sol
+  0db9e05318d9af65 1-43
+lib/openzeppelin-contracts/test/governance/extensions/GovernorSuperQuorumGreaterThanQuorum.t.sol
+  0db9e05318d9af65 1-79
+lib/solidity-utils/contracts/tests/mocks/ERC1271WalletMock.sol
+  0db9e05318d9af65 1-15
+lib/swap-vm/src/instructions/Debug.sol
+  0db9e05318d9af65 1-272
+lib/swap-vm/test/FeeProtocolCommissions.t.sol
+  0db9e05318d9af65 1-295
+lib/openzeppelin-contracts/test/utils/structs/Heap.test.js
+  0db9e05318d9af65 1-113
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/59144/run-latest.json
+  0db9e05318d9af65 1-69
+lib/solidity-utils/contracts/tests/mocks/Create3Mock.sol
+  0db9e05318d9af65 1-17
+lib/openzeppelin-contracts/contracts/utils/structs/Heap.sol
+  0db9e05318d9af65 1-256
+lib/openzeppelin-contracts/certora/specs/ERC20FlashMint.spec
+  0db9e05318d9af65 1-55
+lib/openzeppelin-contracts/test/account/AccountERC7702.test.js
+  0db9e05318d9af65 1-52
+lib/openzeppelin-contracts/contracts/mocks/AccessManagerMock.sol
+  0db9e05318d9af65 1-20
+lib/swap-vm/ignition/modules/SwapVMRouter.ts
+  0db9e05318d9af65 1-3
+lib/openzeppelin-contracts/contracts/access/manager/IAccessManaged.sol
+  0db9e05318d9af65 1-32
+lib/solidity-utils/docs/js/src/functions/deployContractFromBytecode.md
+  0db9e05318d9af65 1-37
+lib/solidity-utils/docs/js/src/functions/domainSeparator.md
+  0db9e05318d9af65 1-37
+lib/openzeppelin-contracts/scripts/upgradeable/README.md
+  0db9e05318d9af65 1-21
+lib/openzeppelin-contracts/test/sanity.test.js
+  0db9e05318d9af65 1-27
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/10/run-1774630905251.json
+  0db9e05318d9af65 1-77
+lib/solidity-utils/test/contracts/AddressArray.test.ts
+  0db9e05318d9af65 1-288
+lib/aqua/src/interfaces/IAqua.sol
+  0db9e05318d9af65 1-127
+lib/openzeppelin-contracts/lib/halmos-cheatcodes/README.md
+  0db9e05318d9af65 1-97
+lib/openzeppelin-contracts/lib/forge-std/test/StdCheats.t.sol
+  0db9e05318d9af65 1-618
+lib/solidity-utils/docs/js/src/functions/trim0x.md
+  0db9e05318d9af65 1-25
+lib/aqua/.github/workflows/ci.yml
+  0db9e05318d9af65 1-48
+lib/openzeppelin-contracts/contracts/token/ERC1155/extensions/IERC1155MetadataURI.sol
+  0db9e05318d9af65 1-20
+lib/openzeppelin-contracts/test/utils/cryptography/P256.test.js
+  0db9e05318d9af65 1-182
+lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol
+  0db9e05318d9af65 1-67
+lib/openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Enumerable.sol
+  0db9e05318d9af65 1-29
+lib/solidity-utils/contracts/tests/mocks/NoReceiveOwnerMock.sol
+  0db9e05318d9af65 1-18
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/4663/run-1781623515141.json
+  0db9e05318d9af65 1-71
+lib/openzeppelin-contracts/contracts/utils/cryptography/signers/SignerP256.sol
+  0db9e05318d9af65 1-64
+lib/openzeppelin-contracts/lib/erc4626-tests/README.md
+  0db9e05318d9af65 1-116
+lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Burnable.sol
+  0db9e05318d9af65 1-39
+lib/openzeppelin-contracts/test/governance/extensions/GovernorCountingFractional.test.js
+  0db9e05318d9af65 1-248
+lib/openzeppelin-contracts/lib/forge-std/.gitattributes
+  0db9e05318d9af65 1
+lib/solidity-utils/docs/contracts/mixins/OnlyWethReceiver.md
+  0db9e05318d9af65 1-34
+lib/swap-vm/test/invariants/pegged/ImbalancedPoolLowFees.t.sol
+  0db9e05318d9af65 1-37
+lib/openzeppelin-contracts/test/token/ERC1155/extensions/ERC1155Burnable.test.js
+  0db9e05318d9af65 1-66
+lib/openzeppelin-contracts/test/utils/Calldata.test.js
+  0db9e05318d9af65 1-22
+lib/openzeppelin-contracts/certora/specs/methods/IOwnable.spec
+  0db9e05318d9af65 1-5
+lib/openzeppelin-contracts/test/token/ERC20/extensions/ERC4626.t.sol
+  0db9e05318d9af65 1-41
+lib/openzeppelin-contracts/test/utils/Strings.test.js
+  0db9e05318d9af65 1-349
+lib/solidity-utils/docs/js/src/functions/buildData.md
+  0db9e05318d9af65 1-107
+lib/solidity-utils/test/contracts/TransientLock.test.ts
+  0db9e05318d9af65 1-59
+lib/solidity-utils/test/contracts/TransientLockNested.test.ts
+  0db9e05318d9af65 1-63
+lib/openzeppelin-contracts/foundry.toml
+  0db9e05318d9af65 1-15
+lib/solidity-utils/docs/js/src/functions/signSignedCall.md
+  0db9e05318d9af65 1-47
+lib/openzeppelin-contracts/test/token/ERC721/ERC721.test.js
+  0db9e05318d9af65 1-23
+lib/openzeppelin-contracts/scripts/checks/coverage.sh
+  0db9e05318d9af65 1-24
+lib/solidity-utils/test/contracts/AddressSet.test.ts
+  0db9e05318d9af65 1-272
+lib/solidity-utils/test/contracts/StringUtil.test.ts
+  0db9e05318d9af65 1-150
+lib/openzeppelin-contracts/certora/harnesses/EnumerableMapHarness.sol
+  0db9e05318d9af65 1-55
+lib/solidity-utils/docs/contracts/libraries/CalldataPtr.md
+  0db9e05318d9af65 1-53
+lib/openzeppelin-contracts/test/token/ERC721/utils/ERC721Holder.test.js
+  0db9e05318d9af65 1-20
+lib/openzeppelin-contracts/contracts/mocks/token/ERC20VotesTimestampMock.sol
+  0db9e05318d9af65 1-29
+lib/solidity-utils/docs/contracts/libraries/BytesMemory.md
+  0db9e05318d9af65 1-99
+lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol
+  0db9e05318d9af65 1-40
+lib/swap-vm/test/TakerTraits.t.sol
+  0db9e05318d9af65 1-571
+lib/openzeppelin-contracts/test/utils/Base64.test.js
+  0db9e05318d9af65 1-59
+lib/solidity-utils/.github/workflows/release.yml
+  0db9e05318d9af65 1-59
+lib/openzeppelin-contracts/contracts/utils/cryptography/verifiers/ERC7913RSAVerifier.sol
+  0db9e05318d9af65 1-23
+lib/swap-vm/AGENTS.md
+  0db9e05318d9af65 1-15
+lib/openzeppelin-contracts/contracts/utils/ReentrancyGuardTransient.sol
+  0db9e05318d9af65 1-61
+lib/openzeppelin-contracts/contracts/mocks/token/ERC20VotesAdditionalCheckpointsMock.sol
+  0db9e05318d9af65 1-31
+lib/openzeppelin-contracts/contracts/token/ERC721/extensions/ERC721Royalty.sol
+  0db9e05318d9af65 1-26
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/utilities.adoc
+  0db9e05318d9af65 1-559
+lib/openzeppelin-contracts/test/token/ERC1155/utils/ERC1155Holder.test.js
+  0db9e05318d9af65 1-56
+lib/solidity-utils/docs/js/src/functions/withTarget.md
+  0db9e05318d9af65 1-29
+lib/swap-vm/src/instructions/FeeFlat.sol
+  0db9e05318d9af65 1-120
+lib/swap-vm/test/helpers/DirectModeTaker.sol
+  0db9e05318d9af65 1-49
+lib/openzeppelin-contracts/contracts/mocks/ERC165/ERC165MaliciousData.sol
+  0db9e05318d9af65 1-12
+lib/openzeppelin-contracts/certora/harnesses/ERC20PermitHarness.sol
+  0db9e05318d9af65 1-16
+lib/openzeppelin-contracts/contracts/interfaces/IERC4906.sol
+  0db9e05318d9af65 1-20
+lib/solidity-utils/contracts/tests/mocks/TransientLockNestedMock.sol
+  0db9e05318d9af65 1-23
+lib/openzeppelin-contracts/lib/erc4626-tests/ERC4626.test.sol
+  0db9e05318d9af65 1-356
+lib/openzeppelin-contracts/contracts/mocks/CallReceiverMock.sol
+  0db9e05318d9af65 1-78
+lib/swap-vm/test/Fee.t.sol
+  0db9e05318d9af65 1-481
+lib/openzeppelin-contracts/lib/forge-std/test/fixtures/broadcast.log.json
+  0db9e05318d9af65 1-187
+lib/aqua/examples/apps/XYCSwap.sol
+  0db9e05318d9af65 1-184
+lib/openzeppelin-contracts/contracts/mocks/docs/governance/MyTokenWrapped.sol
+  0db9e05318d9af65 1-28
+lib/solidity-utils/contracts/mocks/ERC20PermitMock.sol
+  0db9e05318d9af65 1-29
+lib/openzeppelin-contracts/contracts/mocks/ArraysMock.sol
+  0db9e05318d9af65 1-171
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/tokens.adoc
+  0db9e05318d9af65 1-31
+lib/solidity-utils/docs/js/src/enumerations/NonceType.md
+  0db9e05318d9af65 1-49
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/42161/run-1781623265866.json
+  0db9e05318d9af65 1-72
+lib/openzeppelin-contracts/hardhat/common-contracts.js
+  0db9e05318d9af65 1-69
+lib/swap-vm/test/FeeProtocolPartialFill.t.sol
+  0db9e05318d9af65 1-262
+lib/solidity-utils/docgen/templates/event.hbs
+  0db9e05318d9af65 1
+lib/solidity-utils/src/prelude.ts
+  0db9e05318d9af65 1-28
+lib/openzeppelin-contracts/contracts/governance/extensions/GovernorVotesQuorumFraction.sol
+  0db9e05318d9af65 1-113
+lib/openzeppelin-contracts/audits/2017-03.md
+  0db9e05318d9af65 1-292
+lib/openzeppelin-contracts/contracts/governance/utils/IVotes.sol
+  0db9e05318d9af65 1-59
+lib/openzeppelin-contracts/lib/forge-std/src/StdUtils.sol
+  0db9e05318d9af65 1-209
+lib/openzeppelin-contracts/test/token/ERC20/extensions/draft-ERC20Bridgeable.test.js
+  0db9e05318d9af65 1-89
+lib/solidity-utils/contracts/interfaces/IERC20MetadataUppercase.sol
+  0db9e05318d9af65 1-21
+lib/swap-vm/test/StorageSlots.t.sol
+  0db9e05318d9af65 1-77
+lib/solidity-utils/contracts/tests/mocks/TransientLockUnsafeMock.sol
+  0db9e05318d9af65 1-42
+lib/openzeppelin-contracts/test/metatx/ERC2771Context.test.js
+  0db9e05318d9af65 1-133
+lib/openzeppelin-contracts/.github/workflows/checks.yml
+  0db9e05318d9af65 1-132
+lib/openzeppelin-contracts/test/token/ERC20/extensions/ERC20Wrapper.test.js
+  0db9e05318d9af65 1-203
+lib/solidity-utils/docs/contracts/libraries/BySigTraits.md
+  0db9e05318d9af65 1-120
+lib/swap-vm/config/constants.json
+  0db9e05318d9af65 1-11
+lib/openzeppelin-contracts/contracts/mocks/governance/GovernorTimelockCompoundMock.sol
+  0db9e05318d9af65 1-69
+lib/swap-vm/test/invariants/pegged/SmallAmounts.t.sol
+  0db9e05318d9af65 1-33
+lib/openzeppelin-contracts/.github/workflows/formal-verification.yml
+  0db9e05318d9af65 1-86
+lib/openzeppelin-contracts/contracts/utils/Base64.sol
+  0db9e05318d9af65 1-119
+lib/openzeppelin-contracts/scripts/checks/compareGasReports.js
+  0db9e05318d9af65 1-247
+lib/openzeppelin-contracts/certora/harnesses/NoncesHarness.sol
+  0db9e05318d9af65 1-14
+lib/openzeppelin-contracts/lib/forge-std/src/StdStorage.sol
+  0db9e05318d9af65 1-473
+lib/openzeppelin-contracts/test/utils/Panic.test.js
+  0db9e05318d9af65 1-37
+lib/openzeppelin-contracts/.github/ISSUE_TEMPLATE/config.yml
+  0db9e05318d9af65 1-4
+lib/openzeppelin-contracts/CHANGELOG.md
+  0db9e05318d9af65 1-1278
+lib/openzeppelin-contracts/contracts/mocks/ReentrancyMock.sol
+  0db9e05318d9af65 1-50
+lib/solidity-utils/.eslintignore
+  0db9e05318d9af65 1-3
+lib/openzeppelin-contracts/test/access/extensions/AccessControlEnumerable.test.js
+  0db9e05318d9af65 1-24
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/42161/run-1774630705775.json
+  0db9e05318d9af65 1-72
+lib/openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol
+  0db9e05318d9af65 1-161
+lib/openzeppelin-contracts/lib/forge-std/src/interfaces/IMulticall3.sol
+  0db9e05318d9af65 1-73
+lib/swap-vm/src/opcodes/AquaOpcodesDebug.sol
+  0db9e05318d9af65 1-26
+lib/openzeppelin-contracts/contracts/mocks/token/ERC20ExcessDecimalsMock.sol
+  0db9e05318d9af65 1-9
+lib/openzeppelin-contracts/FUNDING.json
+  0db9e05318d9af65 1-10
+lib/openzeppelin-contracts/scripts/generate/templates/EnumerableMap.js
+  0db9e05318d9af65 1-463
+lib/openzeppelin-contracts/contracts/utils/cryptography/signers/draft-ERC7739.sol
+  0db9e05318d9af65 1-99
+lib/openzeppelin-contracts/contracts/mocks/token/ERC20BridgeableMock.sol
+  0db9e05318d9af65 1-26
+lib/solidity-utils/docgen/templates/error.hbs
+  0db9e05318d9af65 1
+lib/swap-vm/test/PrivateOrder.t.sol
+  0db9e05318d9af65 1-136
+lib/aqua/test/AquaEvents.t.sol
+  0db9e05318d9af65 1-127
+lib/swap-vm/test/invariants/PeggedSwapInvariants.t.sol
+  0db9e05318d9af65 1-456
+lib/solidity-utils/docs/js/src/type-aliases/TrackReceivedTokenAndTxResult.md
+  0db9e05318d9af65 1-13
+lib/swap-vm/test/XYCConcentrateFeeEffectivePriceBounds.t.sol
+  0db9e05318d9af65 1-236
+lib/aqua/config/constants.json
+  0db9e05318d9af65 1-5
+lib/openzeppelin-contracts/contracts/interfaces/IERC2612.sol
+  0db9e05318d9af65 1-8
+lib/openzeppelin-contracts/contracts/token/common/ERC2981.sol
+  0db9e05318d9af65 1-139
+lib/openzeppelin-contracts/contracts/utils/math/SignedMath.sol
+  0db9e05318d9af65 1-68
+lib/openzeppelin-contracts/lib/forge-std/CONTRIBUTING.md
+  0db9e05318d9af65 1-193
+lib/openzeppelin-contracts/test/proxy/transparent/TransparentUpgradeableProxy.behaviour.js
+  0db9e05318d9af65 1-357
+lib/solidity-utils/contracts/mixins/ReentrancyGuard.sol
+  0db9e05318d9af65 1-92
+lib/openzeppelin-contracts/test/helpers/iterate.js
+  0db9e05318d9af65 1-41
+lib/aqua/THIRD_PARTY_NOTICES
+  0db9e05318d9af65 1-32
+lib/solidity-utils/.prettierignore
+  0db9e05318d9af65 1-4
+lib/openzeppelin-contracts/contracts/account/utils/draft-ERC4337Utils.sol
+  0db9e05318d9af65 1-159
+lib/openzeppelin-contracts/contracts/interfaces/draft-IERC7821.sol
+  0db9e05318d9af65 1-44
+lib/openzeppelin-contracts/test/utils/Arrays.test.js
+  0db9e05318d9af65 1-227
+lib/solidity-utils/docs/js/hardhat-setup/functions/resetHardhatNetworkFork.md
+  0db9e05318d9af65 1-27
+lib/solidity-utils/test/contracts/Simulator.test.ts
+  0db9e05318d9af65 1-84
+lib/swap-vm/test/LimitSwapFullAmountOneSideZero.t.sol
+  0db9e05318d9af65 1-238
+lib/swap-vm/test/invariants/xyc/SmallAmounts.t.sol
+  0db9e05318d9af65 1-38
+lib/solidity-utils/contracts/tests/mocks/TransientUnsafeMock.sol
+  0db9e05318d9af65 1-92
+lib/solidity-utils/docs/README.md
+  0db9e05318d9af65 1
+lib/swap-vm/test/invariants/pegged/MostlyCurved.t.sol
+  0db9e05318d9af65 1-32
+lib/openzeppelin-contracts/test/utils/structs/EnumerableSet.behavior.js
+  0db9e05318d9af65 1-175
+lib/solidity-utils/contracts/libraries/AddressLib.sol
+  0db9e05318d9af65 1-52
+lib/openzeppelin-contracts/test/access/manager/AccessManager.behavior.js
+  0db9e05318d9af65 1-257
+lib/openzeppelin-contracts/contracts/interfaces/IERC721.sol
+  0db9e05318d9af65 1-6
+lib/openzeppelin-contracts/contracts/mocks/ERC2771ContextMock.sol
+  0db9e05318d9af65 1-28
+lib/swap-vm/test/utils/Dynamic.sol
+  0db9e05318d9af65 1-154
+lib/solidity-utils/docs/js/src/functions/ether.md
+  0db9e05318d9af65 1-25
+lib/openzeppelin-contracts/contracts/mocks/account/modules/ERC7579Mock.sol
+  0db9e05318d9af65 1-115
+lib/openzeppelin-contracts/test/utils/cryptography/ECDSA.test.js
+  0db9e05318d9af65 1-211
+lib/openzeppelin-contracts/test/utils/cryptography/SigVer15_186-3.rsp
+  0db9e05318d9af65 1-3850
+lib/solidity-utils/test/contracts/BySig.test.ts
+  0db9e05318d9af65 1-237
+lib/solidity-utils/test/contracts/SafestERC20.test.ts
+  0db9e05318d9af65 1-487
+lib/swap-vm/src/instructions/Whitelist.sol
+  0db9e05318d9af65 1-225
+lib/openzeppelin-contracts/lib/forge-std/test/fixtures/test.json
+  0db9e05318d9af65 1-8
+lib/openzeppelin-contracts/contracts/mocks/utils/cryptography/ERC7739Mock.sol
+  0db9e05318d9af65 1-13
+lib/openzeppelin-contracts/contracts/interfaces/IERC4626.sol
+  0db9e05318d9af65 1-230
+lib/openzeppelin-contracts/contracts/mocks/governance/GovernorNoncesKeyedMock.sol
+  0db9e05318d9af65 1-45
+lib/solidity-utils/contracts/tests/mocks/BySigTraitsMock.sol
+  0db9e05318d9af65 1-25
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/43114/run-1781623288556.json
+  0db9e05318d9af65 1-68
+lib/openzeppelin-contracts/contracts/utils/Panic.sol
+  0db9e05318d9af65 1-57
+lib/swap-vm/test/MemoryPtr.t.sol
+  0db9e05318d9af65 1-242
+lib/swap-vm/test/invariants/concentrate/NarrowRange.t.sol
+  0db9e05318d9af65 1-46
+lib/openzeppelin-contracts/contracts/mocks/docs/governance/MyTokenTimestampBased.sol
+  0db9e05318d9af65 1-32
+lib/openzeppelin-contracts/contracts/mocks/governance/GovernorMock.sol
+  0db9e05318d9af65 1-14
+lib/openzeppelin-contracts/contracts/mocks/MerkleProofCustomHashMock.sol
+  0db9e05318d9af65 1-62
+lib/openzeppelin-contracts/lib/forge-std/src/Base.sol
+  0db9e05318d9af65 1-35
+lib/swap-vm/test/invariants/MinRateInvariants.t.sol
+  0db9e05318d9af65 1-481
+lib/openzeppelin-contracts/contracts/mocks/governance/GovernorStorageMock.sol
+  0db9e05318d9af65 1-79
+lib/openzeppelin-contracts/contracts/interfaces/IERC5267.sol
+  0db9e05318d9af65 1-28
+lib/openzeppelin-contracts/contracts/mocks/docs/MyNFT.sol
+  0db9e05318d9af65 1-9
+lib/openzeppelin-contracts/scripts/release/workflow/rerun.js
+  0db9e05318d9af65 1-7
+lib/swap-vm/test/Debug.t.sol
+  0db9e05318d9af65 1-129
+lib/openzeppelin-contracts/contracts/governance/extensions/GovernorTimelockControl.sol
+  0db9e05318d9af65 1-167
+lib/openzeppelin-contracts/contracts/mocks/governance/GovernorSuperQuorumMock.sol
+  0db9e05318d9af65 1-95
+lib/openzeppelin-contracts/test/utils/introspection/ERC165Checker.test.js
+  0db9e05318d9af65 1-245
+lib/openzeppelin-contracts/test/utils/introspection/SupportsInterface.behavior.js
+  0db9e05318d9af65 1-166
+lib/openzeppelin-contracts/certora/specs/helpers/helpers.spec
+  0db9e05318d9af65 1-12
+lib/openzeppelin-contracts/certora/harnesses/ERC20FlashMintHarness.sol
+  0db9e05318d9af65 1-36
+lib/openzeppelin-contracts/certora/specs/methods/IERC5313.spec
+  0db9e05318d9af65 1-3
+lib/swap-vm/src/instructions/Balances.sol
+  0db9e05318d9af65 1-133
+lib/swap-vm/test/XYCConcentrate.t.sol
+  0db9e05318d9af65 1-798
+lib/aqua/DEPLOY.md
+  0db9e05318d9af65 1-108
+lib/openzeppelin-contracts/lib/forge-std/src/StdJson.sol
+  0db9e05318d9af65 1-283
+lib/openzeppelin-contracts/certora/specs/Pausable.spec
+  0db9e05318d9af65 1-96
+lib/openzeppelin-contracts/certora/harnesses/OwnableHarness.sol
+  0db9e05318d9af65 1-10
+lib/openzeppelin-contracts/contracts/governance/extensions/GovernorSequentialProposalId.sol
+  0db9e05318d9af65 1-75
+lib/openzeppelin-contracts/docs/antora.yml
+  0db9e05318d9af65 1-7
+lib/openzeppelin-contracts/contracts/account/utils/draft-ERC7579Utils.sol
+  0db9e05318d9af65 1-280
+lib/openzeppelin-contracts/contracts/mocks/token/ERC20ReturnFalseMock.sol
+  0db9e05318d9af65 1-19
+lib/swap-vm/ignition/modules/AquaSwapVMRouter.ts
+  0db9e05318d9af65 1-3
+lib/solidity-utils/.solcover.js
+  0db9e05318d9af65 1-5
+lib/openzeppelin-contracts/contracts/governance/extensions/GovernorSettings.sol
+  0db9e05318d9af65 1-106
+lib/solidity-utils/docs/js/src/functions/fixSignature.md
+  0db9e05318d9af65 1-25
+lib/openzeppelin-contracts/certora/specs/methods/IAccessManager.spec
+  0db9e05318d9af65 1-33
+lib/openzeppelin-contracts/contracts/mocks/token/ERC20ForceApproveMock.sol
+  0db9e05318d9af65 1-13
+lib/openzeppelin-contracts/lib/forge-std/test/StdUtils.t.sol
+  0db9e05318d9af65 1-342
+lib/openzeppelin-contracts/contracts/interfaces/README.adoc
+  0db9e05318d9af65 1-102
+lib/openzeppelin-contracts/test/finance/VestingWalletCliff.test.js
+  0db9e05318d9af65 1-70
+lib/openzeppelin-contracts/test/utils/NoncesKeyed.test.js
+  0db9e05318d9af65 1-17
+lib/openzeppelin-contracts/contracts/mocks/token/ERC721ReceiverMock.sol
+  0db9e05318d9af65 1-47
+lib/openzeppelin-contracts/contracts/utils/types/Time.sol
+  0db9e05318d9af65 1-133
+lib/openzeppelin-contracts/test/access/manager/AuthorityUtils.test.js
+  0db9e05318d9af65 1-112
+lib/openzeppelin-contracts/contracts/interfaces/IERC1820Implementer.sol
+  0db9e05318d9af65 1-20
+lib/solidity-utils/docgen/templates/modifier.hbs
+  0db9e05318d9af65 1
+lib/solidity-utils/CHANGELOG.md
+  0db9e05318d9af65 1-730
+lib/openzeppelin-contracts/test/utils/cryptography/ERC7739Utils.test.js
+  0db9e05318d9af65 1-203
+lib/solidity-utils/contracts/tests/mocks/PermitableMock.sol
+  0db9e05318d9af65 1-17
+lib/swap-vm/src/routers/LimitSwapVMRouterDebug.sol
+  0db9e05318d9af65 1-26
+lib/openzeppelin-contracts/contracts/token/ERC20/extensions/draft-ERC20Bridgeable.sol
+  0db9e05318d9af65 1-51
+lib/swap-vm/test/SwapVmRescueFunds.t.sol
+  0db9e05318d9af65 1-35
+lib/openzeppelin-contracts/contracts/mocks/TimelockReentrant.sol
+  0db9e05318d9af65 1-26
+lib/solidity-utils/contracts/tests/mocks/USDCLikePermitMock.sol
+  0db9e05318d9af65 1-80
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/130/run-1774631108000.json
+  0db9e05318d9af65 1-77
+lib/openzeppelin-contracts/scripts/fetch-common-contracts.js
+  0db9e05318d9af65 1-50
+lib/openzeppelin-contracts/test/utils/cryptography/MerkleProof.test.js
+  0db9e05318d9af65 1-213
+lib/solidity-utils/tsconfig.publish.json
+  0db9e05318d9af65 1-4
+lib/solidity-utils/contracts/interfaces/IERC7597Permit.sol
+  0db9e05318d9af65 1-26
+lib/solidity-utils/contracts/tests/mocks/AddressLibMock.sol
+  0db9e05318d9af65 1-25
+lib/swap-vm/test/invariants/CoreInvariants.t.sol
+  0db9e05318d9af65 1-609
+lib/openzeppelin-contracts/contracts/mocks/DummyImplementation.sol
+  0db9e05318d9af65 1-65
+lib/openzeppelin-contracts/contracts/mocks/token/ERC4626OffsetMock.sol
+  0db9e05318d9af65 1-17
+lib/solidity-utils/docs/js/src/README.md
+  0db9e05318d9af65 1-221
+lib/solidity-utils/docs/contracts/libraries/RevertReasonForwarder.md
+  0db9e05318d9af65 1-34
+lib/solidity-utils/docs/js/src/functions/getPermitLikeUSDC.md
+  0db9e05318d9af65 1-53
+lib/openzeppelin-contracts/certora/harnesses/ERC20WrapperHarness.sol
+  0db9e05318d9af65 1-34
+lib/openzeppelin-contracts/contracts/mocks/VotesMock.sol
+  0db9e05318d9af65 1-42
+lib/solidity-utils/test/contracts/Multicall.test.ts
+  0db9e05318d9af65 1-79
+lib/swap-vm/test/invariants/XYCFeesInvariants.t.sol
+  0db9e05318d9af65 1-451
+lib/openzeppelin-contracts/contracts/mocks/PausableMock.sol
+  0db9e05318d9af65 1-31
+lib/openzeppelin-contracts/contracts/governance/utils/VotesExtended.sol
+  0db9e05318d9af65 1-84
+lib/swap-vm/broadcast/__DeployPadCreate3.s.sol/4663/run-1781121003352.json
+  0db9e05318d9af65 1-82
+lib/openzeppelin-contracts/test/utils/ShortStrings.test.js
+  0db9e05318d9af65 1-64
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/137/run-1781623419801.json
+  0db9e05318d9af65 1-86
+lib/openzeppelin-contracts/test/token/ERC6909/ERC6909.behavior.js
+  0db9e05318d9af65 1-216
+lib/solidity-utils/contracts/tests/StringUtilTest.sol
+  0db9e05318d9af65 1-40
+lib/swap-vm/test/mocks/MockTakerBrokenCallback.sol
+  0db9e05318d9af65 1-115
+lib/openzeppelin-contracts/contracts/utils/cryptography/draft-ERC7739Utils.sol
+  0db9e05318d9af65 1-207
+lib/openzeppelin-contracts/lib/forge-std/src/Vm.sol
+  0db9e05318d9af65 1-2263
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/8453/run-1781623308708.json
+  0db9e05318d9af65 1-77
+lib/swap-vm/test/invariants/xyc/LargeAmounts.t.sol
+  0db9e05318d9af65 1-44
+lib/swap-vm/src/opcodes/LimitOpcodes.sol
+  0db9e05318d9af65 1-61
+lib/swap-vm/.gitignore
+  0db9e05318d9af65 1-15
+lib/solidity-utils/typedoc.json
+  0db9e05318d9af65 1-11
+lib/aqua/script/DeployAquaRouter.s.sol
+  0db9e05318d9af65 1-31
+lib/openzeppelin-contracts/test/proxy/ERC1967/ERC1967Utils.test.js
+  0db9e05318d9af65 1-162
+lib/openzeppelin-contracts/contracts/utils/Nonces.sol
+  0db9e05318d9af65 1-46
+lib/openzeppelin-contracts/contracts/access/README.adoc
+  0db9e05318d9af65 1-45
+lib/openzeppelin-contracts/contracts/interfaces/IERC6372.sol
+  0db9e05318d9af65 1-17
+lib/openzeppelin-contracts/contracts/mocks/StorageSlotMock.sol
+  0db9e05318d9af65 1-87
+lib/openzeppelin-contracts/contracts/mocks/token/ERC20MulticallMock.sol
+  0db9e05318d9af65 1-8
+lib/openzeppelin-contracts/lib/forge-std/test/compilation/CompilationScriptBase.sol
+  0db9e05318d9af65 1-10
+lib/openzeppelin-contracts/contracts/mocks/governance/GovernorWithParamsMock.sol
+  0db9e05318d9af65 1-51
+lib/openzeppelin-contracts/contracts/mocks/account/AccountMock.sol
+  0db9e05318d9af65 1-169
+lib/openzeppelin-contracts/contracts/token/ERC1155/utils/ERC1155Holder.sol
+  0db9e05318d9af65 1-40
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/43114/run-latest.json
+  0db9e05318d9af65 1-68
+lib/swap-vm/src/libs/PeggedSwapMath.sol
+  0db9e05318d9af65 1-107
+lib/openzeppelin-contracts/contracts/utils/Address.sol
+  0db9e05318d9af65 1-149
+lib/solidity-utils/docs/contracts/interfaces/IDaiLikePermit.md
+  0db9e05318d9af65 1-29
+lib/openzeppelin-contracts/solhint.config.js
+  0db9e05318d9af65 1-29
+lib/swap-vm/test/LimitSwapPartialFill.t.sol
+  0db9e05318d9af65 1-391
+lib/swap-vm/src/routers/SwapVMRouter.sol
+  0db9e05318d9af65 1-29
+lib/openzeppelin-contracts/remappings.txt
+  0db9e05318d9af65 1
+lib/solidity-utils/.eslintrc
+  0db9e05318d9af65 1-123
+lib/swap-vm/src/instructions/FeeProtocol.sol
+  0db9e05318d9af65 1-252
+lib/solidity-utils/docs/js/src/functions/getPermit.md
+  0db9e05318d9af65 1-53
+lib/openzeppelin-contracts/test/account/AccountMultiSigner.test.js
+  0db9e05318d9af65 1-326
+lib/swap-vm/test/UnwrapWeth.t.sol
+  0db9e05318d9af65 1-279
+lib/swap-vm/README.md
+  0db9e05318d9af65 1-1047
+lib/solidity-utils/contracts/libraries/AddressArray.sol
+  0db9e05318d9af65 1-239
+lib/swap-vm/test/invariants/xyc/ImbalancedPoolLowFees.t.sol
+  0db9e05318d9af65 1-55
+lib/openzeppelin-contracts/contracts/account/extensions/draft-ERC7821.sol
+  0db9e05318d9af65 1-70
+lib/swap-vm/src/instructions/BaseFeeAdjuster.sol
+  0db9e05318d9af65 1-80
+lib/openzeppelin-contracts/contracts/governance/utils/Votes.sol
+  0db9e05318d9af65 1-252
+lib/openzeppelin-contracts/test/access/extensions/AccessControlDefaultAdminRules.test.js
+  0db9e05318d9af65 1-32
+lib/openzeppelin-contracts/certora/diff/access_manager_AccessManager.sol.patch
+  0db9e05318d9af65 1-97
+lib/solidity-utils/docs/contracts/libraries/SafeERC20.md
+  0db9e05318d9af65 1-381
+lib/solidity-utils/docs/js/src/functions/compressPermit.md
+  0db9e05318d9af65 1-25
+lib/openzeppelin-contracts/lib/forge-std/src/StdCheats.sol
+  0db9e05318d9af65 1-829
+lib/swap-vm/script/utils/Config.sol
+  0db9e05318d9af65 1-52
+lib/openzeppelin-contracts/contracts/mocks/BatchCaller.sol
+  0db9e05318d9af65 1-20
+lib/swap-vm/test/invariants/ConcentrateXYCInvariants.t.sol
+  0db9e05318d9af65 1-230
+lib/swap-vm/src/instructions/interfaces/IProtocolFeeProvider.sol
+  0db9e05318d9af65 1-27
+lib/openzeppelin-contracts/test/utils/cryptography/ERC7739.test.js
+  0db9e05318d9af65 1-42
+lib/openzeppelin-contracts/contracts/interfaces/draft-IERC1822.sol
+  0db9e05318d9af65 1-20
+lib/solidity-utils/test/contracts/WethReceiver.test.ts
+  0db9e05318d9af65 1-34
+lib/openzeppelin-contracts/test/helpers/eip712.js
+  0db9e05318d9af65 1-45
+lib/swap-vm/src/instructions/Controls.sol
+  0db9e05318d9af65 1-159
+lib/openzeppelin-contracts/certora/specs/methods/IAccessManaged.spec
+  0db9e05318d9af65 1-5
+lib/swap-vm/test/base/AquaStrategyBuilders.sol
+  0db9e05318d9af65 1-159
+lib/swap-vm/test/invariants/ConcentrateXYCFeesInvariants.t.sol
+  0db9e05318d9af65 1-362
+lib/openzeppelin-contracts/test/token/ERC721/extensions/ERC721Wrapper.test.js
+  0db9e05318d9af65 1-201
+lib/solidity-utils/docs/contracts/interfaces/IPermit2.md
+  0db9e05318d9af65 1-124
+lib/openzeppelin-contracts/contracts/mocks/account/utils/ERC7579UtilsMock.sol
+  0db9e05318d9af65 1-23
+lib/solidity-utils/.github/1inch_github_b.svg
+  0db9e05318d9af65 1-44
+lib/swap-vm/test/MakerHooks.t.sol
+  0db9e05318d9af65 1-574
+lib/swap-vm/TESTING.md
+  0db9e05318d9af65 1-268
+lib/openzeppelin-contracts/test/token/common/ERC2981.behavior.js
+  0db9e05318d9af65 1-152
+lib/openzeppelin-contracts/certora/harnesses/PausableHarness.sol
+  0db9e05318d9af65 1-18
+lib/openzeppelin-contracts/test/token/ERC20/ERC20.behavior.js
+  0db9e05318d9af65 1-269
+lib/openzeppelin-contracts/docs/modules/ROOT/nav.adoc
+  0db9e05318d9af65 1-29
+lib/openzeppelin-contracts/contracts/utils/structs/DoubleEndedQueue.sol
+  0db9e05318d9af65 1-156
+lib/solidity-utils/hardhat-setup/README.md
+  0db9e05318d9af65 1-96
+lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol
+  0db9e05318d9af65 1-90
+lib/openzeppelin-contracts/test/access/Ownable2Step.test.js
+  0db9e05318d9af65 1-102
+lib/openzeppelin-contracts/test/utils/ReentrancyGuard.test.js
+  0db9e05318d9af65 1-50
+lib/swap-vm/test/Invalidators.t.sol
+  0db9e05318d9af65 1-534
+lib/openzeppelin-contracts/scripts/release/workflow/state.js
+  0db9e05318d9af65 1-112
+lib/openzeppelin-contracts/contracts/mocks/token/ERC1363SpenderMock.sol
+  0db9e05318d9af65 1-47
+lib/openzeppelin-contracts/test/utils/CAIP.test.js
+  0db9e05318d9af65 1-53
+lib/openzeppelin-contracts/test/governance/Governor.test.js
+  0db9e05318d9af65 1-980
+lib/openzeppelin-contracts/lib/forge-std/test/fixtures/test.toml
+  0db9e05318d9af65 1-6
+lib/openzeppelin-contracts/test/utils/cryptography/MessageHashUtils.test.js
+  0db9e05318d9af65 1-97
+lib/openzeppelin-contracts/test/account/utils/draft-ERC4337Utils.test.js
+  0db9e05318d9af65 1-289
+lib/openzeppelin-contracts/test/bin/SenderCreator070.abi
+  0db9e05318d9af65 1
+lib/openzeppelin-contracts/contracts/utils/structs/MerkleTree.sol
+  0db9e05318d9af65 1-267
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/10/run-1781623398440.json
+  0db9e05318d9af65 1-77
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/index.adoc
+  0db9e05318d9af65 1-70
+lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol
+  0db9e05318d9af65 1-87
+lib/solidity-utils/docs/contracts/mixins/PermitAndCall.md
+  0db9e05318d9af65 1-24
+lib/swap-vm/test/SwapVMAqua.t.sol
+  0db9e05318d9af65 1-133
+lib/openzeppelin-contracts/.changeset/config.json
+  0db9e05318d9af65 1-12
+lib/solidity-utils/contracts/tests/mocks/UniERC20Helper.sol
+  0db9e05318d9af65 1-109
+lib/openzeppelin-contracts/test/proxy/utils/UUPSUpgradeable.test.js
+  0db9e05318d9af65 1-120
+lib/openzeppelin-contracts/scripts/prepack.sh
+  0db9e05318d9af65 1-23
+lib/solidity-utils/docs/contracts/mixins/BySig.md
+  0db9e05318d9af65 1-305
+lib/openzeppelin-contracts/contracts/interfaces/IERC1363Spender.sol
+  0db9e05318d9af65 1-26
+lib/solidity-utils/contracts/tests/mocks/TransientMock.sol
+  0db9e05318d9af65 1-96
+lib/aqua/.gas-snapshot
+  0db9e05318d9af65 1-50
+lib/solidity-utils/tsconfig.json
+  0db9e05318d9af65 1-23
+lib/openzeppelin-contracts/contracts/mocks/VotesExtendedMock.sol
+  0db9e05318d9af65 1-42
+lib/solidity-utils/contracts/tests/mocks/AddressArrayMock.sol
+  0db9e05318d9af65 1-49
+lib/openzeppelin-contracts/scripts/release/workflow/github-release.js
+  0db9e05318d9af65 1-48
+lib/solidity-utils/.github/1inch_github_w.svg
+  0db9e05318d9af65 1-44
+lib/solidity-utils/.yarnrc.yml
+  0db9e05318d9af65 1-2
+lib/openzeppelin-contracts/test/token/ERC721/extensions/ERC721Votes.test.js
+  0db9e05318d9af65 1-194
+lib/openzeppelin-contracts/test/utils/StorageSlot.test.js
+  0db9e05318d9af65 1-73
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/access-control.adoc
+  0db9e05318d9af65 1-288
+lib/openzeppelin-contracts/contracts/interfaces/IERC721Enumerable.sol
+  0db9e05318d9af65 1-6
+lib/openzeppelin-contracts/lib/forge-std/test/compilation/CompilationTestBase.sol
+  0db9e05318d9af65 1-10
+lib/solidity-utils/docgen/README.md
+  0db9e05318d9af65 1-46
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/324/run-1781623496717.json
+  0db9e05318d9af65 1-199
+lib/swap-vm/test/ProtocolFeeProviderMock.t.sol
+  0db9e05318d9af65 1-78
+lib/swap-vm/.cursor/rules/00-base.mdc
+  0db9e05318d9af65 1-35
+lib/aqua/LICENSES/Aqua-Source-1.1.txt
+  0db9e05318d9af65 1-105
+lib/openzeppelin-contracts/lib/forge-std/test/Vm.t.sol
+  0db9e05318d9af65 1-18
+lib/solidity-utils/src/expect.ts
+  0db9e05318d9af65 1-42
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/43114/run-1774630737822.json
+  0db9e05318d9af65 1-68
+lib/swap-vm/test/mocks/TokenMockDecimals.sol
+  0db9e05318d9af65 1-24
+lib/openzeppelin-contracts/contracts/utils/SlotDerivation.sol
+  0db9e05318d9af65 1-155
+lib/solidity-utils/docs/contracts/mixins/Simulator.md
+  0db9e05318d9af65 1-48
+lib/solidity-utils/docs/js/hardhat-setup/functions/loadEnv.md
+  0db9e05318d9af65 1-27
+lib/openzeppelin-contracts/test/account/AccountECDSA.test.js
+  0db9e05318d9af65 1-52
+lib/swap-vm/.yarnrc.yml
+  0db9e05318d9af65 1
+lib/openzeppelin-contracts/test/account/utils/draft-ERC7579Utils.t.sol
+  0db9e05318d9af65 1-418
+lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol
+  0db9e05318d9af65 1-118
+lib/openzeppelin-contracts/contracts/utils/Context.sol
+  0db9e05318d9af65 1-28
+lib/swap-vm/snapshots/LimitSwapGas.json
+  0db9e05318d9af65 1-36
+lib/solidity-utils/docs/js/README.md
+  0db9e05318d9af65 1-10
+lib/swap-vm/src/opcodes/OpcodesDebug.sol
+  0db9e05318d9af65 1-26
+lib/aqua/LICENSES/MIT-Forge-Std.txt
+  0db9e05318d9af65 1-25
+lib/aqua/src/AquaRouter.sol
+  0db9e05318d9af65 1-22
+lib/openzeppelin-contracts/contracts/mocks/proxy/UUPSUpgradeableMock.sol
+  0db9e05318d9af65 1-35
+lib/openzeppelin-contracts/contracts/proxy/README.adoc
+  0db9e05318d9af65 1-87
+lib/swap-vm/hardhat.config.ts
+  0db9e05318d9af65 1-71
+lib/openzeppelin-contracts/test/governance/extensions/GovernorStorage.test.js
+  0db9e05318d9af65 1-155
+lib/solidity-utils/codecov.yml
+  0db9e05318d9af65 1-6
+lib/openzeppelin-contracts/test/token/ERC6909/extensions/ERC6909ContentURI.test.js
+  0db9e05318d9af65 1-49
+lib/solidity-utils/docs/contracts/libraries/ECDSA.md
+  0db9e05318d9af65 1-315
+lib/openzeppelin-contracts/lib/forge-std/src/console2.sol
+  0db9e05318d9af65 1-4
+lib/openzeppelin-contracts/contracts/utils/introspection/ERC165.sol
+  0db9e05318d9af65 1-25
+lib/openzeppelin-contracts/test/utils/ShortStrings.t.sol
+  0db9e05318d9af65 1-109
+lib/openzeppelin-contracts/test/utils/structs/EnumerableMap.behavior.js
+  0db9e05318d9af65 1-214
+lib/openzeppelin-contracts/contracts/account/README.adoc
+  0db9e05318d9af65 1-30
+lib/openzeppelin-contracts/contracts/governance/extensions/GovernorTimelockCompound.sol
+  0db9e05318d9af65 1-165
+lib/openzeppelin-contracts/contracts/mocks/token/ERC1363NoReturnMock.sol
+  0db9e05318d9af65 1-33
+lib/solidity-utils/docs/js/src/type-aliases/Token.md
+  0db9e05318d9af65 1-43
+lib/openzeppelin-contracts/scripts/helpers.js
+  0db9e05318d9af65 1-7
+lib/solidity-utils/contracts/libraries/BySigTraits.sol
+  0db9e05318d9af65 1-78
+lib/solidity-utils/docs/js/src/variables/defaultDeadlinePermit2.md
+  0db9e05318d9af65 1-13
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/100/run-1774630856279.json
+  0db9e05318d9af65 1-69
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/137/run-latest.json
+  0db9e05318d9af65 1-86
+lib/openzeppelin-contracts/test/utils/math/SignedMath.t.sol
+  0db9e05318d9af65 1-80
+lib/openzeppelin-contracts/hardhat/task-test-get-files.js
+  0db9e05318d9af65 1-25
+lib/openzeppelin-contracts/contracts/mocks/MultipleInheritanceInitializableMocks.sol
+  0db9e05318d9af65 1-131
+lib/openzeppelin-contracts/contracts/mocks/docs/access-control/MyContractOwnable.sol
+  0db9e05318d9af65 1-17
+lib/solidity-utils/docs/js/src/functions/buildBySigTraits.md
+  0db9e05318d9af65 1-43
+lib/openzeppelin-contracts/contracts/token/ERC6909/README.adoc
+  0db9e05318d9af65 1-27
+lib/solidity-utils/contracts/mocks/SelfdestructEthSenderMock.sol
+  0db9e05318d9af65 1-27
+lib/openzeppelin-contracts/.github/workflows/upgradeable.yml
+  0db9e05318d9af65 1-34
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/130/run-1781623470669.json
+  0db9e05318d9af65 1-77
+lib/aqua/.env.example
+  0db9e05318d9af65 1-10
+lib/openzeppelin-contracts/test/governance/utils/Votes.test.js
+  0db9e05318d9af65 1-102
+lib/swap-vm/src/routers/SwapVMRouterDebug.sol
+  0db9e05318d9af65 1-26
+lib/solidity-utils/contracts/tests/mocks/AddressSetMock.sol
+  0db9e05318d9af65 1-47
+lib/solidity-utils/docs/contracts/libraries/StringUtil.md
+  0db9e05318d9af65 1-71
+lib/swap-vm/test/FeeIndifferencyToSwap.t.sol
+  0db9e05318d9af65 1-428
+lib/swap-vm/.cursor/rules/foundry-tests.mdc
+  0db9e05318d9af65 1-37
+lib/openzeppelin-contracts/contracts/mocks/InitializableMock.sol
+  0db9e05318d9af65 1-130
+lib/swap-vm/test/utils/FormatLib.sol
+  0db9e05318d9af65 1-107
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/42161/run-latest.json
+  0db9e05318d9af65 1-72
+lib/openzeppelin-contracts/test/governance/extensions/GovernorCountingOverridable.test.js
+  0db9e05318d9af65 1-346
+lib/openzeppelin-contracts/test/account/extensions/AccountERC7579Hooked.test.js
+  0db9e05318d9af65 1-60
+lib/solidity-utils/contracts/libraries/BytesMemory.sol
+  0db9e05318d9af65 1-71
+lib/swap-vm/test/invariants/RoundingInvariants.sol
+  0db9e05318d9af65 1-166
+lib/openzeppelin-contracts/contracts/mocks/governance/GovernorTimelockControlMock.sol
+  0db9e05318d9af65 1-69
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/governance.adoc
+  0db9e05318d9af65 1-239
+lib/openzeppelin-contracts/scripts/generate/templates/MerkleProof.js
+  0db9e05318d9af65 1-187
+lib/solidity-utils/docs/js/src/variables/TypedDataVersion.md
+  0db9e05318d9af65 1-13
+lib/solidity-utils/contracts/libraries/ECDSA.sol
+  0db9e05318d9af65 1-383
+lib/swap-vm/.github/workflows/ci.yml
+  0db9e05318d9af65 1-59
+lib/swap-vm/src/instructions/Jumps.sol
+  0db9e05318d9af65 1-198
+lib/solidity-utils/contracts/libraries/AddressSet.sol
+  0db9e05318d9af65 1-139
+lib/swap-vm/broadcast/__DeployPadCreate3.s.sol/4663/run-latest.json
+  0db9e05318d9af65 1-82
+lib/openzeppelin-contracts/lib/forge-std/src/StdInvariant.sol
+  0db9e05318d9af65 1-122
+lib/solidity-utils/contracts/tests/mocks/BytesStorageMock.sol
+  0db9e05318d9af65 1-32
+lib/openzeppelin-contracts/test/proxy/Proxy.behaviour.js
+  0db9e05318d9af65 1-185
+lib/swap-vm/test/FeeOutAdditivityViolation.t.sol
+  0db9e05318d9af65 1-453
+lib/openzeppelin-contracts/test/governance/extensions/GovernorTimelockCompound.test.js
+  0db9e05318d9af65 1-448
+lib/openzeppelin-contracts/test/metatx/ERC2771Forwarder.test.js
+  0db9e05318d9af65 1-384
+lib/solidity-utils/changelog/changelog-template.hbs
+  0db9e05318d9af65 1-16
+lib/openzeppelin-contracts/certora/harnesses/ERC3156FlashBorrowerHarness.sol
+  0db9e05318d9af65 1-13
+lib/solidity-utils/contracts/tests/mocks/BytesMemoryMock.sol
+  0db9e05318d9af65 1-34
+lib/openzeppelin-contracts/contracts/metatx/ERC2771Context.sol
+  0db9e05318d9af65 1-90
+lib/openzeppelin-contracts/test/governance/extensions/GovernorSuperQuorum.test.js
+  0db9e05318d9af65 1-168
+lib/openzeppelin-contracts/hardhat/env-artifacts.js
+  0db9e05318d9af65 1-29
+lib/openzeppelin-contracts/contracts/mocks/ERC3156FlashBorrowerMock.sol
+  0db9e05318d9af65 1-53
+lib/solidity-utils/docs/js/src/functions/trackReceivedTokenAndTx.md
+  0db9e05318d9af65 1-45
+lib/solidity-utils/docs/js/src/variables/PERMIT2_ADDRESS_ZKSYNC.md
+  0db9e05318d9af65 1-13
+lib/aqua/test/AquaLifecycle.t.sol
+  0db9e05318d9af65 1-108
+lib/openzeppelin-contracts/.github/workflows/actionlint.yml
+  0db9e05318d9af65 1-18
+lib/openzeppelin-contracts/CONTRIBUTING.md
+  0db9e05318d9af65 1-36
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/1/run-1781623213305.json
+  0db9e05318d9af65 1-69
+lib/solidity-utils/contracts/mixins/SelfdestructEthSender.sol
+  0db9e05318d9af65 1-32
+lib/openzeppelin-contracts/contracts/utils/introspection/ERC165Checker.sol
+  0db9e05318d9af65 1-124
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/erc4626.adoc
+  0db9e05318d9af65 1-214
+lib/solidity-utils/docs/js/src/variables/DaiLikePermit.md
+  0db9e05318d9af65 1-13
+lib/solidity-utils/.github/workflows/publish.yml
+  0db9e05318d9af65 1-39
+lib/openzeppelin-contracts/contracts/mocks/ReentrancyAttack.sol
+  0db9e05318d9af65 1-12
+lib/openzeppelin-contracts/docs/modules/ROOT/images/access-control-multiple.svg
+  0db9e05318d9af65 1-97
+lib/solidity-utils/docs/contracts/libraries/UniERC20.md
+  0db9e05318d9af65 1-194
+lib/openzeppelin-contracts/contracts/utils/README.adoc
+  0db9e05318d9af65 1-139
+lib/swap-vm/test/helpers/AquaSwapVMHelper.sol
+  0db9e05318d9af65 1-57
+lib/openzeppelin-contracts/contracts/token/ERC1155/utils/ERC1155Utils.sol
+  0db9e05318d9af65 1-88
+lib/openzeppelin-contracts/scripts/generate/templates/SlotDerivation.t.js
+  0db9e05318d9af65 1-127
+lib/openzeppelin-contracts/test/token/ERC1155/extensions/ERC1155Pausable.test.js
+  0db9e05318d9af65 1-105
+lib/openzeppelin-contracts/contracts/account/Account.sol
+  0db9e05318d9af65 1-145
+lib/solidity-utils/contracts/libraries/Calldata.sol
+  0db9e05318d9af65 1-81
+lib/openzeppelin-contracts/lib/forge-std/src/StdMath.sol
+  0db9e05318d9af65 1-43
+lib/openzeppelin-contracts/contracts/finance/VestingWallet.sol
+  0db9e05318d9af65 1-159
+lib/openzeppelin-contracts/test/finance/VestingWallet.test.js
+  0db9e05318d9af65 1-65
+lib/openzeppelin-contracts/test/utils/Nonces.test.js
+  0db9e05318d9af65 1-16
+lib/solidity-utils/docs/js/src/interfaces/DeployContractOptions.md
+  0db9e05318d9af65 1-175
+lib/solidity-utils/docgen/templates/struct.hbs
+  0db9e05318d9af65 1-9
+lib/swap-vm/test/FeeFlatPartialFill.t.sol
+  0db9e05318d9af65 1-265
+lib/swap-vm/test/SwapVM.t.sol
+  0db9e05318d9af65 1-365
+lib/openzeppelin-contracts/contracts/mocks/MerkleTreeMock.sol
+  0db9e05318d9af65 1-52
+lib/solidity-utils/docs/js/src/variables/defaultDeadline.md
+  0db9e05318d9af65 1-13
+lib/solidity-utils/contracts/mixins/EthReceiver.sol
+  0db9e05318d9af65 1-27
+lib/openzeppelin-contracts/contracts/utils/cryptography/RSA.sol
+  0db9e05318d9af65 1-154
+lib/openzeppelin-contracts/contracts/token/ERC6909/extensions/draft-ERC6909ContentURI.sol
+  0db9e05318d9af65 1-53
+lib/solidity-utils/docs/js/hardhat-setup/type-aliases/Etherscan.md
+  0db9e05318d9af65 1-31
+lib/swap-vm/test/Controls.t.sol
+  0db9e05318d9af65 1-758
+lib/openzeppelin-contracts/contracts/mocks/ERC165/ERC165MissingData.sol
+  0db9e05318d9af65 1-7
+lib/solidity-utils/package.json
+  0db9e05318d9af65 1-118
+lib/openzeppelin-contracts/contracts/utils/NoncesKeyed.sol
+  0db9e05318d9af65 1-74
+lib/openzeppelin-contracts/contracts/token/ERC6909/draft-ERC6909.sol
+  0db9e05318d9af65 1-224
+lib/openzeppelin-contracts/test/governance/extensions/GovernorProposalGuardian.test.js
+  0db9e05318d9af65 1-132
+lib/solidity-utils/test/contracts/Calldata.test.ts
+  0db9e05318d9af65 1-87
+lib/openzeppelin-contracts/scripts/checks/extract-layout.js
+  0db9e05318d9af65 1-38
+lib/openzeppelin-contracts/contracts/mocks/ContextMock.sol
+  0db9e05318d9af65 1-35
+lib/openzeppelin-contracts/test/TESTING.md
+  0db9e05318d9af65 1-3
+lib/solidity-utils/LICENSE.md
+  0db9e05318d9af65 1-9
+lib/openzeppelin-contracts/docs/templates/contract.hbs
+  0db9e05318d9af65 1-141
+lib/solidity-utils/docs/js/src/functions/deployContract.md
+  0db9e05318d9af65 1-29
+lib/solidity-utils/contracts/tests/mocks/WETH.sol
+  0db9e05318d9af65 1-70
+lib/openzeppelin-contracts/.github/PULL_REQUEST_TEMPLATE.md
+  0db9e05318d9af65 1-20
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/59144/run-1781623377949.json
+  0db9e05318d9af65 1-69
+lib/openzeppelin-contracts/contracts/interfaces/IERC2981.sol
+  0db9e05318d9af65 1-26
+lib/openzeppelin-contracts/test/bin/EntryPoint070.abi
+  0db9e05318d9af65 1
+lib/openzeppelin-contracts/test/utils/structs/EnumerableSet.test.js
+  0db9e05318d9af65 1-66
+lib/solidity-utils/docs/contracts/libraries/Calldata.md
+  0db9e05318d9af65 1-105
+lib/openzeppelin-contracts/lib/forge-std/foundry.toml
+  0db9e05318d9af65 1-23
+lib/swap-vm/script/DeploySwapVMRouter.s.sol
+  0db9e05318d9af65 1-41
+lib/openzeppelin-contracts/scripts/generate/templates/Packing.js
+  0db9e05318d9af65 1-92
+lib/openzeppelin-contracts/contracts/interfaces/IERC3156FlashLender.sol
+  0db9e05318d9af65 1-41
+lib/openzeppelin-contracts/test/governance/extensions/GovernorPreventLateQuorum.test.js
+  0db9e05318d9af65 1-185
+lib/swap-vm/LICENSES/MIT-1inch.txt
+  0db9e05318d9af65 1-9
+lib/openzeppelin-contracts/contracts/token/ERC721/utils/ERC721Utils.sol
+  0db9e05318d9af65 1-50
+lib/swap-vm/script/DeployLimitSwapVMRouter.s.sol
+  0db9e05318d9af65 1-41
+lib/solidity-utils/test/contracts/BytesStorage.test.ts
+  0db9e05318d9af65 1-148
+lib/openzeppelin-contracts/scripts/generate/templates/Enumerable.opts.js
+  0db9e05318d9af65 1-53
+lib/openzeppelin-contracts/contracts/mocks/TransientSlotMock.sol
+  0db9e05318d9af65 1-61
+lib/solidity-utils/docs/contracts/mixins/EthReceiver.md
+  0db9e05318d9af65 1-40
+lib/openzeppelin-contracts/test/token/ERC1155/ERC1155.test.js
+  0db9e05318d9af65 1-213
+lib/swap-vm/test/invariants/concentrate/WideRange.t.sol
+  0db9e05318d9af65 1-46
+lib/openzeppelin-contracts/contracts/mocks/governance/GovernorPreventLateQuorumMock.sol
+  0db9e05318d9af65 1-40
+lib/openzeppelin-contracts/contracts/token/ERC721/README.adoc
+  0db9e05318d9af65 1-69
+lib/openzeppelin-contracts/scripts/checks/pragma-consistency.js
+  0db9e05318d9af65 1-49
+lib/solidity-utils/docs/contracts/libraries/BytesStorage.md
+  0db9e05318d9af65 1-100
+lib/solidity-utils/docgen/templates/page.hbs
+  0db9e05318d9af65 1-7
+lib/solidity-utils/docs/js/src/functions/deployAndGetContractWithCreate3.md
+  0db9e05318d9af65 1-31
+lib/swap-vm/src/routers/LimitSwapVMRouter.sol
+  0db9e05318d9af65 1-29
+lib/swap-vm/test/helpers/DirectSwapVMHelper.sol
+  0db9e05318d9af65 1-71
+lib/solidity-utils/docs/contracts/libraries/Transient.md
+  0db9e05318d9af65 1-354
+lib/swap-vm/test/NativePayment.t.sol
+  0db9e05318d9af65 1-537
+lib/swap-vm/test/invariants/concentrate/TinyLiquidity.t.sol
+  0db9e05318d9af65 1-59
+lib/openzeppelin-contracts/test/utils/cryptography/SignatureChecker.test.js
+  0db9e05318d9af65 1-416
+lib/solidity-utils/docgen/templates/user-defined-value-type.hbs
+  0db9e05318d9af65 1
+lib/swap-vm/test/invariants/concentrate/EdgePriceRange.t.sol
+  0db9e05318d9af65 1-121
+lib/openzeppelin-contracts/contracts/mocks/docs/access-control/AccessControlModified.sol
+  0db9e05318d9af65 1-14
+lib/solidity-utils/contracts/tests/mocks/CalldataPtrMock.sol
+  0db9e05318d9af65 1-28
+lib/solidity-utils/src/permit.ts
+  0db9e05318d9af65 1-501
+foundry.toml
+  0db9e05318d9af65 5,10-16
+lib/solidity-utils/.github/workflows/cpv.yml
+  0db9e05318d9af65 1-25
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/extending-contracts.adoc
+  0db9e05318d9af65 1-51
+lib/openzeppelin-contracts/test/utils/cryptography/ecdsa_secp256r1_sha256_p1363_test.json
+  0db9e05318d9af65 1-3719
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/130/run-latest.json
+  0db9e05318d9af65 1-77
+lib/swap-vm/test/invariants/xyc/TinyLiquidity.t.sol
+  0db9e05318d9af65 1-56
+lib/openzeppelin-contracts/lib/forge-std/LICENSE-MIT
+  0db9e05318d9af65 1-25
+lib/openzeppelin-contracts/contracts/mocks/token/ERC20ApprovalMock.sol
+  0db9e05318d9af65 1-10
+lib/solidity-utils/test/contracts/AddressLib.test.ts
+  0db9e05318d9af65 1-59
+lib/openzeppelin-contracts/lib/forge-std/src/interfaces/IERC165.sol
+  0db9e05318d9af65 1-12
+lib/swap-vm/test/XYCConcentrateCapitalEfficiency.t.sol
+  0db9e05318d9af65 1-318
+lib/openzeppelin-contracts/contracts/token/ERC6909/extensions/draft-ERC6909TokenSupply.sol
+  0db9e05318d9af65 1-35
+lib/openzeppelin-contracts/test/utils/cryptography/RSA.test.js
+  0db9e05318d9af65 1-102
+lib/openzeppelin-contracts/lib/forge-std/.gitignore
+  0db9e05318d9af65 1-4
+lib/openzeppelin-contracts/certora/harnesses/AccessControlDefaultAdminRulesHarness.sol
+  0db9e05318d9af65 1-46
+lib/openzeppelin-contracts/test/helpers/chains.js
+  0db9e05318d9af65 1-109
+lib/openzeppelin-contracts/test/utils/TransientSlot.test.js
+  0db9e05318d9af65 1-59
+lib/openzeppelin-contracts/contracts/governance/extensions/GovernorVotesSuperQuorumFraction.sol
+  0db9e05318d9af65 1-134
+lib/swap-vm/src/instructions/TokenValidators.sol
+  0db9e05318d9af65 1-185
+lib/openzeppelin-contracts/lib/forge-std/test/compilation/CompilationScript.sol
+  0db9e05318d9af65 1-10
+lib/solidity-utils/docs/js/src/functions/timeIncreaseTo.md
+  0db9e05318d9af65 1-23
+lib/openzeppelin-contracts/scripts/generate/templates/SafeCast.js
+  0db9e05318d9af65 1-136
+lib/openzeppelin-contracts/test/utils/structs/Checkpoints.test.js
+  0db9e05318d9af65 1-146
+lib/solidity-utils/docs/js/src/functions/getEthPrice.md
+  0db9e05318d9af65 1-25
+lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20FlashMint.sol
+  0db9e05318d9af65 1-134
+lib/openzeppelin-contracts/certora/specs/methods/IERC721.spec
+  0db9e05318d9af65 1-17
+lib/swap-vm/test/mocks/MockMakerHooks.sol
+  0db9e05318d9af65 1-255
+lib/solidity-utils/contracts/tests/mocks/EthReceiverMock.sol
+  0db9e05318d9af65 1-10
+lib/swap-vm/ignition/parameters/chain-11155111.json
+  0db9e05318d9af65 1-9
+lib/openzeppelin-contracts/contracts/mocks/governance/GovernorCountingOverridableMock.sol
+  0db9e05318d9af65 1-18
+lib/swap-vm/mocks/ProtocolFeeProviderMock.sol
+  0db9e05318d9af65 1-51
+lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol
+  0db9e05318d9af65 1-180
+lib/openzeppelin-contracts/scripts/release/workflow/set-changesets-pr-title.js
+  0db9e05318d9af65 1-17
+lib/openzeppelin-contracts/test/utils/cryptography/ERC1271.behavior.js
+  0db9e05318d9af65 1-111
+lib/openzeppelin-contracts/.github/workflows/docs.yml
+  0db9e05318d9af65 1-19
+lib/solidity-utils/contracts/libraries/Transient.sol
+  0db9e05318d9af65 1-245
+lib/openzeppelin-contracts/docs/templates/page.hbs
+  0db9e05318d9af65 1-4
+lib/openzeppelin-contracts/lib/forge-std/src/Script.sol
+  0db9e05318d9af65 1-27
+lib/openzeppelin-contracts/test/account/extensions/AccountERC7579.test.js
+  0db9e05318d9af65 1-60
+lib/openzeppelin-contracts/test/utils/Context.test.js
+  0db9e05318d9af65 1-18
+lib/solidity-utils/contracts/interfaces/IWETH.sol
+  0db9e05318d9af65 1-32
+lib/solidity-utils/docs/js/src/functions/deployAndGetContract.md
+  0db9e05318d9af65 1-31
+lib/openzeppelin-contracts/contracts/mocks/governance/GovernorFractionalMock.sol
+  0db9e05318d9af65 1-14
+lib/swap-vm/test/XYCSwapAqua.t.sol
+  0db9e05318d9af65 1-614
+lib/openzeppelin-contracts/contracts/proxy/Proxy.sol
+  0db9e05318d9af65 1-69
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/upgradeable.adoc
+  0db9e05318d9af65 1-77
+lib/swap-vm/ignition/modules/LimitSwapVMRouter.ts
+  0db9e05318d9af65 1-3
+lib/swap-vm/test/Strategies.t.sol
+  0db9e05318d9af65 1-263
+lib/solidity-utils/docs/js/src/functions/countInstructions.md
+  0db9e05318d9af65 1-33
+lib/openzeppelin-contracts/contracts/utils/CAIP2.sol
+  0db9e05318d9af65 1-51
+lib/openzeppelin-contracts/test/token/ERC20/extensions/ERC20FlashMint.test.js
+  0db9e05318d9af65 1-164
+lib/openzeppelin-contracts/contracts/token/ERC6909/extensions/draft-ERC6909Metadata.sol
+  0db9e05318d9af65 1-77
+lib/solidity-utils/docs/js/src/functions/assertRoughlyEqualValues.md
+  0db9e05318d9af65 1-38
+lib/solidity-utils/docs/js/src/functions/permit2Contract.md
+  0db9e05318d9af65 1-25
+lib/openzeppelin-contracts/contracts/interfaces/IERC777Sender.sol
+  0db9e05318d9af65 1-35
+lib/swap-vm/test/invariants/pegged/TinyLiquidity.t.sol
+  0db9e05318d9af65 1-36
+lib/openzeppelin-contracts/contracts/governance/extensions/GovernorNoncesKeyed.sol
+  0db9e05318d9af65 1-91
+lib/openzeppelin-contracts/contracts/utils/Blockhash.sol
+  0db9e05318d9af65 1-53
+lib/openzeppelin-contracts/scripts/release/version.sh
+  0db9e05318d9af65 1-11
+lib/openzeppelin-contracts/certora/harnesses/AccessManagedHarness.sol
+  0db9e05318d9af65 1-36
+lib/solidity-utils/test/Permitable.test.ts
+  0db9e05318d9af65 1-195
+lib/solidity-utils/contracts/mixins/BySig.sol
+  0db9e05318d9af65 1-217
+lib/openzeppelin-contracts/.mocharc.js
+  0db9e05318d9af65 1-4
+lib/swap-vm/ignition/parameters/chain-31337.json
+  0db9e05318d9af65 1-9
+lib/openzeppelin-contracts/test/token/ERC721/extensions/ERC721Consecutive.test.js
+  0db9e05318d9af65 1-228
+lib/openzeppelin-contracts/certora/harnesses/InitializableHarness.sol
+  0db9e05318d9af65 1-23
+lib/openzeppelin-contracts/contracts/token/ERC721/extensions/ERC721Consecutive.sol
+  0db9e05318d9af65 1-176
+lib/solidity-utils/contracts/tests/mocks/EthSenderMock.sol
+  0db9e05318d9af65 1-13
+lib/openzeppelin-contracts/test/token/ERC721/extensions/ERC721Burnable.test.js
+  0db9e05318d9af65 1-77
+lib/openzeppelin-contracts/test/utils/structs/EnumerableMap.test.js
+  0db9e05318d9af65 1-83
+lib/aqua/Makefile
+  0db9e05318d9af65 1-181
+lib/openzeppelin-contracts/contracts/mocks/SingleInheritanceInitializableMocks.sol
+  0db9e05318d9af65 1-49
+lib/openzeppelin-contracts/contracts/utils/cryptography/signers/AbstractSigner.sol
+  0db9e05318d9af65 1-23
+lib/swap-vm/test/XYCConcentrateFeeTrackingDetailed.t.sol
+  0db9e05318d9af65 1-352
+lib/openzeppelin-contracts/test/token/ERC1155/extensions/ERC1155URIStorage.test.js
+  0db9e05318d9af65 1-70
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/100/run-latest.json
+  0db9e05318d9af65 1-69
+lib/openzeppelin-contracts/test/utils/Create2.t.sol
+  0db9e05318d9af65 1-17
+lib/openzeppelin-contracts/test/helpers/signers.js
+  0db9e05318d9af65 1-184
+lib/solidity-utils/contracts/tests/mocks/RevertReasonForwarderMock.sol
+  0db9e05318d9af65 1-43
+lib/openzeppelin-contracts/scripts/solhint-custom/index.js
+  0db9e05318d9af65 1-84
+lib/openzeppelin-contracts/scripts/update-docs-branch.js
+  0db9e05318d9af65 1-65
+lib/solidity-utils/docs/contracts/libraries/TransientLock.md
+  0db9e05318d9af65 1-91
+lib/swap-vm/test/FeeAqua.t.sol
+  0db9e05318d9af65 1-130
+lib/openzeppelin-contracts/test/bin/SenderCreator080.abi
+  0db9e05318d9af65 1
+lib/solidity-utils/docs/js/src/functions/getPermit2.md
+  0db9e05318d9af65 1-53
+lib/openzeppelin-contracts/docs/templates/helpers.js
+  0db9e05318d9af65 1-46
+lib/openzeppelin-contracts/contracts/mocks/token/ERC4626LimitsMock.sol
+  0db9e05318d9af65 1-23
+lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/SVM.sol
+  0db9e05318d9af65 1-49
+lib/swap-vm/src/instructions/interfaces/IPriceOracle.sol
+  0db9e05318d9af65 1-36
+lib/aqua/test/AquaStorageTest.t.sol
+  0db9e05318d9af65 1-166
+lib/openzeppelin-contracts/certora/specs/Initializable.spec
+  0db9e05318d9af65 1-165
+lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol
+  0db9e05318d9af65 1-146
+lib/aqua/foundry.toml
+  0db9e05318d9af65 1-32
+lib/solidity-utils/test/permit.test.ts
+  0db9e05318d9af65 1-98
+lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Permit.sol
+  0db9e05318d9af65 1-77
+lib/solidity-utils/docs/contracts/libraries/AddressSet.md
+  0db9e05318d9af65 1-211
+lib/openzeppelin-contracts/contracts/proxy/beacon/BeaconProxy.sol
+  0db9e05318d9af65 1-57
+lib/openzeppelin-contracts/hardhat/remappings.js
+  0db9e05318d9af65 1-18
+lib/openzeppelin-contracts/test/utils/structs/CircularBuffer.test.js
+  0db9e05318d9af65 1-83
+lib/swap-vm/test/invariants/concentrate/SmallAmounts.t.sol
+  0db9e05318d9af65 1-45
+lib/openzeppelin-contracts/contracts/utils/cryptography/verifiers/ERC7913P256Verifier.sol
+  0db9e05318d9af65 1-29
+lib/solidity-utils/test/contracts/BytesMemory.test.ts
+  0db9e05318d9af65 1-113
+lib/aqua/test/AquaPushPull.t.sol
+  0db9e05318d9af65 1-195
+lib/openzeppelin-contracts/contracts/governance/extensions/GovernorPreventLateQuorum.sol
+  0db9e05318d9af65 1-92
+lib/openzeppelin-contracts/contracts/governance/extensions/GovernorVotes.sol
+  0db9e05318d9af65 1-63
+lib/openzeppelin-contracts/contracts/utils/Create2.sol
+  0db9e05318d9af65 1-92
+lib/openzeppelin-contracts/contracts/utils/cryptography/P256.sol
+  0db9e05318d9af65 1-408
+lib/openzeppelin-contracts/scripts/generate/templates/Checkpoints.t.js
+  0db9e05318d9af65 1-137
+lib/swap-vm/test/DutchAuction.t.sol
+  0db9e05318d9af65 1-286
+lib/openzeppelin-contracts/.github/actions/storage-layout/action.yml
+  0db9e05318d9af65 1-57
+lib/openzeppelin-contracts/scripts/release/synchronize-versions.js
+  0db9e05318d9af65 1-15
+lib/solidity-utils/.solhint.json
+  0db9e05318d9af65 1-13
+lib/openzeppelin-contracts/certora/specs/AccessControl.spec
+  0db9e05318d9af65 1-119
+lib/solidity-utils/docs/contracts/mocks/TokenMock.md
+  0db9e05318d9af65 1-54
+lib/swap-vm/test/invariants/pegged/BalancedCurve.t.sol
+  0db9e05318d9af65 1-32
+lib/openzeppelin-contracts/contracts/utils/Pausable.sol
+  0db9e05318d9af65 1-112
+lib/swap-vm/src/instructions/Invalidators.sol
+  0db9e05318d9af65 1-253
+lib/solidity-utils/contracts/interfaces/ICreate3Deployer.sol
+  0db9e05318d9af65 1-24
+lib/openzeppelin-contracts/certora/harnesses/EnumerableSetHarness.sol
+  0db9e05318d9af65 1-35
+lib/openzeppelin-contracts/contracts/mocks/RegressionImplementation.sol
+  0db9e05318d9af65 1-61
+lib/aqua/test/AquaShipDock.t.sol
+  0db9e05318d9af65 1-374
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/137/run-1774630972889.json
+  0db9e05318d9af65 1-86
+lib/swap-vm/test/FeeProtocolCombinations.t.sol
+  0db9e05318d9af65 1-604
+lib/openzeppelin-contracts/contracts/governance/README.adoc
+  0db9e05318d9af65 1-197
+lib/openzeppelin-contracts/contracts/token/ERC721/utils/ERC721Holder.sol
+  0db9e05318d9af65 1-24
+lib/openzeppelin-contracts/contracts/interfaces/IERC20Metadata.sol
+  0db9e05318d9af65 1-6
+lib/openzeppelin-contracts/contracts/access/extensions/IAccessControlEnumerable.sol
+  0db9e05318d9af65 1-31
+lib/openzeppelin-contracts/.prettierrc
+  0db9e05318d9af65 1-15
+lib/openzeppelin-contracts/netlify.toml
+  0db9e05318d9af65 1-3
+lib/openzeppelin-contracts/certora/specs/methods/IERC20.spec
+  0db9e05318d9af65 1-11
+lib/openzeppelin-contracts/contracts/access/manager/AccessManaged.sol
+  0db9e05318d9af65 1-112
+lib/openzeppelin-contracts/contracts/interfaces/draft-IERC7579.sol
+  0db9e05318d9af65 1-226
+lib/openzeppelin-contracts/contracts/interfaces/IERC20.sol
+  0db9e05318d9af65 1-6
+lib/openzeppelin-contracts/contracts/utils/Packing.sol
+  0db9e05318d9af65 1-1656
+lib/openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol
+  0db9e05318d9af65 1-514
+lib/openzeppelin-contracts/scripts/generate/templates/Arrays.js
+  0db9e05318d9af65 1-386
+lib/openzeppelin-contracts/contracts/token/ERC1155/extensions/ERC1155Pausable.sol
+  0db9e05318d9af65 1-38
+lib/openzeppelin-contracts/test/governance/TimelockController.test.js
+  0db9e05318d9af65 1-1279
+lib/openzeppelin-contracts/certora/harnesses/DoubleEndedQueueHarness.sol
+  0db9e05318d9af65 1-58
+lib/solidity-utils/contracts/libraries/TransientLock.sol
+  0db9e05318d9af65 1-59
+lib/solidity-utils/test/contracts/EthReceiver.test.ts
+  0db9e05318d9af65 1-34
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/8453/run-latest.json
+  0db9e05318d9af65 1-77
+lib/openzeppelin-contracts/contracts/mocks/MulticallHelper.sol
+  0db9e05318d9af65 1-23
+lib/swap-vm/test/base/TestConstants.sol
+  0db9e05318d9af65 1-29
+lib/openzeppelin-contracts/.github/workflows/changeset.yml
+  0db9e05318d9af65 1-28
+lib/swap-vm/src/instructions/TWAPSwap.sol
+  0db9e05318d9af65 1-258
+lib/openzeppelin-contracts/certora/specs/methods/IERC721Receiver.spec
+  0db9e05318d9af65 1-3
+lib/openzeppelin-contracts/test/helpers/governance.js
+  0db9e05318d9af65 1-217
+lib/swap-vm/src/libs/TakerTraits.sol
+  0db9e05318d9af65 1-329
+lib/openzeppelin-contracts/test/proxy/transparent/TransparentUpgradeableProxy.test.js
+  0db9e05318d9af65 1-28
+lib/openzeppelin-contracts/test/proxy/transparent/ProxyAdmin.test.js
+  0db9e05318d9af65 1-82
+lib/openzeppelin-contracts/lib/forge-std/src/StdToml.sol
+  0db9e05318d9af65 1-283
+lib/swap-vm/DEPLOY.md
+  0db9e05318d9af65 1-98
+lib/openzeppelin-contracts/contracts/mocks/Base64Dirty.sol
+  0db9e05318d9af65 1-19
+lib/openzeppelin-contracts/contracts/token/ERC1155/IERC1155.sol
+  0db9e05318d9af65 1-123
+lib/openzeppelin-contracts/test/finance/VestingWallet.behavior.js
+  0db9e05318d9af65 1-87
+lib/swap-vm/broadcast/__DeployPadCreate3.s.sol/8453/run-1781098938950.json
+  0db9e05318d9af65 1-88
+lib/swap-vm/test/OpcodeEnumCheck.t.sol
+  0db9e05318d9af65 1-41
+lib/openzeppelin-contracts/contracts/mocks/docs/token/ERC1155/GameItems.sol
+  0db9e05318d9af65 1-21
+lib/solidity-utils/docs/contracts/mocks/TokenCustomDecimalsMock.md
+  0db9e05318d9af65 1-71
+lib/openzeppelin-contracts/contracts/governance/extensions/GovernorTimelockAccess.sol
+  0db9e05318d9af65 1-346
+lib/openzeppelin-contracts/contracts/mocks/token/ERC20FlashMintMock.sol
+  0db9e05318d9af65 1-26
+lib/openzeppelin-contracts/lib/forge-std/test/StdToml.t.sol
+  0db9e05318d9af65 1-49
+lib/openzeppelin-contracts/certora/specs/Ownable2Step.spec
+  0db9e05318d9af65 1-108
+lib/openzeppelin-contracts/contracts/access/AccessControl.sol
+  0db9e05318d9af65 1-207
+lib/openzeppelin-contracts/test/token/ERC1155/ERC1155.behavior.js
+  0db9e05318d9af65 1-763
+lib/solidity-utils/docs/js/src/interfaces/DeployContractOptionsWithCreate3.md
+  0db9e05318d9af65 1-207
+lib/openzeppelin-contracts/test/governance/extensions/GovernorSequentialProposalId.test.js
+  0db9e05318d9af65 1-202
+lib/aqua/.github/workflows/claude-code-review.yml
+  0db9e05318d9af65 1-79
+lib/openzeppelin-contracts/contracts/interfaces/IERC3156.sol
+  0db9e05318d9af65 1-7
+lib/openzeppelin-contracts/scripts/upgradeable/transpile.sh
+  0db9e05318d9af65 1-50
+lib/openzeppelin-contracts/test/account/AccountRSA.test.js
+  0db9e05318d9af65 1-58
+lib/openzeppelin-contracts/test/token/ERC20/utils/SafeERC20.test.js
+  0db9e05318d9af65 1-463
+lib/solidity-utils/contracts/libraries/TransientLockUnsafe.sol
+  0db9e05318d9af65 1-54
+lib/swap-vm/src/routers/AquaSwapVMRouterDebug.sol
+  0db9e05318d9af65 1-26
+lib/openzeppelin-contracts/test/utils/cryptography/MessageHashUtils.t.sol
+  0db9e05318d9af65 1-33
+lib/openzeppelin-contracts/lib/forge-std/.github/workflows/ci.yml
+  0db9e05318d9af65 1-128
+lib/openzeppelin-contracts/contracts/mocks/ERC1271WalletMock.sol
+  0db9e05318d9af65 1-24
+lib/openzeppelin-contracts/lib/forge-std/src/interfaces/IERC4626.sol
+  0db9e05318d9af65 1-190
+lib/aqua/test/utils/Dynamic.sol
+  0db9e05318d9af65 1-79
+lib/openzeppelin-contracts/LICENSE
+  0db9e05318d9af65 1-22
+lib/aqua/test/AquaRouter.t.sol
+  0db9e05318d9af65 1-30
+lib/solidity-utils/docs/js/src/functions/getAccountsWithCode.md
+  0db9e05318d9af65 1-25
+lib/openzeppelin-contracts/contracts/mocks/token/ERC4646FeesMock.sol
+  0db9e05318d9af65 1-40
+lib/openzeppelin-contracts/certora/specs/methods/IERC2612.spec
+  0db9e05318d9af65 1-5
+lib/aqua/LICENSES/Apache-2.0-Forge-Std.txt
+  0db9e05318d9af65 1-203
+lib/openzeppelin-contracts/contracts/mocks/token/ERC4626Mock.sol
+  0db9e05318d9af65 1-17
+lib/solidity-utils/docgen/templates/function.hbs
+  0db9e05318d9af65 1
+lib/openzeppelin-contracts/test/token/ERC6909/ERC6909.test.js
+  0db9e05318d9af65 1-104
+lib/solidity-utils/CONTRIBUTING.md
+  0db9e05318d9af65 1-36
+lib/openzeppelin-contracts/contracts/interfaces/IERC1271.sol
+  0db9e05318d9af65 1-17
+lib/solidity-utils/contracts/libraries/TransientUnsafe.sol
+  0db9e05318d9af65 1-195
+lib/openzeppelin-contracts/contracts/access/extensions/IAccessControlDefaultAdminRules.sol
+  0db9e05318d9af65 1-192
+lib/openzeppelin-contracts/fv-requirements.txt
+  0db9e05318d9af65 1-4
+lib/openzeppelin-contracts/contracts/account/utils/EIP7702Utils.sol
+  0db9e05318d9af65 1-21
+lib/openzeppelin-contracts/RELEASING.md
+  0db9e05318d9af65 1-45
+lib/openzeppelin-contracts/scripts/generate/templates/Slot.opts.js
+  0db9e05318d9af65 1-15
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/erc721.adoc
+  0db9e05318d9af65 1-58
+lib/aqua/examples/test/XYCSwap.t.sol
+  0db9e05318d9af65 1-718
+lib/solidity-utils/docs/js/src/functions/buildDataLikeDai.md
+  0db9e05318d9af65 1-109
+lib/solidity-utils/docs/contracts/libraries/AddressLib.md
+  0db9e05318d9af65 1-94
+lib/openzeppelin-contracts/contracts/mocks/docs/ERC4626Fees.sol
+  0db9e05318d9af65 1-109
+lib/solidity-utils/docs/js/hardhat-setup/functions/parseRpcEnv.md
+  0db9e05318d9af65 1-33
+lib/openzeppelin-contracts/contracts/utils/cryptography/signers/SignerERC7913.sol
+  0db9e05318d9af65 1-63
+lib/swap-vm/src/instructions/MinRate.sol
+  0db9e05318d9af65 1-119
+lib/openzeppelin-contracts/contracts/mocks/docs/ERC20WithAutoMinerReward.sol
+  0db9e05318d9af65 1-22
+lib/openzeppelin-contracts/certora/specs/TimelockController.spec
+  0db9e05318d9af65 1-274
+lib/openzeppelin-contracts/certora/README.md
+  0db9e05318d9af65 1-60
+lib/openzeppelin-contracts/contracts/mocks/proxy/BadBeacon.sol
+  0db9e05318d9af65 1-11
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/wizard.adoc
+  0db9e05318d9af65 1-15
+lib/swap-vm/test/Whitelist.t.sol
+  0db9e05318d9af65 1-350
+lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol
+  0db9e05318d9af65 1-1162
+lib/openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol
+  0db9e05318d9af65 1-28
+lib/openzeppelin-contracts/test/token/ERC721/extensions/ERC721Consecutive.t.sol
+  0db9e05318d9af65 1-181
+lib/openzeppelin-contracts/contracts/utils/structs/EnumerableMap.sol
+  0db9e05318d9af65 1-1319
+lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/SymTest.sol
+  0db9e05318d9af65 1-11
+lib/solidity-utils/docs/js/src/functions/permit2Address.md
+  0db9e05318d9af65 1-25
+lib/swap-vm/src/strategies/Strategies.sol
+  0db9e05318d9af65 1-104
+lib/swap-vm/test/invariants/BaseFeeAdjusterFeesInvariants.t.sol
+  0db9e05318d9af65 1-435
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/eoa-delegation.adoc
+  0db9e05318d9af65 1-143
+lib/openzeppelin-contracts/contracts/token/ERC721/extensions/ERC721Votes.sol
+  0db9e05318d9af65 1-47
+lib/solidity-utils/docs/js/hardhat-setup/functions/getNetwork.md
+  0db9e05318d9af65 1-19
+lib/openzeppelin-contracts/contracts/mocks/docs/token/ERC20/GLDToken.sol
+  0db9e05318d9af65 1-11
+lib/solidity-utils/test/contracts/ReentrancyGuard.test.ts
+  0db9e05318d9af65 1-119
+lib/openzeppelin-contracts/contracts/access/manager/IAccessManager.sol
+  0db9e05318d9af65 1-399
+lib/openzeppelin-contracts/contracts/mocks/ERC165/ERC165ReturnBomb.sol
+  0db9e05318d9af65 1-18
+lib/solidity-utils/contracts/tests/mocks/CalldataMock.sol
+  0db9e05318d9af65 1-24
+lib/aqua/.npmrc
+  0db9e05318d9af65 1
+lib/openzeppelin-contracts/contracts/interfaces/IERC1363.sol
+  0db9e05318d9af65 1-86
+lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Wrapper.sol
+  0db9e05318d9af65 1-89
+lib/openzeppelin-contracts/contracts/interfaces/IERC777.sol
+  0db9e05318d9af65 1-200
+lib/openzeppelin-contracts/contracts/mocks/docs/token/ERC6909/ERC6909GameItems.sol
+  0db9e05318d9af65 1-26
+lib/openzeppelin-contracts/scripts/checks/inheritance-ordering.js
+  0db9e05318d9af65 1-55
+lib/solidity-utils/docs/js/hardhat-setup/classes/Networks.md
+  0db9e05318d9af65 1-171
+lib/openzeppelin-contracts/test/access/Ownable.test.js
+  0db9e05318d9af65 1-79
+lib/openzeppelin-contracts/contracts/mocks/docs/account/MyFactoryAccount.sol
+  0db9e05318d9af65 1-37
+lib/openzeppelin-contracts/SECURITY.md
+  0db9e05318d9af65 1-43
+lib/solidity-utils/contracts/tests/mocks/TokenWithBySig.sol
+  0db9e05318d9af65 1-31
+lib/solidity-utils/src/index.ts
+  0db9e05318d9af65 1-8
+lib/openzeppelin-contracts/test/account/AccountERC7913.test.js
+  0db9e05318d9af65 1-116
+lib/solidity-utils/docs/contracts/libraries/AddressArray.md
+  0db9e05318d9af65 1-242
+lib/solidity-utils/docs/contracts/mixins/ReentrancyGuard.md
+  0db9e05318d9af65 1-60
+lib/solidity-utils/contracts/tests/mocks/TransientLockUnsafeNestedMock.sol
+  0db9e05318d9af65 1-23
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/146/run-1781623448789.json
+  0db9e05318d9af65 1-69
+lib/openzeppelin-contracts/contracts/governance/extensions/GovernorCountingSimple.sol
+  0db9e05318d9af65 1-96
+lib/aqua/.github/workflows/claude.yml
+  0db9e05318d9af65 1-101
+lib/openzeppelin-contracts/lib/erc4626-tests/ERC4626.prop.sol
+  0db9e05318d9af65 1-404
+lib/swap-vm/remappings.txt
+  0db9e05318d9af65 1-4
+lib/openzeppelin-contracts/test/token/ERC1155/utils/ERC1155Utils.test.js
+  0db9e05318d9af65 1-299
+lib/openzeppelin-contracts/contracts/mocks/docs/access-control/AccessControlERC20MintBase.sol
+  0db9e05318d9af65 1-25
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/324/run-1774632214302.json
+  0db9e05318d9af65 1-199
+lib/swap-vm/test/base/AquaSwapVMTest.sol
+  0db9e05318d9af65 1-235
+lib/openzeppelin-contracts/contracts/access/Ownable.sol
+  0db9e05318d9af65 1-100
+lib/openzeppelin-contracts/lib/forge-std/src/Test.sol
+  0db9e05318d9af65 1-33
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/erc20.adoc
+  0db9e05318d9af65 1-67
+lib/solidity-utils/contracts/tests/RevertReasonParserTest.sol
+  0db9e05318d9af65 1-84
+lib/openzeppelin-contracts/contracts/utils/structs/BitMaps.sol
+  0db9e05318d9af65 1-60
+lib/openzeppelin-contracts/test/utils/Multicall.test.js
+  0db9e05318d9af65 1-72
+lib/openzeppelin-contracts/test/account/utils/EIP7702Utils.test.js
+  0db9e05318d9af65 1-53
+lib/swap-vm/script/DeployAquaSwapVMRouter.s.sol
+  0db9e05318d9af65 1-41
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/accounts.adoc
+  0db9e05318d9af65 1-354
+lib/solidity-utils/src/permit2.json
+  0db9e05318d9af65 1-3
+lib/openzeppelin-contracts/test/access/manager/AccessManaged.test.js
+  0db9e05318d9af65 1-146
+lib/swap-vm/test/ProtocolFeeAqua.t.sol
+  0db9e05318d9af65 1-193
+lib/openzeppelin-contracts/certora/specs/ERC20Wrapper.spec
+  0db9e05318d9af65 1-198
+lib/openzeppelin-contracts/test/token/ERC721/ERC721Enumerable.test.js
+  0db9e05318d9af65 1-28
+lib/openzeppelin-contracts/contracts/token/ERC721/extensions/ERC721Burnable.sol
+  0db9e05318d9af65 1-26
+lib/openzeppelin-contracts/scripts/upgradeable/patch-save.sh
+  0db9e05318d9af65 1-18
+lib/solidity-utils/docs/js/src/functions/signMessage.md
+  0db9e05318d9af65 1-29
+lib/openzeppelin-contracts/contracts/access/IAccessControl.sol
+  0db9e05318d9af65 1-98
+lib/openzeppelin-contracts/certora/specs/methods/IERC3156FlashLender.spec
+  0db9e05318d9af65 1-5
+lib/solidity-utils/docs/js/src/functions/saveContractWithCreate3Deployment.md
+  0db9e05318d9af65 1-57
+lib/openzeppelin-contracts/contracts/utils/cryptography/Hashes.sol
+  0db9e05318d9af65 1-31
+lib/openzeppelin-contracts/test/bin/EntryPoint080.abi
+  0db9e05318d9af65 1
+lib/openzeppelin-contracts/test/token/ERC20/extensions/ERC20Permit.test.js
+  0db9e05318d9af65 1-109
+lib/openzeppelin-contracts/lib/forge-std/package.json
+  0db9e05318d9af65 1-16
+lib/openzeppelin-contracts/contracts/mocks/docs/access-control/AccessControlERC20MintOnlyRole.sol
+  0db9e05318d9af65 1-23
+lib/solidity-utils/docs/js/src/functions/getPermitLikeDai.md
+  0db9e05318d9af65 1-53
+lib/solidity-utils/test/contracts/SelfdestructEthSender.test.ts
+  0db9e05318d9af65 1-39
+lib/openzeppelin-contracts/.husky/pre-commit
+  0db9e05318d9af65 1-2
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/56/run-1774630828221.json
+  0db9e05318d9af65 1-69
+lib/openzeppelin-contracts/test/helpers/time.js
+  0db9e05318d9af65 1-33
+lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol
+  0db9e05318d9af65 1-143
+lib/openzeppelin-contracts/contracts/utils/cryptography/signers/SignerECDSA.sol
+  0db9e05318d9af65 1-56
+lib/openzeppelin-contracts/lib/forge-std/src/StdAssertions.sol
+  0db9e05318d9af65 1-669
+lib/solidity-utils/contracts/libraries/UniERC20.sol
+  0db9e05318d9af65 1-203
+lib/openzeppelin-contracts/hardhat.config.js
+  0db9e05318d9af65 1-124
+lib/openzeppelin-contracts/contracts/governance/extensions/GovernorProposalGuardian.sol
+  0db9e05318d9af65 1-58
+lib/openzeppelin-contracts/contracts/token/ERC1155/extensions/ERC1155Burnable.sol
+  0db9e05318d9af65 1-28
+lib/swap-vm/test/invariants/xyc/BalancedPoolEdgeFees.t.sol
+  0db9e05318d9af65 1-43
+lib/openzeppelin-contracts/.github/workflows/release-cycle.yml
+  0db9e05318d9af65 1-214
+lib/swap-vm/test/utils/FeeBuilders.sol
+  0db9e05318d9af65 1-60
+lib/openzeppelin-contracts/test/utils/structs/BitMap.test.js
+  0db9e05318d9af65 1-149
+lib/solidity-utils/docgen/index.ts
+  0db9e05318d9af65 1-4
+lib/solidity-utils/docgen/templates/helpers.js
+  0db9e05318d9af65 1-76
+lib/swap-vm/test/invariants/pegged/DustAmounts.t.sol
+  0db9e05318d9af65 1-32
+lib/openzeppelin-contracts/scripts/generate/templates/StorageSlot.js
+  0db9e05318d9af65 1-77
+lib/openzeppelin-contracts/contracts/governance/Governor.sol
+  0db9e05318d9af65 1-818
+lib/openzeppelin-contracts/scripts/generate/templates/Packing.t.js
+  0db9e05318d9af65 1-48
+lib/openzeppelin-contracts/contracts/interfaces/draft-IERC4337.sol
+  0db9e05318d9af65 1-253
+lib/solidity-utils/contracts/mocks/TokenMock.sol
+  0db9e05318d9af65 1-38
+lib/openzeppelin-contracts/contracts/interfaces/IERC721Metadata.sol
+  0db9e05318d9af65 1-6
+lib/swap-vm/src/instructions/LimitSwap.sol
+  0db9e05318d9af65 1-131
+lib/solidity-utils/.github/pull_request_template.md
+  0db9e05318d9af65 1-7
+lib/openzeppelin-contracts/certora/specs/EnumerableMap.spec
+  0db9e05318d9af65 1-333
+lib/swap-vm/test/ConcentrateXYCRounding.t.sol
+  0db9e05318d9af65 1-249
+lib/solidity-utils/test/contracts/Rescuable.test.ts
+  0db9e05318d9af65 1-118
+lib/openzeppelin-contracts/contracts/interfaces/IERC1820Registry.sol
+  0db9e05318d9af65 1-112
+lib/openzeppelin-contracts/test/metatx/ERC2771Forwarder.t.sol
+  0db9e05318d9af65 1-279
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/324/run-latest.json
+  0db9e05318d9af65 1-199
+lib/openzeppelin-contracts/test/utils/Base64.t.sol
+  0db9e05318d9af65 1-34
+lib/solidity-utils/test/contracts/UniERC20.test.ts
+  0db9e05318d9af65 1-265
+lib/openzeppelin-contracts/hardhat/async-test-sanity.js
+  0db9e05318d9af65 1-10
+lib/swap-vm/src/opcodes/Opcodes.sol
+  0db9e05318d9af65 1-88
+lib/openzeppelin-contracts/test/token/ERC721/extensions/ERC721URIStorage.test.js
+  0db9e05318d9af65 1-121
+lib/solidity-utils/docgen/templates/common.hbs
+  0db9e05318d9af65 1-38
+lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Votes.sol
+  0db9e05318d9af65 1-83
+lib/openzeppelin-contracts/.gitmodules
+  0db9e05318d9af65 1-10
+lib/openzeppelin-contracts/test/token/ERC20/extensions/ERC1363.test.js
+  0db9e05318d9af65 1-370
+lib/openzeppelin-contracts/scripts/release/update-comment.js
+  0db9e05318d9af65 1-34
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/59144/run-1774630884388.json
+  0db9e05318d9af65 1-69
+lib/openzeppelin-contracts/test/helpers/enums.js
+  0db9e05318d9af65 1-14
+lib/openzeppelin-contracts/contracts/interfaces/IERC1155Receiver.sol
+  0db9e05318d9af65 1-6
+lib/openzeppelin-contracts/test/utils/Blockhash.t.sol
+  0db9e05318d9af65 1-100
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/multisig.adoc
+  0db9e05318d9af65 1-306
+lib/aqua/src/Aqua.sol
+  0db9e05318d9af65 1-81
+lib/openzeppelin-contracts/test/account/utils/draft-ERC7579Utils.test.js
+  0db9e05318d9af65 1-399
+lib/openzeppelin-contracts/certora/specs/ERC721.spec
+  0db9e05318d9af65 1-679
+lib/openzeppelin-contracts/scripts/generate/templates/EnumerableSet.js
+  0db9e05318d9af65 1-469
+lib/openzeppelin-contracts/test/utils/SlotDerivation.test.js
+  0db9e05318d9af65 1-58
+lib/swap-vm/test/mocks/MockNft.sol
+  0db9e05318d9af65 1-19
+lib/solidity-utils/docs/js/src/functions/cutSelector.md
+  0db9e05318d9af65 1-25
+lib/openzeppelin-contracts/contracts/mocks/AccessManagedTarget.sol
+  0db9e05318d9af65 1-34
+lib/solidity-utils/contracts/tests/mocks/DaiLikePermitMock.sol
+  0db9e05318d9af65 1-49
+lib/openzeppelin-contracts/scripts/checks/generation.sh
+  0db9e05318d9af65 1-6
+lib/openzeppelin-contracts/docs/config.js
+  0db9e05318d9af65 1-21
+lib/openzeppelin-contracts/contracts/utils/structs/CircularBuffer.sol
+  0db9e05318d9af65 1-140
+lib/solidity-utils/docs/js/src/interfaces/SignedCallStruct.md
+  0db9e05318d9af65 1-27
+lib/swap-vm/test/invariants/ExampleInvariantUsage.t.sol
+  0db9e05318d9af65 1-294
+lib/openzeppelin-contracts/certora/run.js
+  0db9e05318d9af65 1-168
+lib/solidity-utils/src/utils.ts
+  0db9e05318d9af65 1-446
+lib/openzeppelin-contracts/certora/harnesses/AccessControlHarness.sol
+  0db9e05318d9af65 1-6
+lib/openzeppelin-contracts/test/helpers/methods.js
+  0db9e05318d9af65 1-14
+lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol
+  0db9e05318d9af65 1-99
+lib/swap-vm/test/AquaAccounting.t.sol
+  0db9e05318d9af65 1-553
+lib/openzeppelin-contracts/contracts/utils/math/Math.sol
+  0db9e05318d9af65 1-749
+lib/openzeppelin-contracts/lib/forge-std/src/safeconsole.sol
+  0db9e05318d9af65 1-13937
+lib/solidity-utils/src/bySig.ts
+  0db9e05318d9af65 1-99
+lib/openzeppelin-contracts/test/utils/SlotDerivation.t.sol
+  0db9e05318d9af65 1-248
+lib/swap-vm/test/mocks/RevertingMakerHooks.sol
+  0db9e05318d9af65 1-39
+lib/swap-vm/.cursor/rules/security-review.mdc
+  0db9e05318d9af65 1-132
+lib/openzeppelin-contracts/contracts/governance/TimelockController.sol
+  0db9e05318d9af65 1-471
+lib/openzeppelin-contracts/lib/erc4626-tests/LICENSE
+  0db9e05318d9af65 1-661
+lib/openzeppelin-contracts/certora/harnesses/ERC721ReceiverHarness.sol
+  0db9e05318d9af65 1-11
+lib/openzeppelin-contracts/.github/ISSUE_TEMPLATE/feature_request.md
+  0db9e05318d9af65 1-14
+lib/openzeppelin-contracts/test/utils/Packing.test.js
+  0db9e05318d9af65 1-70
+lib/openzeppelin-contracts/certora/harnesses/TimelockControllerHarness.sol
+  0db9e05318d9af65 1-13
+lib/openzeppelin-contracts/lib/forge-std/test/compilation/CompilationTest.sol
+  0db9e05318d9af65 1-10
+lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Utils.sol
+  0db9e05318d9af65 1-177
+lib/swap-vm/test/invariants/DecayXYCInvariants.t.sol
+  0db9e05318d9af65 1-252
+lib/swap-vm/test/invariants/ExactInOutSymmetry.t.sol
+  0db9e05318d9af65 1-62
+lib/openzeppelin-contracts/lib/forge-std/scripts/vm.py
+  0db9e05318d9af65 1-646
+lib/openzeppelin-contracts/test/utils/structs/MerkleTree.test.js
+  0db9e05318d9af65 1-180
+lib/openzeppelin-contracts/test/utils/structs/Checkpoints.t.sol
+  0db9e05318d9af65 1-332
+lib/openzeppelin-contracts/contracts/access/manager/IAuthority.sol
+  0db9e05318d9af65 1-14
+lib/openzeppelin-contracts/test/token/ERC20/extensions/ERC20Capped.test.js
+  0db9e05318d9af65 1-55
+lib/solidity-utils/docs/js/src/functions/hashBySig.md
+  0db9e05318d9af65 1-43
+lib/solidity-utils/test/contracts/RevertReasonParser.test.ts
+  0db9e05318d9af65 1-50
+lib/solidity-utils/docs/contracts/libraries/RevertReasonParser.md
+  0db9e05318d9af65 1-46
+lib/openzeppelin-contracts/contracts/interfaces/IERC1967.sol
+  0db9e05318d9af65 1-24
+lib/openzeppelin-contracts/contracts/mocks/governance/GovernorTimelockAccessMock.sol
+  0db9e05318d9af65 1-70
+lib/openzeppelin-contracts/lib/forge-std/test/StdStorage.t.sol
+  0db9e05318d9af65 1-488
+lib/openzeppelin-contracts/contracts/metatx/ERC2771Forwarder.sol
+  0db9e05318d9af65 1-372
+lib/openzeppelin-contracts/contracts/utils/Comparators.sol
+  0db9e05318d9af65 1-19
+lib/openzeppelin-contracts/test/account/Account.behavior.js
+  0db9e05318d9af65 1-144
+lib/solidity-utils/contracts/tests/mocks/SimulatorMock.sol
+  0db9e05318d9af65 1-37
+lib/swap-vm/src/instructions/Extruction.sol
+  0db9e05318d9af65 1-119
+lib/aqua/.yarnrc.yml
+  0db9e05318d9af65 1
+lib/aqua/package.json
+  0db9e05318d9af65 1-31
+lib/openzeppelin-contracts/contracts/utils/Strings.sol
+  0db9e05318d9af65 1-490
+lib/aqua/script/utils/Config.sol
+  0db9e05318d9af65 1-34
+lib/openzeppelin-contracts/test/utils/structs/Heap.t.sol
+  0db9e05318d9af65 1-74
+lib/openzeppelin-contracts/contracts/token/common/README.adoc
+  0db9e05318d9af65 1-10
+lib/swap-vm/test/Decay.t.sol
+  0db9e05318d9af65 1-345
+lib/openzeppelin-contracts/contracts/mocks/governance/GovernorVotesSuperQuorumFractionMock.sol
+  0db9e05318d9af65 1-37
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/1/run-latest.json
+  0db9e05318d9af65 1-69
+lib/openzeppelin-contracts/contracts/access/extensions/AccessControlEnumerable.sol
+  0db9e05318d9af65 1-81
+lib/solidity-utils/test/utils.test.ts
+  0db9e05318d9af65 1-340
+lib/openzeppelin-contracts/test/utils/math/Math.t.sol
+  0db9e05318d9af65 1-349
+lib/solidity-utils/docs/js/src/variables/constants.md
+  0db9e05318d9af65 1-55
+lib/solidity-utils/contracts/mocks/TokenCustomDecimalsMock.sol
+  0db9e05318d9af65 1-57
+lib/openzeppelin-contracts/test/governance/utils/VotesExtended.test.js
+  0db9e05318d9af65 1-152
+lib/openzeppelin-contracts/contracts/token/ERC1155/extensions/ERC1155URIStorage.sol
+  0db9e05318d9af65 1-61
+lib/openzeppelin-contracts/docs/modules/ROOT/images/access-manager.svg
+  0db9e05318d9af65 1-99
+lib/swap-vm/broadcast/__DeployPadCreate.s.sol/8453/run-1774630788701.json
+  0db9e05318d9af65 1-77
+lib/openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol
+  0db9e05318d9af65 1-792
+lib/openzeppelin-contracts/test/helpers/erc7739.js
+  0db9e05318d9af65 1-118
+lib/openzeppelin-contracts/test/utils/Strings.t.sol
+  0db9e05318d9af65 1-50
+lib/swap-vm/test/XYCConcentratePnL.t.sol
+  0db9e05318d9af65 1-529
+lib/solidity-utils/docs/js/src/functions/profileEVM.md
+  0db9e05318d9af65 1-37
+lib/swap-vm/test/invariants/concentrate/MicroAmounts.t.sol
+  0db9e05318d9af65 1-66
+lib/openzeppelin-contracts/contracts/access/extensions/AccessControlDefaultAdminRules.sol
+  0db9e05318d9af65 1-372
+lib/openzeppelin-contracts/lib/forge-std/src/StdError.sol
+  0db9e05318d9af65 1-15
+lib/openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol
+  0db9e05318d9af65 1-45
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/backwards-compatibility.adoc
+  0db9e05318d9af65 1-50
+lib/swap-vm/broadcast/__DeployPadCreate3.s.sol/8453/run-latest.json
+  0db9e05318d9af65 1-88
+lib/solidity-utils/docs/js/src/variables/Permit.md
+  0db9e05318d9af65 1-13
+lib/aqua/remappings.txt
+  0db9e05318d9af65 1-3
+lib/openzeppelin-contracts/scripts/generate/run.js
+  0db9e05318d9af65 1-61
+lib/openzeppelin-contracts/contracts/utils/cryptography/signers/MultiSignerERC7913Weighted.sol
+  0db9e05318d9af65 1-208
+lib/openzeppelin-contracts/contracts/mocks/docs/governance/MyToken.sol
+  0db9e05318d9af65 1-21
+lib/openzeppelin-contracts/scripts/checks/compare-layout.js
+  0db9e05318d9af65 1-20
+lib/openzeppelin-contracts/CODE_OF_CONDUCT.md
+  0db9e05318d9af65 1-73
+lib/openzeppelin-contracts/contracts/mocks/ERC165/ERC165InterfacesSupported.sol
+  0db9e05318d9af65 1-58
+lib/swap-vm/test/PeggedSwap.t.sol
+  0db9e05318d9af65 1-1416
+lib/swap-vm/test/invariants/pegged/VeryImbalancedDifferentDecimals.t.sol
+  0db9e05318d9af65 1-273
+lib/swap-vm/docs/PROGRAMS.md
+  0db9e05318d9af65 1-234
+lib/openzeppelin-contracts/test/helpers/txpool.js
+  0db9e05318d9af65 1-29
+lib/openzeppelin-contracts/hardhat/ignore-unreachable-warnings.js
+  0db9e05318d9af65 1-45
+lib/solidity-utils/hardhat-setup/index.ts
+  0db9e05318d9af65 1-3
+lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol
+  0db9e05318d9af65 1-25
+lib/openzeppelin-contracts/contracts/token/ERC721/extensions/ERC721URIStorage.sol
+  0db9e05318d9af65 1-58
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/erc6909.adoc
+  0db9e05318d9af65 1-47
+lib/swap-vm/test/ControlsAqua.t.sol
+  0db9e05318d9af65 1-318
+lib/solidity-utils/contracts/tests/ECDSATest.sol
+  0db9e05318d9af65 1-114
+lib/openzeppelin-contracts/contracts/mocks/docs/governance/MyGovernor.sol
+  0db9e05318d9af65 1-80
+lib/solidity-utils/docs/contracts/mocks/ERC20PermitMock.md
+  0db9e05318d9af65 1-27
+lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol
+  0db9e05318d9af65 1-305
+lib/openzeppelin-contracts/scripts/generate/templates/SlotDerivation.js
+  0db9e05318d9af65 1-119
+lib/openzeppelin-contracts/contracts/mocks/token/ERC1363ForceApproveMock.sol
+  0db9e05318d9af65 1-13
+lib/openzeppelin-contracts/test/governance/extensions/GovernorVotesQuorumFraction.test.js
+  0db9e05318d9af65 1-165
+lib/swap-vm/test/TakerTraitsPartialFill.t.sol
+  0db9e05318d9af65 1-198
+lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol
+  0db9e05318d9af65 1-16
+lib/openzeppelin-contracts/lib/forge-std/src/StdStyle.sol
+  0db9e05318d9af65 1-333
+lib/swap-vm/test/PiecewiseLinearScale.t.sol
+  0db9e05318d9af65 1-816
+lib/openzeppelin-contracts/docs/modules/ROOT/pages/erc1155.adoc
+  0db9e05318d9af65 1-118
+lib/openzeppelin-contracts/test/helpers/account.js
+  0db9e05318d9af65 1-14
+lib/openzeppelin-contracts/package.json
+  0db9e05318d9af65 1-104
+lib/solidity-utils/docs/contracts/mocks/SelfdestructEthSenderMock.md
+  0db9e05318d9af65 1-41
+lib/solidity-utils/docs/SUMMARY.md
+  0db9e05318d9af65 1-44
+lib/openzeppelin-contracts/contracts/mocks/docs/token/ERC1155/MyERC115HolderContract.sol
+  0db9e05318d9af65 1-7
+lib/openzeppelin-contracts/test/account/extensions/AccountERC7579.behavior.js
+  0db9e05318d9af65 1-563
+lib/openzeppelin-contracts/contracts/access/manager/AuthorityUtils.sol
+  0db9e05318d9af65 1-36
+lib/openzeppelin-contracts/test/access/manager/AccessManager.test.js
+  0db9e05318d9af65 1-2489
+lib/openzeppelin-contracts/test/token/ERC721/extensions/ERC721Pausable.test.js
+  0db9e05318d9af65 1-81
+lib/swap-vm/broadcast/__DeployPadCreate3.s.sol/8453/run-1781101164239.json
+  0db9e05318d9af65 1-88
+lib/solidity-utils/.gitignore
+  0db9e05318d9af65 1-14
+lib/openzeppelin-contracts/contracts/token/ERC20/extensions/draft-ERC20TemporaryApproval.sol
+  0db9e05318d9af65 1-119
+lib/aqua/LICENSES/MIT-1inch.txt
+  0db9e05318d9af65 1-9
+lib/openzeppelin-contracts/contracts/utils/Arrays.sol
+  0db9e05318d9af65 1-552
+lib/openzeppelin-contracts/scripts/generate/templates/Packing.opts.js
+  0db9e05318d9af65 1-3
+lib/openzeppelin-contracts/test/proxy/Clones.behaviour.js
+  0db9e05318d9af65 1-160
+lib/swap-vm/src/libs/ProtocolFee.sol
+  0db9e05318d9af65 1-234
+lib/openzeppelin-contracts/test/utils/Bytes.test.js
+  0db9e05318d9af65 1-104
+lib/openzeppelin-contracts/contracts/mocks/Stateless.sol
+  0db9e05318d9af65 1-53
+lib/openzeppelin-contracts/test/helpers/math.js
+  0db9e05318d9af65 1-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2-bit.10+672fbf0",
+  "base_commit_sha": "3af94609717c340c5af808702c770573d4aa909e",
+  "prompts": {
+    "0db9e05318d9af65": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "85fae049-c0e4-4810-9138-13442c7ec958",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "angel.phoon",
+      "messages": [],
+      "total_additions": 398069,
+      "total_deletions": 88,
+      "accepted_lines": 429218,
+      "overriden_lines": 0
+    }
+  }
+}
