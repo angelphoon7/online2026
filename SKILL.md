@@ -1,7 +1,7 @@
 ---
 name: aquavalve-build
 summary: Build and test AquaValve — a custom 1inch Aqua SwapVM extension with programmable live liquidity (local λ + shared Γ).
-description: Use this skill to build the AquaValve Solidity contracts, run test gates, generate documentation, and prepare a hackathon demo. Covers Foundry setup, Aqua/SwapVM interfaces, ACTIVENESS_XD instruction, local λ scaling, shared Γ wallet envelope, coverage-drop quote shrinking, Decay composition, The Graph subgraph, and all required diagrams.
+description: Use this skill to build the AquaValve Solidity contracts, run test gates, generate documentation, and prepare a hackathon demo. Covers Foundry setup, real Aqua/SwapVM integration, ACTIVENESS_XD instruction, local λ scaling, shared Γ wallet envelope, coverage-drop quote shrinking, Decay composition, The Graph subgraph, and all required diagrams.
 ---
 
 # AquaValve Build Skill
@@ -19,7 +19,13 @@ Before writing any code:
 1. Read `AGENTS.md` for non-negotiable technical semantics and test gates.
 2. Check if Foundry is installed: `forge --version`.
 3. Check the repo tree: identify what exists (frontend, docs) vs what is missing (contracts, tests).
-4. Do **not** claim compile/test/deploy success unless command output proves it.
+4. Install the **real** 1inch repos as Foundry dependencies:
+   ```bash
+   forge install 1inch/swap-vm --no-git --no-commit
+   forge install 1inch/aqua --no-git --no-commit
+   ```
+5. Read `lib/swap-vm/src/instructions/Decay.sol` and `lib/swap-vm/src/instructions/XYCSwap.sol` to understand the instruction pattern before writing `Activeness.sol`.
+6. Do **not** claim compile/test/deploy success unless command output proves it.
 
 ## Phase 1 — Foundry Setup
 
@@ -29,16 +35,6 @@ Before writing any code:
 forge init --no-git --no-commit
 ```
 
-This creates:
-
-```
-foundry.toml
-src/              # Solidity source (rename or symlink to contracts/ if preferred)
-test/             # Foundry tests
-script/           # deploy scripts
-lib/              # dependencies (forge-std)
-```
-
 ### 1.2 Configure foundry.toml
 
 ```toml
@@ -46,27 +42,35 @@ lib/              # dependencies (forge-std)
 src = "contracts"
 out = "out"
 libs = ["lib"]
-solc = "0.8.24"
+solc = "0.8.30"
 optimizer = true
 optimizer_runs = 200
+via_ir = true
 
 [profile.default.fuzz]
 runs = 256
 ```
 
-Move the default `src/` to `contracts/` if using that convention:
+Use `solc = "0.8.30"` to match the official SwapVM contracts.
 
-```bash
-mv src contracts
-```
-
-### 1.3 Install forge-std
+### 1.3 Install dependencies
 
 ```bash
 forge install foundry-rs/forge-std --no-git --no-commit
+forge install 1inch/swap-vm --no-git --no-commit
+forge install 1inch/aqua --no-git --no-commit
 ```
 
-### 1.4 Verify
+### 1.4 Configure remappings
+
+In `foundry.toml` or `remappings.txt`:
+
+```
+@1inch/swap-vm/=lib/swap-vm/src/
+@1inch/aqua/=lib/aqua/src/
+```
+
+### 1.5 Verify
 
 ```bash
 forge build
@@ -74,61 +78,88 @@ forge build
 
 Must compile with zero errors before proceeding.
 
-## Phase 2 — Aqua/SwapVM Interfaces
+## Phase 2 — Aqua Interface
 
-1inch Aqua is not a public Foundry package. Build minimal interfaces that model the parts AquaValve needs.
+Aqua and SwapVM are open-source. Use the **real** repos installed in `lib/`.
 
-### 2.1 Files to create
+### 2.1 Real Aqua interface
 
-```
-contracts/interfaces/IAqua.sol
-contracts/interfaces/ISwapVM.sol
-contracts/interfaces/IERC20.sol
-contracts/lib/SwapVMTypes.sol
-```
-
-### 2.2 IAqua.sol — what we need from Aqua
+The official Aqua core uses `ship`, `dock`, `pull`, `push` — **not** a single `settle()` call.
 
 ```solidity
 interface IAqua {
     function safeBalances(
         address maker,
-        bytes32 orderHash,
-        address tokenIn,
-        address tokenOut
-    ) external view returns (uint256 reserveIn, uint256 reserveOut);
+        address app,
+        bytes32 strategyHash,
+        address token0,
+        address token1
+    ) external view returns (uint256 balance0, uint256 balance1);
 
-    function settle(
+    function ship(
+        address app,
+        bytes calldata strategy,
+        address[] calldata tokens,
+        uint256[] calldata amounts
+    ) external returns (bytes32 strategyHash);
+
+    function dock(
+        address app,
+        bytes32 strategyHash,
+        address[] calldata tokens
+    ) external;
+
+    function pull(
         address maker,
-        address taker,
-        address tokenIn,
-        address tokenOut,
-        uint256 amountIn,
-        uint256 amountOut,
-        bytes32 orderHash
+        bytes32 strategyHash,
+        address token,
+        uint256 amount,
+        address to
+    ) external;
+
+    function push(
+        address maker,
+        address app,
+        bytes32 strategyHash,
+        address token,
+        uint256 amount
     ) external;
 }
 ```
 
-### 2.3 SwapVMTypes.sol — shared types
+Token movement goes through `pull()` / `push()`, not a single `settle()`. If writing mock tests, a `MockAqua.settle()` convenience is fine, but **never describe it as the Aqua interface**.
+
+### 2.2 SwapVM instruction pattern
+
+Every SwapVM instruction is a **library** with:
 
 ```solidity
-struct Order {
-    address maker;
-    address tokenIn;
-    address tokenOut;
-    uint256 reserveIn;
-    uint256 reserveOut;
-    bytes32 groupId;
-    uint256 activenessNumerator;   // λ as fraction of 1e18
-    uint256 activenessGroupCap;    // Γ envelope cap
-    bytes   strategyBytes;
+library MyInstruction {
+    Opcode constant opcode = Opcode.SomeSlot;
+
+    function exec(Context memory ctx, bytes calldata args) internal { ... }
+    function build(...) internal pure returns (bytes memory) { ... }
+    function sizeOf(...) internal pure returns (uint256) { ... }
 }
 ```
 
-### 2.4 Key constraint
+Instructions modify `ctx.swap.balanceIn / balanceOut` (to scale reserves) or compute `ctx.swap.amountIn / amountOut`. State persistence is gated by `ctx.vm.isStaticContext` (false = quote, true = swap).
 
-Do **not** reimplement order-hash logic off-chain. Use `router.hash(order)` as the source of truth.
+Study `lib/swap-vm/src/instructions/Decay.sol` — it is the closest pattern to what Activeness needs (stateful, per-order, per-token storage).
+
+### 2.3 Key types from SwapVM
+
+```solidity
+// from lib/swap-vm/src/libs/VM.sol
+struct Context {
+    VM vm;
+    SwapQuery query;       // orderHash, maker, taker, tokenIn, tokenOut, isExactIn
+    SwapRegisters swap;    // balanceIn, balanceOut, amountIn, amountOut
+    ProtocolFee fee;
+}
+```
+
+`ACTIVENESS_XD` scales `ctx.swap.balanceIn` and `ctx.swap.balanceOut` before downstream instructions (Decay, XYC) run.
 
 ## Phase 3 — Core Contracts
 
@@ -147,14 +178,14 @@ effectiveReserve = totalReserve × λ / 1e18
 State per position per token:
 
 ```solidity
-struct LocalState {
+struct LocalTokenState {
     uint256 blockNumber;
-    uint256 activeReserveIn;
-    uint256 activeReserveOut;
+    uint256 activeReserve;
 }
-mapping(bytes32 => mapping(address => LocalState)) public localState;
-// key: orderHash => token => state
+mapping(bytes32 orderHash => mapping(address token => LocalTokenState)) public localState;
 ```
+
+Each token's active reserve is tracked independently. Both directions (ETH→USDC and USDC→ETH) read the same per-token state.
 
 Rules:
 - `λ = 1e18` (100%) must behave identically to vanilla XYC.
@@ -182,6 +213,14 @@ uint256 coverage = min(
 );
 ```
 
+Group envelope is **objective coverage**. The `headroomBps` parameter can only tighten it, never increase executable capacity:
+
+```solidity
+uint256 headroomBps; // optional tightening cap, <= 10000 (100%)
+```
+
+If `headroomBps < 10000`, the effective envelope is `coverage * headroomBps / 10000`. A position cannot use `headroomBps` to exceed the wallet's actual coverage.
+
 Rules:
 - Coverage drops shrink quotes proportionally. Never brick `quote()`.
 - Same-block inflows do not reopen envelope until next block.
@@ -198,50 +237,74 @@ Use the final scaled output reserve after both local λ and group coverage scali
 
 **Opcode index:**
 
-Do not hard-code `0x92`. Append to the actual `_instructions()` table and expose:
+Use a free slot in the "Balances tuning" bank (0x90-0xaf). The real `OpcodeList.sol` has `_92` through `_93` free. Do not hard-code — claim a `_XX` slot from the enum and expose:
 
 ```solidity
-function activenessOpcode() external view returns (uint8);
+function activenessOpcode() external pure returns (uint8);
 ```
 
-### 3.2 AquaValveRouter.sol — modified SwapVM router
+**State persistence gate:**
 
-Instruction pipeline:
+Follow the Decay pattern — only write state when `!ctx.vm.isStaticContext`:
 
+```solidity
+if (!ctx.vm.isStaticContext) {
+    // persist local and group state
+}
 ```
-ACTIVENESS_XD → optional DECAY_XD → XYC_SWAP → settlement
+
+### 3.2 AquaValveOpcodes.sol — extended opcode dispatcher
+
+Extend `AquaOpcodes` to add the Activeness instruction:
+
+```solidity
+contract AquaValveOpcodes is AquaOpcodes {
+    function _runOpcode(Context memory ctx, uint256 opcode, bytes calldata args) internal override {
+        if (opcode == Activeness.opcode.asU8()) Activeness.exec(ctx, args);
+        else super._runOpcode(ctx, opcode, args);
+    }
+}
 ```
 
-Two paths:
-- `quote(order, amountIn)` → returns amountOut, **zero state writes**.
-- `swap(order, amountIn)` → persists local + group state, calls Aqua settlement.
+### 3.3 AquaValveRouter.sol — extended router
 
-The router must:
-- Call `IAqua.safeBalances()` for full virtual reserves.
-- Run `ACTIVENESS_XD` (scales reserves, checks group envelope).
-- Optionally run `DECAY_XD` (time-based price impact recovery).
-- Run `XYC_SWAP` (constant-product pricing).
-- On swap path: persist state, call `IAqua.settle()`.
+Extend `AquaSwapVMRouter` pattern with our custom opcodes:
 
-Expose `hash(order)` as the canonical order-hash source.
+```solidity
+contract AquaValveRouter is Simulator, SwapVM, AquaValveOpcodes {
+    constructor(address aqua, address weth, address owner, string memory name, string memory version)
+        SwapVM(aqua, weth, owner, name, version) { }
 
-### 3.3 AquaValveOrderBuilder.sol — strategy builder
+    function _dispatch(Context memory ctx, uint256 opcode, bytes calldata args) internal override {
+        _runOpcode(ctx, opcode, args);
+    }
+}
+```
 
-Encodes activeness parameters into strategy bytes for Aqua orders:
+### 3.4 AquaValveOrderBuilder.sol — strategy builder
+
+Encodes activeness parameters into strategy bytes:
 
 ```solidity
 function buildStrategy(
     uint256 activenessNumerator,
     bytes32 groupId,
-    uint256 groupCap
+    uint256 headroomBps
 ) external pure returns (bytes memory strategyBytes);
 ```
 
-Uses `router.hash(order)` — no independent hash reimplementation.
+The builder is `pure` — it only encodes bytes. Hash preflight belongs in tests/scripts:
 
-### 3.4 DemoTaker.sol — multi-order test helper
+```solidity
+// In test or script — NOT in the builder
+bytes32 strategyHash = router.hash(order);
+bytes32 shippedHash = aqua.ship(address(router), abi.encode(order), tokens, amounts);
+assertEq(shippedHash, strategyHash);
+```
 
-A contract that calls two orders in a single transaction to prove shared Γ works:
+### 3.5 DemoTaker.sol — multi-order test helper
+
+A contract that fills two orders in a single transaction to prove shared Γ works:
 
 ```solidity
 function fillTwoOrders(
@@ -307,6 +370,8 @@ Write these 4 tests using `DemoTaker`:
 | `test_allowance_drop_shrinks_quote_not_reverts` | Reduce maker allowance | Quote shrinks, no revert |
 | `test_same_block_inflow_does_not_reopen_envelope` | Deposit in same block | Group remaining unchanged |
 
+Use **tight coverage** (maker balance close to effective reserves) so group envelope is binding.
+
 Run:
 
 ```bash
@@ -334,7 +399,7 @@ This is the live demo. Requires all prior gates green.
 
 1. Deploy contracts to a local Anvil fork or testnet.
 2. Fund maker wallet.
-3. Create two positions.
+3. Ship two positions via `aqua.ship()`.
 4. Execute the demo script from `FULL_EXECUTION.md` Section 9.
 
 ### Hash Integrity
@@ -370,9 +435,11 @@ GroupEnvelope     — per-maker per-group remaining capacity
 CoverageSnapshot  — balance/allowance readings
 ```
 
-### 5.3 Subgraph purpose
+### 5.3 Subgraph role
 
-Solvers query the subgraph to discover which positions have remaining capacity before routing. This avoids wasted gas on positions that will revert.
+The Graph provides **live-capacity discovery and prefiltering**. It helps solvers avoid obviously exhausted sibling positions.
+
+**The subgraph is not the source of truth.** It may have block-level lag. The authoritative executable amount is always `router.quote()` at the current chain state. SwapVM quote path reads Aqua balances and runs the full instruction program; settlement goes through `pull()` / `push()`.
 
 ## Phase 6 — Documentation
 
@@ -474,6 +541,8 @@ ACTIVENESS_XD + local λ + shared Γ + failure-path tests
 - Do not add sponsors as stickers.
 - Do not use transient storage for group state.
 - Do not ship half-working Γ.
+- Do not describe `settle()` as the Aqua interface. Aqua uses `ship / dock / pull / push`.
+- Do not let `headroomBps` increase executable capacity beyond wallet coverage.
 
 ## Quality Bar
 
