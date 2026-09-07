@@ -1,0 +1,22 @@
+World ID 验证方式对比
+======================
+
+1. Device 验证
+   - 需要：World App + 手机
+   - 防 sybil 强度：较低（一个手机号一个）
+   - Orb 虹膜：不需要
+   - 权限门槛：默认可用，无需申请
+
+2. Selfie Check（自拍验证）
+   - 需要：World App + 自拍
+   - 防 sybil 强度：中等（人脸去重）
+   - Orb 虹膜：不需要
+   - 权限门槛：需要在 Developer Portal 申请开通
+
+3. Orb 验证（虹膜扫描）
+   - 需要：World App + 实体 Orb 设备扫描虹膜
+   - 防 sybil 强度：最高（虹膜唯一性）
+   - Orb 虹膜：需要
+   - 权限门槛：需要申请
+
+结论：Device 验证对大多数场景够用（hackathon、防刷票、防重复注册），默认可用无需额外申请。
