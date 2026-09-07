@@ -1,0 +1,55 @@
+component/world_verif_button/config.ts
+  0db9e05318d9af65 1-29
+component/world_verif_button/index.ts
+  0db9e05318d9af65 1-3
+TEST_PLAN.md
+  0db9e05318d9af65 1-124
+lib/world_verif_button/handlers.ts
+  0db9e05318d9af65 4
+docs/diagrams/06_demo_flow.mmd
+  0db9e05318d9af65 1-44
+app/api/world/rp-signature/route.ts
+  0db9e05318d9af65 1
+docs/diagrams/03_state_machine.mmd
+  0db9e05318d9af65 1-78
+app/page.tsx
+  0db9e05318d9af65 1-2
+PITCH.md
+  0db9e05318d9af65 1-60
+docs/diagrams/02_execution_sequence.mmd
+  0db9e05318d9af65 1-63
+README.md
+  0db9e05318d9af65 5,7,9,11,13,15,19,21-24,28,30,34-36,51,59,61,64-98,102-131,136-144,150-161,164-174,178-188,192-217
+app/api/world/verify/route.ts
+  0db9e05318d9af65 1
+docs/diagrams/04_failure_paths.mmd
+  0db9e05318d9af65 1-52
+docs/diagrams/05_sponsor_layers.mmd
+  0db9e05318d9af65 1-59
+component/connectWallet/ConnectWalletButton.tsx
+  0db9e05318d9af65 1-92
+docs/diagrams/01_architecture.mmd
+  0db9e05318d9af65 1-65
+FULL_EXECUTION.md
+  0db9e05318d9af65 1-308
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2-bit.10+672fbf0",
+  "base_commit_sha": "97d5c05322ebaf3bae2bf1cbfe7dd1536ddc4686",
+  "prompts": {
+    "0db9e05318d9af65": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "85fae049-c0e4-4810-9138-13442c7ec958",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "angel.phoon",
+      "messages": [],
+      "total_additions": 1345,
+      "total_deletions": 60,
+      "accepted_lines": 1345,
+      "overriden_lines": 0
+    }
+  }
+}
