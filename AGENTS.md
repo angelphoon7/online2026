@@ -18,13 +18,13 @@ Use this file together with `SKILL.md` when generating README, FULL_EXECUTION, d
 
 Cross adds a SwapVM instruction called `CROSS_XD`.
 
-It reconciles multiple strategies shipped by the same maker so they quote against one shared real inventory rather than against independently tracked virtual balances.
+It reads the maker's real executable coverage and proportionally resizes the strategy's reserves before downstream pricing runs, so a partial-fill-capable pricing instruction settles a smaller fill instead of failing at settlement.
 
-When one strategy fills, Cross reads the maker's actual remaining coverage and proportionally reduces the effective executable depth of every sibling strategy within the same block. Depth falls; quoted price ratios remain unchanged.
+At full maturity (Gate 1+), Cross reconciles multiple strategies shipped by the same maker so they quote against one shared real inventory rather than against independently tracked virtual balances. Depth falls; quoted price ratios remain unchanged.
 
 ## What Cross Is
 
-Cross is a custom Aqua app and SwapVM extension. It allows multiple 1inch Aqua strategies, shipped by the same maker, to quote against one shared real inventory rather than against independently tracked virtual balances. It prevents sibling strategies from quoting capacity that the shared wallet cannot deterministically execute.
+Cross is a custom Aqua app and SwapVM extension. It reads real on-chain coverage (wallet balance and allowance) and resizes Aqua's virtual reserves to match, preventing settlement failures when virtual depth exceeds real capacity.
 
 ## What Cross Is Not
 
@@ -49,7 +49,73 @@ Always distinguish:
 
 Never say "passed" unless there is command output.
 
-## Non-Negotiable Technical Semantics
+## Current State: Gate 0.5 — REVERT to RESIZE
+
+Gate 0.5 proves exactly one thing:
+
+```
+Aqua virtual depth 10 / real wallet coverage 6, same taker parameters both sides
+
+  without CROSS_XD:  pricing trusts 10 -> oversized Aqua.pull -> REVERT
+  with    CROSS_XD:  reserves resized to 6 -> native partial fill -> SETTLE
+```
+
+**Status: PASS** — `test_fromRevertToResize` and `test_crossOpcodeViewMatchesDispatchedSlot` both green.
+
+### What Gate 0.5 implements
+
+- `coverage(maker, token)` = `min(balanceOf, allowance to Aqua)`
+- Zero-coverage revert with `InsufficientSharedInventory(requested, 0)`
+- Proportional resize of both `balanceIn` and `balanceOut` when coverage < balanceOut
+- `ctx.runLoop()` to continue the SwapVM program
+
+### What Gate 0.5 does NOT implement
+
+- Group state (`GroupEpoch`, `openingCoverage`, `consumed`)
+- Sibling accounting across order hashes
+- `maxFillBps` or any rate-limiting
+- Exact-out zero-envelope short circuit (returns zero path)
+- Envelope ceiling with same-block inflow protection
+
+These belong to Gate 1+.
+
+## Technical Semantics: Gate 0.5
+
+### Coverage
+
+Executable coverage is:
+
+```text
+min(maker ERC20 balance, maker allowance to Aqua)
+```
+
+Coverage drops shrink quotes, not brick them.
+
+### Proportional Scaling
+
+Scale both `balanceIn` and `balanceOut` by the same factor. Scaling only one side alters the spot ratio.
+
+### Zero-Envelope Revert
+
+When coverage is zero, revert with `InsufficientSharedInventory(requested, 0)`. A zero fill is not representable: `TakerTraits.validate` opens with `require(amountOut > 0)` and is called by both `quote()` and `swap()`.
+
+### Opcode Index
+
+Do not hard-code `0x92` or any fixed opcode index. Reference as `Opcode._92` via the enum. Expose `crossOpcode()` as a public view on the router.
+
+### Saturating Subtraction
+
+Never use checked subtraction that could underflow and brick the position. At Gate 0.5 this applies to the coverage-vs-balanceOut comparison (use `<` guard, not subtraction).
+
+### allowPartialFill is load-bearing
+
+Without it, `TakerTraits.validate` enforces `takerAmount == amountIn` on exact-in, so a resize that lowers `amountIn` reverts on validation, not on anything Cross did.
+
+### Hashing / Shipping
+
+In Aqua mode (`useAquaInsteadOfSignature: true`), `aqua.ship(router, abi.encode(order), tokens, amounts)` creates `strategyHash = keccak256(abi.encode(order))` which equals `router.hash(order)`.
+
+## Technical Semantics: Gate 1+ (Planned)
 
 ### Shared Inventory / Group Envelope
 
@@ -61,16 +127,6 @@ Never say "passed" unless there is command output.
 - Group envelope turns "route first, revert later" into quote-time deterministic capacity.
 - It does not make an underfunded wallet solvent.
 
-### Coverage
-
-Executable coverage is:
-
-```text
-min(maker ERC20 balance, maker allowance to Aqua)
-```
-
-Coverage drops should shrink quotes, not brick quote.
-
 ### Envelope Ceiling
 
 ```text
@@ -81,55 +137,31 @@ cap = min(openingCoverage, currentCoverage)
 - Same-block inflows cannot raise the ceiling (I8).
 - Same-block outflows lower it immediately.
 
-### Saturating Subtraction
-
-```text
-remaining = cap > consumed ? cap - consumed : 0
-```
-
-Never use checked subtraction that could underflow and brick the position.
-
-### Zero-Envelope Short Circuit
+### Zero-Envelope Short Circuit (Gate 1)
 
 When remaining is zero:
 - Exact-in: return amountOut = 0 without invoking downstream pricing.
 - Exact-out: revert with `InsufficientSharedInventory(requested, 0)`.
 
-This prevents passing zero reserves to XYC, which would panic.
-
-### Proportional Scaling
-
-Scale both `balanceIn` and `balanceOut` by the same factor. Scaling only one side alters the spot ratio.
-
 ### Exact-Out Guard
 
 Guard against `amountOut >= balanceOut` after scaling (step 7), not against the pre-scaling reserve.
 
-### Opcode Index
-
-Do not hard-code `0x92` or any fixed opcode index. Reference as `Opcode._92` via the enum. Expose `crossOpcode()` as a public view on the router.
-
-### Hashing / Shipping
-
-Do not independently reimplement order-hash logic off-chain.
-
-Use `router.hash(order)` as the source of truth, then ship the corresponding strategy bytes/key consistently. Add a test named:
-
-```text
-shipped_key_equals_router_resolved_key
-```
-
 ## Required Test Gates
 
-Gate 0 — Plumbing:
+Gate 0 — Plumbing (**PASS**):
 
 ```text
 cross_opcode_view_matches_dispatched_slot
-stock_aqua_programs_dispatch_unchanged
-single_strategy_executes_real_erc20_transfer
 ```
 
-Gate 1 — Single-strategy:
+Gate 0.5 — REVERT to RESIZE (**PASS**):
+
+```text
+test_fromRevertToResize
+```
+
+Gate 1 — Single-strategy (planned):
 
 ```text
 unbound_envelope_matches_plain_program
@@ -143,7 +175,7 @@ exact_out_above_post_scaling_reserve_reverts_cleanly
 dust_grants_minimum_unit_and_stays_live
 ```
 
-Gate 2 — Shared inventory:
+Gate 2 — Shared inventory (planned):
 
 ```text
 siblings_share_one_envelope
@@ -161,14 +193,14 @@ headroom_only_tightens
 two_orders_same_tx_share_group_budget
 ```
 
-Gate 3 — Aqua integration:
+Gate 3 — Aqua integration (planned):
 
 ```text
 shipped_key_equals_router_resolved_key
 fill_moves_real_erc20_between_maker_and_taker
 ```
 
-Gate 4 — Composition:
+Gate 4 — Composition (planned):
 
 ```text
 xyc_baseline
@@ -181,17 +213,35 @@ Test 2.10 (`two_orders_same_tx_share_group_budget`) is the load-bearing security
 
 ## Invariants
 
-| # | Invariant |
-|---|---|
-| I1 | With no binding envelope, output is byte-identical to the equivalent stock SwapVM program. |
-| I2 | Within one block, the sum of gross outflows across all strategies in a group never exceeds the coverage observed at that block's first real execution. |
-| I3 | The reserve ratio handed to downstream pricing equals the pre-scaling ratio, within integer rounding. |
-| I4 | `quote()` never mutates state. |
-| I5 | An exact-in `quote()` never reverts on account of state drift; it shrinks toward zero. Exact-out above executable inventory reverts with a named error. |
-| I6 | A position never becomes permanently unfillable. |
-| I7 | Consumption is visible to sibling strategies executing later in the *same transaction*, not merely the same block. |
-| I8 | Same-block inflows do not increase `remaining`. The envelope may only tighten within a block. |
-| I9 | Cross never writes to Aqua's virtual balances. Sibling strategies' recorded claims are unchanged; only effective executable depth is reduced. |
+| # | Invariant | Gate |
+|---|---|---|
+| I1 | With no binding envelope, output is byte-identical to the equivalent stock SwapVM program. | 1 |
+| I2 | Within one block, the sum of gross outflows across all strategies in a group never exceeds the coverage observed at that block's first real execution. | 2 |
+| I3 | The reserve ratio handed to downstream pricing equals the pre-scaling ratio, within integer rounding. | **0.5 (proven)** |
+| I4 | `quote()` never mutates state. | 1 |
+| I5 | An exact-in `quote()` never reverts on account of state drift; it shrinks toward zero. Exact-out above executable inventory reverts with a named error. | 1 |
+| I6 | A position never becomes permanently unfillable. | 1 |
+| I7 | Consumption is visible to sibling strategies executing later in the *same transaction*, not merely the same block. | 2 |
+| I8 | Same-block inflows do not increase `remaining`. The envelope may only tighten within a block. | 2 |
+| I9 | Cross never writes to Aqua's virtual balances. Sibling strategies' recorded claims are unchanged; only effective executable depth is reduced. | 2 |
+
+## File Layout
+
+```
+contracts/
+  Cross.sol              CrossBuilder library + Cross abstract (coverage + resize)
+  CrossOpcodes.sol       AquaOpcodes + CROSS_XD dispatch
+  CrossRouter.sol        Simulator + SwapVM + CrossOpcodes
+  DemoTaker.sol          multi-call taker helper (kept for Gate 1)
+test/
+  Cross.t.sol            Gate 0 + Gate 0.5 tests (real Aqua integration)
+scripts/
+  preflight.sh           mandatory version check before writing contract code
+references/
+  scaffold.md            contract and test templates
+  traps.md               version traps with source citations
+SKILL.md                 cross-gate05 skill definition
+```
 
 ## Sponsor Priority
 
@@ -201,13 +251,9 @@ Test 2.10 (`two_orders_same_tx_share_group_budget`) is the load-bearing security
 
 ## Best README Sentence
 
-Use this near the top:
-
 > Cross turns Aqua shared liquidity from soft virtual promises into deterministic executable capacity.
 
 ## Best Demo Sentence
-
-Use this during the demo:
 
 > This second order looks locally executable, but the shared wallet envelope has already been consumed. Cross tells the solver before settlement would revert.
 
