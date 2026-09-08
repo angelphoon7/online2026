@@ -1,0 +1,23 @@
+test/Cross.t.sol
+  a05b02b6861160e8 423-425,429-430,433,436,439
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2-bit.10+672fbf0",
+  "base_commit_sha": "99fc8462c6f3dab2f39ba159c92176a507227ecf",
+  "prompts": {
+    "a05b02b6861160e8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "86fe6e77-a3a1-4bd2-9752-c5e224cfd90a",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "angel.phoon",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 4,
+      "accepted_lines": 32,
+      "overriden_lines": 0
+    }
+  }
+}
