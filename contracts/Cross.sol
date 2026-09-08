@@ -23,7 +23,7 @@ library CrossBuilder {
         MemoryPtr ptr = ptrStart.pushHeader(opcode);
         ptr = ptr.push(uint256(groupId), 8);
         ptrStart.patchLength(ptr);
-        return ptrStart.resolve();
+        return ptr.resolve();
     }
 
     function build(uint64 groupId, uint16 headroomBps) internal pure returns (bytes memory) {
@@ -33,7 +33,7 @@ library CrossBuilder {
         ptr = ptr.push(uint256(groupId), 8);
         ptr = ptr.push(uint256(headroomBps), 2);
         ptrStart.patchLength(ptr);
-        return ptrStart.resolve();
+        return ptr.resolve();
     }
 }
 

@@ -371,27 +371,24 @@ contract CrossTest is Test {
     }
 
     function test_fill_on_one_shrinks_all_siblings_same_block() public {
+        // Tight coverage so the envelope binds
+        deal(tokenB, maker, 100e18);
+
         (ISwapVM.Order memory orderA, bytes memory sigA) = _createCrossOrder(GROUP_1, HEADROOM_FULL);
         (ISwapVM.Order memory orderB, bytes memory sigB) = _createCrossOrder(GROUP_1, HEADROOM_FULL);
-        (ISwapVM.Order memory orderC, bytes memory sigC) = _createCrossOrder(GROUP_1, HEADROOM_FULL);
 
-        // Large fill against A
-        _swap(trader1, orderA, sigA, 100e18);
+        // Large fill against A consumes significant envelope
+        _swap(trader1, orderA, sigA, 50e18);
 
-        // B and C should now quote less (consumed envelope)
+        // B should now quote less (consumed envelope)
         (, uint256 outB) = _swap(trader1, orderB, sigB, STANDARD_SWAP);
 
-        // Compare with a fresh order in a fresh block
-        deal(tokenA, maker, 10_000e18);
-        deal(tokenB, maker, 10_000e18);
-        deal(tokenA, trader1, 10_000e18);
-        deal(tokenB, trader1, 10_000e18);
+        // Fresh order in a fresh block (consumed resets to 0)
         vm.roll(block.number + 1);
-
         (ISwapVM.Order memory orderFresh, bytes memory sigFresh) = _createCrossOrder(GROUP_1, HEADROOM_FULL);
         (, uint256 outFresh) = _swap(trader1, orderFresh, sigFresh, STANDARD_SWAP);
 
-        assertTrue(outB < outFresh, "sibling must quote less after another's fill (I2)");
+        assertTrue(outFresh > outB, "sibling must quote less after another's fill (I2)");
     }
 
     function test_coverage_drop_shrinks_quote_not_reverts() public {
