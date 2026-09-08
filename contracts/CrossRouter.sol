@@ -28,8 +28,8 @@ contract CrossRouter is Simulator, SwapVM, CrossOpcodes {
         _runOpcode(ctx, opcode_, args);
     }
 
-    /// @notice Returns the opcode index used by CROSS_XD
-    function crossOpcode() external pure returns (uint8) {
+    /// @notice Returns the opcode index used by CROSS_XD. Read from tests and frontend.
+    function crossOpcode() external pure returns (uint256) {
         return Opcode._92.asU8();
     }
 }
