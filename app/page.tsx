@@ -1,5 +1,4 @@
 import ConnectWalletButton from "@/component/connectWallet/ConnectWalletButton";
-import WorldVerifyButton from "@/component/world_verif_button/WorldVerifyButton";
 
 export default function Home() {
   return (
@@ -8,7 +7,6 @@ export default function Home() {
         <h1 className="text-2xl font-bold text-white">Online 2026</h1>
         <div className="flex items-center gap-4">
           <ConnectWalletButton />
-          <WorldVerifyButton />
         </div>
       </header>
       <main className="flex flex-1 items-center justify-center">
