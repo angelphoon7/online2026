@@ -1,42 +1,41 @@
-# AquaValve Agent Instructions
+# Cross Agent Instructions
 
-Use this file together with `SKILL.md` when generating README, FULL_EXECUTION, diagrams, tests, and submission material for AquaValve.
+Use this file together with `SKILL.md` when generating README, FULL_EXECUTION, diagrams, tests, and submission material for Cross.
 
 ## Project Identity
 
-**Project:** AquaValve — Programmable Live Liquidity for Aqua
+**Project:** Cross — Shared-inventory market making on 1inch Aqua
 
 **One-line pitch:**
 
-> Liquidity doesn't have to be all-in. AquaValve lets a maker decide how much goes live each block.
+> Cross margin for DeFi: one balance behind every position, enforced inside the swap.
 
 **Technical pitch:**
 
-> AMMs made price programmable. AquaValve makes liveness programmable.
+> AMMs made price programmable. Cross makes inventory programmable.
 
 ## Core Idea
 
-AquaValve adds a SwapVM instruction called `ACTIVENESS_XD`.
+Cross adds a SwapVM instruction called `CROSS_XD`.
 
-It has two layers:
+It reconciles multiple strategies shipped by the same maker so they quote against one shared real inventory rather than against independently tracked virtual balances.
 
-1. **Local λ** — per-position active reserves for the current block.
-2. **Shared Γ / group envelope** — per-maker, per-group, per-token wallet release envelope across sibling Aqua positions.
+When one strategy fills, Cross reads the maker's actual remaining coverage and proportionally reduces the effective executable depth of every sibling strategy within the same block. Depth falls; quoted price ratios remain unchanged.
 
-## What AquaValve Is
+## What Cross Is
 
-AquaValve is a custom Aqua app and SwapVM extension. It lets makers expose only part of their liquidity to trading during a block, while preventing sibling Aqua positions from independently quoting capacity that the shared wallet cannot deterministically execute.
+Cross is a custom Aqua app and SwapVM extension. It allows multiple 1inch Aqua strategies, shipped by the same maker, to quote against one shared real inventory rather than against independently tracked virtual balances. It prevents sibling strategies from quoting capacity that the shared wallet cannot deterministically execute.
 
-## What AquaValve Is Not
+## What Cross Is Not
 
-AquaValve is not:
+Cross is not:
 
 - a generic dashboard,
 - a router aggregator,
 - a dynamic fee AMM,
 - a replacement for `DECAY_XD`,
 - a solvency guarantee,
-- a World/Uniswap/Chainlink/Ledger project first.
+- a local activeness / block-scoped participation rate mechanism.
 
 ## Claim Discipline
 
@@ -48,36 +47,23 @@ Always distinguish:
 - planned integration,
 - sponsor roadmap.
 
-Never say “passed” unless there is command output.
+Never say "passed" unless there is command output.
 
 ## Non-Negotiable Technical Semantics
 
-### Local λ
-
-- `λ = 100%` must behave like normal XYC.
-- `λ < 100%` creates a shallower effective reserve curve.
-- Same-block exact-in trades can still execute after the first trade.
-- Same-block trades continue along the already consumed active curve.
-- Same-block trades never receive a fresh active slice.
-- Next block repartitions from the current total state.
-
-### ExactOut
-
-- Guard against `amountOut >= finalEffectiveActiveOut`.
-- Use the final scaled output reserve after local λ and group coverage scaling.
-- Do not rely on downstream XYC arithmetic panic.
-
-### Shared Γ
+### Shared Inventory / Group Envelope
 
 - Group state is keyed by `maker + groupId + token`.
+- State struct is `GroupEpoch { lastBlock, openingCoverage, consumed }`.
 - Use ordinary storage, not transient storage.
+- State must NOT be keyed by `orderHash`.
 - Same outer transaction must share group consumption across different order hashes.
-- Group envelope should turn “route first, revert later” into quote-time deterministic capacity.
+- Group envelope turns "route first, revert later" into quote-time deterministic capacity.
 - It does not make an underfunded wallet solvent.
 
 ### Coverage
 
-Executable coverage is at most:
+Executable coverage is:
 
 ```text
 min(maker ERC20 balance, maker allowance to Aqua)
@@ -85,11 +71,43 @@ min(maker ERC20 balance, maker allowance to Aqua)
 
 Coverage drops should shrink quotes, not brick quote.
 
-Same-block inflows should not reopen the envelope until the next block.
+### Envelope Ceiling
+
+```text
+cap = min(openingCoverage, currentCoverage)
+```
+
+`openingCoverage` is snapshotted at the block's first real execution. `currentCoverage` is read live every invocation. Taking the minimum means:
+- Same-block inflows cannot raise the ceiling (I8).
+- Same-block outflows lower it immediately.
+
+### Saturating Subtraction
+
+```text
+remaining = cap > consumed ? cap - consumed : 0
+```
+
+Never use checked subtraction that could underflow and brick the position.
+
+### Zero-Envelope Short Circuit
+
+When remaining is zero:
+- Exact-in: return amountOut = 0 without invoking downstream pricing.
+- Exact-out: revert with `InsufficientSharedInventory(requested, 0)`.
+
+This prevents passing zero reserves to XYC, which would panic.
+
+### Proportional Scaling
+
+Scale both `balanceIn` and `balanceOut` by the same factor. Scaling only one side alters the spot ratio.
+
+### Exact-Out Guard
+
+Guard against `amountOut >= balanceOut` after scaling (step 7), not against the pre-scaling reserve.
 
 ### Opcode Index
 
-Do not hard-code `0x92` or any fixed opcode index. Append to the actual `_instructions()` table and expose an `activenessOpcode()` helper for tests/builders.
+Do not hard-code `0x92` or any fixed opcode index. Reference as `Opcode._92` via the enum. Expose `crossOpcode()` as a public view on the router.
 
 ### Hashing / Shipping
 
@@ -98,54 +116,82 @@ Do not independently reimplement order-hash logic off-chain.
 Use `router.hash(order)` as the source of truth, then ship the corresponding strategy bytes/key consistently. Add a test named:
 
 ```text
-aqua_strategy_hash_matches_router_order_hash
+shipped_key_equals_router_resolved_key
 ```
 
 ## Required Test Gates
 
-Gate 0 — Compile:
-
-```bash
-forge build
-```
-
-Gate 1 — Local λ:
+Gate 0 — Plumbing:
 
 ```text
-lambda_100_equals_XYC
-same_block_does_not_refresh_lambda
-split_trade_does_not_reactivate_liquidity
-next_block_repartitions
-exact_in_continues_on_consumed_curve
-exact_out_above_effective_active_reverts
+cross_opcode_view_matches_dispatched_slot
+stock_aqua_programs_dispatch_unchanged
+single_strategy_executes_real_erc20_transfer
+```
+
+Gate 1 — Single-strategy:
+
+```text
+unbound_envelope_matches_plain_program
+first_execution_initialises_epoch
+second_same_block_execution_uses_stored_consumption
+split_trade_cannot_reopen_envelope
+next_block_refreshes_from_current_coverage
+reverse_direction_shares_token_keyed_state
 quote_does_not_mutate_state
+exact_out_above_post_scaling_reserve_reverts_cleanly
+dust_grants_minimum_unit_and_stays_live
 ```
 
-Gate 2 — Shared Γ:
+Gate 2 — Shared inventory:
 
 ```text
-two_orders_same_tx_share_group_budget
+siblings_share_one_envelope
+fill_on_one_shrinks_all_siblings_same_block
+proportional_shrink_preserves_spot_ratio
 coverage_drop_shrinks_quote_not_reverts
 allowance_drop_shrinks_quote_not_reverts
-same_block_inflow_does_not_reopen_envelope
+same_block_inflow_does_not_replenish
+zero_envelope_exact_in_returns_zero_without_reverting
+zero_envelope_exact_out_reverts_named
+virtual_balances_unchanged_after_sibling_fill
+next_block_refreshes_from_real_coverage
+distinct_group_ids_do_not_share
+headroom_only_tightens
+two_orders_same_tx_share_group_budget
 ```
 
-Gate 3 — Decay:
+Gate 3 — Aqua integration:
 
 ```text
-XYC only
-DECAY + XYC
-ACTIVENESS + XYC
-ACTIVENESS + DECAY + XYC
+shipped_key_equals_router_resolved_key
+fill_moves_real_erc20_between_maker_and_taker
 ```
 
-Gate 4 — Demo:
+Gate 4 — Composition:
 
-- real Aqua ship,
-- real token transfer,
-- local λ visualization,
-- shared Γ failure path,
-- quote shrink after coverage drop.
+```text
+xyc_baseline
+decay_then_xyc
+cross_then_xyc
+cross_then_decay_then_xyc
+```
+
+Test 2.10 (`two_orders_same_tx_share_group_budget`) is the load-bearing security test. It MUST be implemented in Solidity with a real `DemoTaker` helper contract.
+
+## Invariants
+
+| # | Invariant |
+|---|---|
+| I1 | With no binding envelope, output is byte-identical to the equivalent stock SwapVM program. |
+| I2 | Within one block, the sum of gross outflows across all strategies in a group never exceeds the coverage observed at that block's first real execution. |
+| I3 | The reserve ratio handed to downstream pricing equals the pre-scaling ratio, within integer rounding. |
+| I4 | `quote()` never mutates state. |
+| I5 | An exact-in `quote()` never reverts on account of state drift; it shrinks toward zero. Exact-out above executable inventory reverts with a named error. |
+| I6 | A position never becomes permanently unfillable. |
+| I7 | Consumption is visible to sibling strategies executing later in the *same transaction*, not merely the same block. |
+| I8 | Same-block inflows do not increase `remaining`. The envelope may only tighten within a block. |
+| I9 | Cross never writes to Aqua's virtual balances. Sibling strategies' recorded claims are unchanged; only effective executable depth is reduced. |
 
 ## Sponsor Priority
 
@@ -157,13 +203,13 @@ Gate 4 — Demo:
 
 Use this near the top:
 
-> AquaValve turns Aqua shared liquidity from soft virtual promises into programmable live capacity.
+> Cross turns Aqua shared liquidity from soft virtual promises into deterministic executable capacity.
 
 ## Best Demo Sentence
 
 Use this during the demo:
 
-> This second order looks locally executable, but the shared wallet envelope has already been consumed. AquaValve tells the solver before settlement would revert.
+> This second order looks locally executable, but the shared wallet envelope has already been consumed. Cross tells the solver before settlement would revert.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
