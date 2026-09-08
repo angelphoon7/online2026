@@ -420,19 +420,23 @@ contract CrossTest is Test {
     }
 
     function test_same_block_inflow_does_not_replenish() public {
+        // Tight coverage so the envelope binds
+        deal(tokenB, maker, 100e18);
+
         (ISwapVM.Order memory orderA, bytes memory sigA) = _createCrossOrder(GROUP_1, HEADROOM_FULL);
         (ISwapVM.Order memory orderB, bytes memory sigB) = _createCrossOrder(GROUP_1, HEADROOM_FULL);
 
-        // Fill orderA — consumes some envelope
-        _swap(trader1, orderA, sigA, 100e18);
+        // Fill orderA — consumes significant envelope
+        _swap(trader1, orderA, sigA, 50e18);
 
         // Simulate inflow: mint tokens to maker mid-block
-        TokenMock(tokenB).mint(maker, 5_000e18);
+        TokenMock(tokenB).mint(maker, 200e18);
 
         // orderB should NOT see the new tokens as available in this block (I8)
+        // openingCoverage caps at 100, preventing inflow from widening envelope
         (, uint256 outB) = _swap(trader1, orderB, sigB, STANDARD_SWAP);
 
-        // Next block: should see fresh coverage
+        // Next block: should see fresh coverage including inflow
         vm.roll(block.number + 1);
         (ISwapVM.Order memory orderC, bytes memory sigC) = _createCrossOrder(GROUP_1, HEADROOM_FULL);
         (, uint256 outC) = _swap(trader1, orderC, sigC, STANDARD_SWAP);
