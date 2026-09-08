@@ -391,7 +391,6 @@ Every feature must be labelled:
 1inch / SwapVM  → execution primitive CROSS_XD              — mandatory
 Aqua            → shared wallet position layer               — mandatory
 The Graph       → live capacity discovery / prefiltering     — preferred secondary
-World           → stretch only
 Ledger          → stretch only
 Chainlink CRE   → stretch only
 Uniswap v4      → stretch only

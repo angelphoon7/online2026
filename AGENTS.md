@@ -197,7 +197,7 @@ Test 2.10 (`two_orders_same_tx_share_group_budget`) is the load-bearing security
 
 1. 1inch Aqua/SwapVM core — mandatory.
 2. The Graph live capacity surface — strongest secondary layer.
-3. World / Ledger / Chainlink / Uniswap — stretch only after core tests pass.
+3. Ledger / Chainlink / Uniswap — stretch only after core tests pass.
 
 ## Best README Sentence
 
