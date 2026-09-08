@@ -1,0 +1,31 @@
+contracts/Cross.sol
+  a05b02b6861160e8 1-153
+contracts/CrossOpcodes.sol
+  a05b02b6861160e8 1-24
+contracts/CrossRouter.sol
+  a05b02b6861160e8 1-35
+contracts/DemoTaker.sol
+  a05b02b6861160e8 1-29
+test/Cross.t.sol
+  a05b02b6861160e8 1-581
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2-bit.10+672fbf0",
+  "base_commit_sha": "3f8be6c145f059a58c8fb95524bdbe2a0f030ad2",
+  "prompts": {
+    "a05b02b6861160e8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "86fe6e77-a3a1-4bd2-9752-c5e224cfd90a",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "angel.phoon",
+      "messages": [],
+      "total_additions": 822,
+      "total_deletions": 0,
+      "accepted_lines": 822,
+      "overriden_lines": 0
+    }
+  }
+}
