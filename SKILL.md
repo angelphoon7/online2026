@@ -18,6 +18,8 @@ Do not treat GitHub `main` as stable. At the start of implementation, record the
 
 Do **not** claim compile, test, deploy, or demo success unless command output proves it.
 
+License note: the Aqua and SwapVM sources use custom Degensoft license identifiers. ETHOnline's 1inch track allows official Aqua/SwapVM usage and modified SwapVM redeployments for the submission, but do not make broader licensing claims beyond the hackathon use case.
+
 ## Mission
 
 Build a working AquaValve: a custom Aqua app and SwapVM extension where liquidity liveness is programmable.
@@ -29,14 +31,6 @@ Core claim:
 Technical claim:
 
 > AMMs made price programmable. AquaValve makes liveness programmable.
-
-## Scope Guard
-
-Whenever this skill is active, if the user proposes any feature not in the gates below, respond with:
-
-> "Noted in IDEAS.md. Not doing it before Gate N+1."
-
-Do not analyze the merit of the proposal. Do not start exploratory code. Log it and move on.
 
 ## First Actions
 
@@ -56,14 +50,15 @@ Before writing code:
    forge install 1inch/solidity-utils --no-git --no-commit
    forge install OpenZeppelin/openzeppelin-contracts --no-git --no-commit
    ```
-5. **Log the resolved versions before pinning.** Record the actual commit SHAs and opcode count:
+
+   If `forge install` fails for the 1inch repos, use the npm packages instead:
+
    ```bash
-   git -C lib/swap-vm rev-parse HEAD
-   git -C lib/aqua rev-parse HEAD
-   grep -c "Opcode\." lib/swap-vm/src/libs/OpcodeList.sol
+   yarn add @1inch/swap-vm @1inch/aqua @1inch/solidity-utils @openzeppelin/contracts
    ```
-   From this point on, read the opcode table from **that installed source**, not from docs or READMEs.
-6. Inspect the exact local source files before coding:
+
+   Then update remappings to the equivalent `node_modules/` paths. Do not continue until `forge build` can resolve the official imports.
+5. Inspect the exact local source files before coding:
    ```text
    lib/aqua/src/interfaces/IAqua.sol
    lib/aqua/src/Aqua.sol
@@ -75,7 +70,7 @@ Before writing code:
    lib/swap-vm/src/instructions/Decay.sol
    lib/swap-vm/src/instructions/XYCSwap.sol
    ```
-7. Do not redesign the project during M0. The first objective is `forge build`.
+6. Do not redesign the project during M0. The first objective is `forge build`.
 
 ## Phase 1 — Foundry Setup
 
@@ -115,7 +110,7 @@ number_underscore = "thousands"
 
 Notes:
 
-- `optimizer_runs = 700` follows the current SwapVM project style. Do not claim bytecode equivalence to official deployments unless the exact compiler settings and commits match.
+- `optimizer_runs = 700` follows the current SwapVM project style. Aqua may use a different optimizer run count. Do not claim bytecode equivalence to official deployments unless the exact compiler settings and commits match.
 - If the starter generated `src/`, either move it to `contracts/` or change `src = "src"` consistently.
 
 ### 1.3 Configure remappings
@@ -130,6 +125,15 @@ forge-std/=lib/forge-std/src/
 @1inch/aqua/=lib/aqua/
 @1inch/solidity-utils/=lib/solidity-utils/
 @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+```
+
+If using npm packages instead of `lib/`, equivalent remappings:
+
+```text
+@1inch/swap-vm/=node_modules/@1inch/swap-vm/
+@1inch/aqua/=node_modules/@1inch/aqua/
+@1inch/solidity-utils/=node_modules/@1inch/solidity-utils/
+@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/
 ```
 
 ### 1.4 Verify baseline
@@ -178,11 +182,11 @@ function push(
 ) external;
 ```
 
-Aqua stores virtual balances by `maker → app/router → strategyHash/orderHash → token`. Token transfer happens through `pull()` (maker→taker) and `push()` (taker→maker). Tokens never sit in the Aqua contract.
+Aqua stores virtual balances by `maker → app/router → strategyHash/orderHash → token`. Aqua `ship()` stores the virtual balances and returns `keccak256(strategy)`. Token transfer happens through `pull()` and `push()`.
 
 ### 2.2 Use official SwapVM order/hash semantics
 
-Import official SwapVM types:
+Import official SwapVM types where possible:
 
 ```solidity
 import { ISwapVM } from "@1inch/swap-vm/src/interfaces/ISwapVM.sol";
@@ -193,9 +197,21 @@ import { AquaOpcodes } from "@1inch/swap-vm/src/opcodes/AquaOpcodes.sol";
 import { Simulator } from "@1inch/solidity-utils/contracts/mixins/Simulator.sol";
 ```
 
-For Aqua-mode orders, `router.hash(order)` is the canonical hash. Use it as the source of truth. Do not independently reimplement order hashing off-chain.
+For Aqua-mode orders, `router.hash(order)` is the canonical hash. Use it as the source of truth.
 
-### 2.3 SwapVM context semantics
+Hash preflight test:
+
+```solidity
+bytes32 expected = router.hash(order);
+bytes32 shipped = aqua.ship(address(router), abi.encode(order), tokens, amounts);
+assertEq(shipped, expected);
+```
+
+This works because in Aqua mode, `router.hash()` returns `keccak256(abi.encode(order))`, and `aqua.ship()` also returns `keccak256(strategy)` where `strategy = abi.encode(order)`.
+
+Do not independently reimplement order hashing off-chain.
+
+### 2.3 Correct SwapVM context facts
 
 `quote()` sets `ctx.vm.isStaticContext = true`. `swap()` sets it `false`.
 
@@ -206,31 +222,9 @@ Your custom instruction must obey `isStaticContext` and never write during quote
 
 ### 2.4 Real SwapVM instruction pattern
 
-Study `lib/swap-vm/src/instructions/Decay.sol` — it is the closest pattern to what Activeness needs (stateful, per-order, per-token storage, wraps `ctx.runLoop()`).
+Current instructions are libraries with `exec/build/sizeOf`, wired through opcode dispatchers. Study `lib/swap-vm/src/instructions/Decay.sol` — it is the closest pattern to what Activeness needs (stateful, per-order, per-token storage, wraps `ctx.runLoop()`).
 
-Instructions are wired through `_runOpcode(...)` in the opcode dispatcher, dispatching by comparing the opcode to `Opcode.X`.
-
-## Invariants
-
-These are non-negotiable. Every invariant must have at least one Foundry test that fails if violated.
-
-**Invariant 1 — λ = 100% is a no-op.** Output must match vanilla XYC exactly.
-
-**Invariant 2 — Same-block trades never get a fresh active slice.** They continue on the consumed curve.
-
-**Invariant 3 — Coverage drops shrink quotes, never brick them.** `quote()` must return a smaller amount, not revert.
-
-**Invariant 4 — Same-block inflows do not reopen the group envelope.** New deposits in the same block are ignored until next block.
-
-**Invariant 5 — Group state is shared across order hashes in the same transaction.** Order B must see Order A's consumption within the same outer tx. Group state is keyed by `maker + groupId + token` in ordinary storage (not by orderHash, not transient). In M0, `groupId` defaults to `orderHash` — each position has its own envelope. Explicit cross-position grouping (multiple positions sharing one `groupId`) is a post-M4 feature.
-
-**Invariant 6 — quote() has zero state side effects.** All state slots must be unchanged after any number of quote calls.
-
-**Invariant 7 — Proportional scaling preserves spot ratio.** When Γ, coverage, or headroom clamps `effectiveOut` below `localActiveOut`, scale `effectiveIn` proportionally: `effectiveIn = floor(localActiveIn × effectiveOut / localActiveOut)`. Clamping only the output side silently distorts the spot price and forces the maker to quote at a wrong ratio.
-
-**Invariant 8 — Tightening is unconditional; relaxation is a permission upgrade.** `headroomBps` can only tighten the envelope, never increase it beyond wallet coverage. Any relaxation path (λ increase, Γ expansion, groupId change) is not implemented in V1 — it requires Aqua `dock()` + `ship()`. The router cannot intercept or implement relaxation. Do not attempt to add relaxation logic to the router.
-
-**Invariant 9 — Foundry tests are the only proof.** The `two_orders_same_tx_share_group_budget` test and all other gate tests must pass in Foundry against the pinned source. Model tests, JS tests, and "the logic looks right" do not count as green.
+The opcode dispatcher compares the opcode to enum values and calls the corresponding library `exec()`.
 
 ## Phase 3 — Core Contracts
 
@@ -240,25 +234,21 @@ Build in this order. Each contract must compile before starting the next.
 
 `ACTIVENESS_XD` is a balances-tuning wrapper instruction. It must run before downstream pricing computes the missing swap amount.
 
-Recommended opcode slot for the vendored source:
+Recommended opcode slot:
 
 ```solidity
-uint256 internal constant ACTIVENESS_OPCODE = uint256(Opcode._92);
+Opcode constant opcode = Opcode._92;
 ```
 
-Current `OpcodeList.sol` places `_92` and `_93` in the `0x90-0xaf` Balances tuning bank. Do not hard-code raw numeric `0x92` or `146` in builders/tests. Expose:
+Current `OpcodeList.sol` places `_92` in the `0x90-0xaf` Balances tuning bank. Do not hard-code raw numeric `0x92` or `146`. Expose:
 
 ```solidity
-function activenessOpcode() external pure returns (uint8) {
-    return uint8(ACTIVENESS_OPCODE);
-}
+function activenessOpcode() external pure returns (uint8);
 ```
 
 If the installed SwapVM version changes, re-check `OpcodeList.sol` before using `_92`.
 
 #### Args encoding
-
-Use compact BPS values:
 
 ```text
 args = abi.encodePacked(lambdaBps, headroomBps, groupId)
@@ -268,7 +258,7 @@ Where:
 
 ```text
 lambdaBps   uint16, 1..10000
-headroomBps uint16, 1..10000  (10000 = no tightening)
+headroomBps uint16, 1..10000  (10000 = no extra tightening)
 groupId     bytes32
 ```
 
@@ -321,9 +311,13 @@ struct GroupState {
     uint256 remaining;
 }
 mapping(bytes32 groupKey => GroupState) internal _groupState;
+
+function _groupKey(address maker, bytes32 groupId, address token) internal pure returns (bytes32) {
+    return keccak256(abi.encode(maker, groupId, token));
+}
 ```
 
-The group envelope applies to `ctx.query.tokenOut` (the token the maker sends out). Do not consume group budget for `tokenIn`.
+The group envelope applies to `ctx.query.tokenOut` (maker outflow). Do not consume group budget for `tokenIn`.
 
 Executable coverage:
 
@@ -334,7 +328,7 @@ uint256 coverage = Math.min(
 );
 ```
 
-`headroomBps` can only tighten:
+The envelope is objective coverage. `headroomBps` can only tighten it:
 
 ```text
 positionHeadroom = floor(currentCoverage × headroomBps / 10000)
@@ -347,7 +341,7 @@ Rules:
 - Group state uses ordinary storage, not transient storage.
 - Different order hashes in the same outer transaction must share group consumption.
 
-#### Scaling after group/coverage clamp (Invariant 7)
+#### Scaling after group/coverage clamp
 
 Compute local active reserves first. Then compute final effective output:
 
@@ -355,15 +349,15 @@ Compute local active reserves first. Then compute final effective output:
 effectiveOut = min(localActiveOut, groupRemaining, currentCoverage, positionHeadroom)
 ```
 
-If `effectiveOut < localActiveOut`, scale both sides proportionally:
+If `localActiveOut == 0`, return no executable liquidity or revert before any division.
+
+If `effectiveOut < localActiveOut`, scale both sides proportionally to preserve the spot reserve ratio:
 
 ```text
 effectiveIn = floor(localActiveIn × effectiveOut / localActiveOut)
 ```
 
 Do not clamp only `balanceOut` — that changes the implied spot price.
-
-If the final reserves are zero, return no executable liquidity or revert with a named error; do not underflow or panic.
 
 #### ExactOut guard
 
@@ -394,9 +388,9 @@ State writes must not happen during quote.
 Extend the opcode set and add Activeness dispatch:
 
 ```solidity
-function _runOpcode(Context memory ctx, uint256 opcode, bytes calldata args) internal virtual override {
-    if (opcode == ACTIVENESS_OPCODE) _activenessXD(ctx, args);
-    else super._runOpcode(ctx, opcode, args);
+function _runOpcode(Context memory ctx, uint256 opcode_, bytes calldata args) internal virtual override {
+    if (opcode_ == Activeness.opcode.asU8()) Activeness.exec(ctx, args);
+    else super._runOpcode(ctx, opcode_, args);
 }
 ```
 
@@ -439,6 +433,8 @@ test_quote_does_not_mutate_state
 test_reverse_direction_uses_same_local_token_state
 ```
 
+For local λ epoch tests, `vm.roll` is sufficient because the epoch key is `block.number`. For Decay composition tests, also use `vm.warp` because `Decay` uses `block.timestamp`.
+
 Run: `forge test --match-contract ActivenessSinglePosition -vvv`
 
 ### Gate 2 — Shared Γ
@@ -455,8 +451,6 @@ test_group_applies_to_tokenOut_only
 
 Use tight coverage so the group envelope is binding.
 
-**"Green" for Gate 2 means:** `test_two_orders_same_tx_share_group_budget` passes in Foundry against the pinned template. Not model tests. Not "the logic looks right." If this test is not green by the deadline, delete all Γ-related code and update the pitch to local-only version. No middle state.
-
 Run: `forge test --match-contract ActivenessGroupEnvelope -vvv`
 
 ### Gate 3 — Hash integrity
@@ -465,15 +459,13 @@ Run: `forge test --match-contract ActivenessGroupEnvelope -vvv`
 test_aqua_strategy_hash_matches_router_order_hash
 ```
 
-`router.hash(order)` is the **only** source of truth. It uses EIP-712 structured encoding (ORDER_TYPEHASH + maker + traits + keccak256(data)), NOT `abi.encode(order)`.
+The test must ship `abi.encode(order)` through Aqua and assert:
 
-The correct test flow:
+```solidity
+assertEq(aqua.ship(address(router), abi.encode(order), tokens, amounts), router.hash(order));
+```
 
-1. Compute `bytes32 orderHash = router.hash(order)`.
-2. Use `orderHash` as the key when shipping to Aqua.
-3. Assert that `router.swap()` can fill the position — proving the hash the router uses at swap time matches the hash used at ship time.
-
-Do **not** independently recompute the hash formula. Do **not** pass `abi.encode(order)` as `strategy` to `aqua.ship()` and compare with `router.hash()` — they use different encoding and will never match. A wrong hash silently produces a position no one can ever fill while tests appear green.
+The order must set Aqua mode in `MakerTraits`. This works because in Aqua mode, `router.hash()` returns `keccak256(abi.encode(order))`, matching `aqua.ship()`'s `keccak256(strategy)`.
 
 ### Gate 4 — Decay composition
 
@@ -486,14 +478,14 @@ ACTIVENESS + XYC
 ACTIVENESS + DECAY + XYC
 ```
 
-**Block vs time advancement:** λ epoch uses `block.number` — use `vm.roll`. Decay uses `block.timestamp` — use `vm.warp`. In composition tests, advance both:
+When asserting Decay behavior over time, advance both block and timestamp:
 
 ```solidity
 vm.roll(block.number + 1);
-vm.warp(block.timestamp + decayPeriod);
+vm.warp(block.timestamp + decayPeriod / 2);
 ```
 
-Using only `vm.roll` in decay tests will silently produce zero-decay results (timestamp unchanged), making it look like decay has no effect.
+Using only `vm.roll` in decay tests will silently produce zero-decay results (timestamp unchanged).
 
 Run: `forge test --match-contract ActivenessDecayComposition -vvv`
 
@@ -592,10 +584,10 @@ ACTIVENESS_XD + local λ + shared Γ + failure-path tests
 - Do not describe `settle()` as the Aqua interface.
 - Do not let `headroomBps` increase executable capacity beyond wallet coverage.
 - Do not mutate Activeness state during quote/static execution.
-- Do not implement relaxation paths (λ increase, Γ expand) in the router. V1 relaxation goes through Aqua dock+reship.
-- Do not cite unverifiable paper references. Base claims on code and test output only.
 
 ## Completion Bar
+
+The build is complete only when:
 
 ```text
 forge build                              green
