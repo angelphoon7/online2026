@@ -334,12 +334,18 @@ contract CrossTest is Test {
     }
 
     function test_next_block_refreshes_from_current_coverage() public {
+        // Tight coverage so the envelope binds
+        deal(tokenB, maker, 100e18);
+
         (ISwapVM.Order memory order, bytes memory sig) = _createCrossOrder(GROUP_1, HEADROOM_FULL);
 
-        _swap(trader1, order, sig, STANDARD_SWAP);
+        // Large first swap to consume significant envelope
+        _swap(trader1, order, sig, 50e18);
+        // Same-block second swap — tight remaining after consumption
         (, uint256 outSameBlock) = _swap(trader1, order, sig, STANDARD_SWAP);
 
         vm.roll(block.number + 1);
+        // Next block — fresh epoch, consumed resets to 0
         (, uint256 outNextBlock) = _swap(trader1, order, sig, STANDARD_SWAP);
 
         assertTrue(outNextBlock > outSameBlock, "next block must refresh from current coverage");
@@ -457,17 +463,17 @@ contract CrossTest is Test {
     }
 
     function test_headroom_only_tightens() public {
-        (ISwapVM.Order memory orderFull, bytes memory sigFull) = _createCrossOrder(GROUP_1, HEADROOM_FULL);
-        (ISwapVM.Order memory orderHalf, bytes memory sigHalf) = _createCrossOrder(GROUP_2, HEADROOM_50);
+        // Tight coverage so headroom visibly constrains
+        deal(tokenB, maker, 100e18);
 
+        (ISwapVM.Order memory orderFull, bytes memory sigFull) = _createCrossOrder(GROUP_1, HEADROOM_FULL);
         (, uint256 outFull) = _swap(trader1, orderFull, sigFull, STANDARD_SWAP);
 
-        deal(tokenA, maker, 10_000e18);
-        deal(tokenB, maker, 10_000e18);
-        deal(tokenA, trader1, 10_000e18);
-        deal(tokenB, trader1, 10_000e18);
+        // Reset to same coverage for fair comparison
+        deal(tokenB, maker, 100e18);
         vm.roll(block.number + 1);
 
+        (ISwapVM.Order memory orderHalf, bytes memory sigHalf) = _createCrossOrder(GROUP_2, HEADROOM_50);
         (, uint256 outHalf) = _swap(trader1, orderHalf, sigHalf, STANDARD_SWAP);
 
         assertTrue(outHalf < outFull, "headroom=50% must tighten, producing less output");
