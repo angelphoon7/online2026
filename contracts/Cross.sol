@@ -4,6 +4,25 @@ pragma solidity 0.8.30;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { Context, ContextLib } from "@1inch/swap-vm/src/libs/VM.sol";
+import { Opcode, OpcodeOps } from "@1inch/swap-vm/src/libs/OpcodeList.sol";
+import { MemoryPtr, MemoryPtrLib } from "@1inch/swap-vm/src/libs/MemoryPtr.sol";
+import { InstructionBuilder } from "@1inch/swap-vm/src/libs/InstructionBuilder.sol";
+
+/// @notice Instruction builder for CROSS_XD (no args at Gate 0.5)
+library CrossBuilder {
+    using OpcodeOps for Opcode;
+    using MemoryPtrLib for MemoryPtr;
+    using InstructionBuilder for MemoryPtr;
+
+    Opcode constant opcode = Opcode._92;
+
+    function build() internal pure returns (bytes memory) {
+        MemoryPtr ptrStart = MemoryPtrLib.alloc(InstructionBuilder.sizeOf());
+        MemoryPtr ptr = ptrStart.pushHeader(opcode);
+        ptrStart.patchLength(ptr);
+        return ptr.resolve();
+    }
+}
 
 /// @notice CROSS_XD — Gate 0.5 minimal: coverage read + proportional resize
 /// @dev No group state, no openingCoverage, no maxFillBps. Those come at Gate 1.

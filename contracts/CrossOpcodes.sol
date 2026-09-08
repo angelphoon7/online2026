@@ -11,7 +11,7 @@ import { Cross } from "./Cross.sol";
 contract CrossOpcodes is AquaOpcodes, Cross {
     using OpcodeOps for Opcode;
 
-    constructor(address aqua) AquaOpcodes(aqua) Cross(aqua) {}
+    constructor(address aqua) Cross(aqua) {}
 
     function _runOpcode(Context memory ctx, uint256 opcode_, bytes calldata args)
         internal
