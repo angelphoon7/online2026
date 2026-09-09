@@ -4,6 +4,23 @@
 
 You never give up your tickets unless the whole replacement arrives.
 
+<!-- Live demo: TBD · Video: TBD -->
+
+---
+
+## Contents
+
+- [The problem](#the-problem)
+- [The solution](#the-solution)
+- [High-level architecture](#high-level-architecture)
+- [Sponsor technology map](#sponsor-technology-map)
+- [Component flows](#component-flows)
+- [Technical reference](#technical-reference)
+- [Sequence diagrams](#sequence-diagrams)
+- [Sponsor tracks](#sponsor-tracks)
+- [Questions we expect](#questions-we-expect)
+- [Limitations](#limitations)
+- [Repository](#repository)
 
 ---
 
@@ -19,7 +36,7 @@ The intent already exists — it is written in forum comments:
 
 > *"HAVE: 4 Toronto, Sec 105. WANT: 4 Vancouver, together. Will pay difference."*
 
-Users are already expressing conditional replacement in natural language. There is just no system that executes it.
+Users are already expressing conditional replacement in natural language. Mainstream resale workflows do not natively execute it — the condition stays a forum comment rather than something a system can act on.
 
 ### Why current systems can't help
 
@@ -37,7 +54,7 @@ flowchart LR
     class C decide
 ```
 
-Official exchange usually requires the same event, venue and date, so changing dates is not an exchange at all — it is a sale followed by a purchase.
+Official exchange usually requires the same event, venue and date, with the replacement priced at or above the original. Changing dates often falls outside standard exchange eligibility, pushing the user back toward resale or manual support — a sale followed by a purchase.
 
 ### And sometimes no bilateral trade exists
 
@@ -61,7 +78,7 @@ No two people can trade. All three together can. Every pairwise negotiation fail
 | 1 | Replacement exposure — I want to *change*, not to speculate | user pain |
 | 2 | No direct counterparty — nobody wants exactly what I hold | matching problem |
 | 3 | Bundle constraints — not any two tickets, but a complete outcome | user pain |
-| 4 | Coordination — four people cannot all be online at the same second | coordination problem |
+| 4 | Post-match coordination — a found solution stalls until every participant returns and approves *that exact proposal* | coordination problem |
 
 Most systems address some of 1–3. Number 4 is what makes the others usable in reality.
 
@@ -159,15 +176,17 @@ Unsold inventory joins the same graph. This is what stops a reshuffle from requi
 ```mermaid
 flowchart LR
     V["Venue<br/>unsold Saturday"] -->|"Saturday"| A["A"]
-    A -->|"Friday returned"| C["C"]
-    C -->|"Sunday returned"| B["B"]
-    B -->|"Saturday"| V
+    A -->|"Friday, directly"| C["C"]
+    C -->|"Sunday"| B["B"]
+    B -->|"per venue's predicate"| V
 
     classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
     class V ok
 ```
 
-One issuer ticket does not complete a single upgrade — it starts a chain. The returned Friday immediately satisfies the next person's predicate, in the same transaction.
+One issuer ticket does not complete a single upgrade — it makes a chain possible. The venue **injects an asset** into the graph, which frees A's Friday to go **directly to C** in the same settlement.
+
+Each ticket is received exactly once. A's Friday does not route through the venue and onward — V4 would reject that as a double receive.
 
 ---
 
@@ -202,7 +221,7 @@ flowchart TD
     B --> C{"User reviews<br/>the conditions"}
     C -->|"edit"| B
     C -->|"confirm"| D["Deposit tickets into escrow"]
-    D --> E["Sign EIP-712 intent<br/>the only signature ever required"]
+    D --> E["Sign EIP-712 intent<br/>no signature is needed when a<br/>matching settlement is later found"]
     E --> F["Commit on-chain<br/>emit IntentCommitted"]
     F --> G["User closes the tab"]
 
@@ -222,7 +241,7 @@ flowchart TD
     B --> C["Search for valid reshuffles<br/>bounded by participants,<br/>candidates and timeout"]
     C --> D{"Any found?"}
     D -->|"no"| E["Report honestly:<br/>no solution found<br/>within the search bound"]
-    D -->|"yes"| F["Rank by published rule:<br/>min total net payment,<br/>ties to fewer participants"]
+    D -->|"yes"| F["Rank by published rule:<br/>min gross cash moved,<br/>ties to fewer participants"]
     F --> G["eth_call simulate"]
     G --> H{"Simulation<br/>passes?"}
     H -->|"no"| C
@@ -232,7 +251,7 @@ flowchart TD
     class I ok
 ```
 
-Simulation and submission are one transaction with no window between them. A participant withdrawing in the meantime causes a revert — the proposer loses gas, which is why simulation comes first.
+Simulation is immediately followed by submission, but `eth_call` and the real transaction are separate calls and do not lock state. A participant can withdraw or revoke in between. Settlement revalidates everything at execution, so any intervening change causes a clean revert with nothing half-moved; the proposer loses gas, which is why simulation runs first.
 
 ### 3. Settlement validation
 
@@ -240,10 +259,12 @@ The core of the project. Every guarantee is enforced here or not at all.
 
 ```mermaid
 flowchart TD
-    S["settle intents, legs"] --> V1{"V1 intent live,<br/>unexpired,<br/>signature valid?"}
+    S["settle intents, legs"] --> V0{"V0 shape: one leg per intent,<br/>no duplicate hashes,<br/>each intent hashes to its key?"}
+    V0 -->|"no"| E0["MalformedSettlement"]
+    V0 -->|"yes"| V1{"V1 state == LIVE,<br/>unexpired?<br/>no signature here"}
     V1 -->|"no"| E1["IntentNotLive<br/>IntentExpired"]
-    V1 -->|"yes"| V2{"V2 every offered ticket<br/>escrowed by its owner?"}
-    V2 -->|"no"| E2["TicketNotEscrowed"]
+    V1 -->|"yes"| V2{"V2 every offered ticket<br/>escrowed by its owner<br/>AND eventId matches?"}
+    V2 -->|"no"| E2["TicketNotEscrowed<br/>WrongEvent"]
     V2 -->|"yes"| V3{"V3 no ticket<br/>already redeemed?"}
     V3 -->|"no"| E3["TicketRedeemed"]
     V3 -->|"yes"| V4{"V4 exact bijection<br/>offered to received?"}
@@ -254,17 +275,17 @@ flowchart TD
     V6 -->|"no"| E6["BudgetExceeded"]
     V6 -->|"yes"| V7{"V7 sum of<br/>netPayment is zero?"}
     V7 -->|"no"| E7["PaymentImbalance"]
-    V7 -->|"yes"| V8{"V8 every payer has<br/>balance and allowance?"}
+    V7 -->|"yes"| V8{"V8 every NET DEBTOR:<br/>ownerNet covered by<br/>balance and allowance?"}
     V8 -->|"no"| E8["InsufficientPaymentCapacity"]
-    V8 -->|"yes"| X["Transfer tickets<br/>Settle USDC<br/>Mark settled<br/>Emit"]
+    V8 -->|"yes"| X["1 mark intents SETTLED<br/>2 settle USDC net<br/>3 release tickets<br/>4 emit — effects before interactions"]
 
     classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
     classDef bad fill:#FCEBEB,stroke:#A32D2D,stroke-width:1px,color:#501313
     class X ok
-    class E1,E2,E3,E4,E5,E6,E7,E8 bad
+    class E0,E1,E2,E3,E4,E5,E6,E7,E8 bad
 ```
 
-Checks first, effects second, interactions last. Nothing transfers until all eight pass.
+Checks first, effects second, interactions last. Nothing transfers until every check passes, and intents are marked `SETTLED` **before** any transfer — `safeTransferFrom` calls into the recipient, so moving a ticket while its intent is still `LIVE` would open a reentrant window against stale state. A revert in any transfer rolls the marking back with it.
 
 ### 4. Redemption
 
@@ -309,8 +330,8 @@ classDiagram
         address owner
         uint256[] offered
         uint32 eventId
-        uint16 sessionMask
-        uint16 sectionMask
+        uint256 sessionMask
+        uint256 sectionMask
         uint8 exactCount
         bool mustShareSession
         bool mustShareSection
@@ -322,9 +343,9 @@ classDiagram
 
     class Leg {
         bytes32 intentHash
-        address participant
         uint256[] receives
         int256 netPayment
+        note "no participant field — recipient is intent.owner"
     }
 
     class IntentState {
@@ -358,7 +379,7 @@ flowchart TB
         T1["mint(to, TicketMeta)<br/>onlyRegisteredIssuer"]
         T2["redeem(tokenId)<br/>onlyCurrentOwner"]
         T3["meta(tokenId) → TicketMeta"]
-        T4["transferFrom(from, to, id)<br/>onlySettlement"]
+        T4["transferFrom(from, to, id)<br/>standard ERC-721"]
     end
 
     subgraph ES["Escrow"]
@@ -371,7 +392,7 @@ flowchart TB
 
     subgraph IR["IntentRegistry"]
         direction TB
-        I1["commit(Intent, bytes sig)<br/>verifies EIP-712"]
+        I1["commit(Intent, bytes sig)<br/>verifies EIP-712 — the only<br/>place a signature is checked"]
         I2["revoke(bytes32 hash)<br/>onlyOwner"]
         I3["state(hash) → uint8"]
         I4["markSettled(hash)<br/>onlySettlement"]
@@ -396,8 +417,8 @@ flowchart TB
     S2 -->|"read"| T3
     S2 -->|"read balance + allowance"| USDC
     S2 --> S3
-    S3 -->|"release tickets"| E4
-    S3 -->|"transfer"| T4
+    S3 -->|"releaseBatch — the only<br/>settlement exit"| E4
+    E4 -->|"safeTransferFrom"| T4
     S3 -->|"transferFrom net amounts"| USDC
     S3 -->|"mark settled"| I4
     U -->|"anytime"| E2
@@ -407,7 +428,15 @@ flowchart TB
     class S2 decide
 ```
 
-`Settlement` is the only contract permitted to move a ticket out of escrow. Users can always withdraw, but they cannot transfer directly to each other — every reallocation goes through validation.
+`TicketNFT` keeps standard ERC-721 transfer semantics. Restricting `transferFrom` to
+`Settlement` would break `Escrow.deposit()`, whose caller is the escrow, not the settlement
+contract.
+
+The restriction lives one level up: **`Escrow.releaseBatch` is `onlySettlement`**. So the
+precise claim is *Settlement is the only actor that can instruct Escrow to release an escrowed
+ticket* — not *Settlement is the only actor that can transfer a TicketNFT*. Depositors can
+always withdraw their own tickets; what they cannot do is move an escrowed ticket to someone
+else without passing validation.
 
 ### Ticket lifecycle
 
@@ -486,11 +515,14 @@ flowchart TB
     D --> DIG["digest = keccak256(<br/>0x1901, domainSeparator, structHash)"]
     H --> DIG
     DIG --> SIG["user signs once"]
-    SIG --> REC["ecrecover at settlement<br/>must equal intent.owner"]
+    SIG --> REC["ecrecover at COMMIT<br/>must equal intent.owner<br/>then state = LIVE"]
+    REC --> SET["at settlement: no signature.<br/>V0 rebinds the struct to its hash,<br/>V1 checks state == LIVE"]
 
     classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
     class REC ok
 ```
+
+**The signature is verified once, at commit.** `settle()` takes no signatures and performs no `ecrecover`; a `LIVE` entry in the registry is the proof of authorisation. What settlement must do is rebind — recompute the hash from the struct it was handed and require it to match the one presented (V0) — otherwise a solver could pair a live hash with a struct carrying looser bounds.
 
 `chainId` and `verifyingContract` are inside the domain. **Redeploying the contracts or moving to another network invalidates every committed intent** and requires reconfiguring the frontend domain. This is a correctness requirement, not a configuration detail — a chain migration is not a matter of changing an RPC URL.
 
@@ -503,16 +535,13 @@ flowchart TB
     A["Collect all offered ids<br/>across every Intent"] --> B["Collect all received ids<br/>across every Leg"]
     B --> C{"len(offered) ==<br/>len(received)?"}
     C -->|"no"| X["ConservationViolated"]
-    C -->|"yes"| D["Mark each offered id<br/>in a scratch map"]
-    D --> E{"any id<br/>marked twice?"}
+    C -->|"yes"| D["Sort both id arrays<br/>in memory"]
+    D --> E{"any duplicate<br/>within either array?"}
     E -->|"yes"| X
-    E -->|"no"| F["Walk received ids"]
-    F --> G{"every received id<br/>present in the map?"}
+    E -->|"no"| F["Walk both sorted arrays<br/>in lockstep"]
+    F --> G{"every position<br/>matches?"}
     G -->|"no"| X
-    G -->|"yes"| H["Unmark as we go"]
-    H --> I{"map fully<br/>drained?"}
-    I -->|"no"| X
-    I -->|"yes"| J["Exact bijection proven"]
+    G -->|"yes"| J["Exact bijection proven"]
 
     classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
     classDef bad fill:#FCEBEB,stroke:#A32D2D,stroke-width:1px,color:#501313
@@ -520,7 +549,9 @@ flowchart TB
     class X bad
 ```
 
-Length equality alone is insufficient — it would admit a proposal that duplicates one ticket and drops another. The scratch map must be fully drained.
+Length equality alone is insufficient — it would admit a proposal that duplicates one ticket and drops another, which is why duplicates must be rejected inside each array before the two are compared.
+
+Solidity has no memory mapping, so *use a scratch map* is not an implementable instruction. Sort and compare, or do a bounded O(n²) duplicate check at demo scale.
 
 ### V5 — per-participant predicate, in detail
 
@@ -547,7 +578,7 @@ flowchart TB
     J -->|"no"| K
     J2 -->|"yes"| K{"I.mustBeAdjacent?"}
     K -->|"no"| OK["Predicate satisfied"]
-    K -->|"yes"| L{"all row equal?"}
+    K -->|"yes"| L{"same session AND section<br/>AND row?"}
     L -->|"no"| E7["SeatsNotAdjacent"]
     L -->|"yes"| M["Sort seats ascending"]
     M --> N{"seat[i+1] - seat[i]<br/>== 1 for all i?"}
@@ -560,23 +591,21 @@ flowchart TB
     class E1,E2,E3,E4,E5,E6,E7 bad
 ```
 
-Adjacency is checkable only because we issue the tickets and guarantee seat numbers are consecutive integers within a row. It does not generalise to arbitrary venues.
+Adjacency implies **same session, same section, same row and consecutive seats** — all four, independently of the cohesion flags. Someone who accepts Saturday or Sunday and wants adjacent seats does not mean Saturday row A seat 10 beside Sunday row A seat 11; seat numbers are only comparable within one session, section and row.
+
+It is checkable only because we issue the tickets and guarantee seat numbers are consecutive integers within a row. It does not generalise to arbitrary venues.
 
 ### V6 to V8 — money
 
 ```mermaid
 flowchart TB
-    A["For each Leg"] --> B{"netPayment > 0?"}
-    B -->|"yes, payer"| C{"netPayment<br/><= I.maxNetPay?"}
-    B -->|"no, receiver"| D{"netPayment<br/>>= I.maxNetPay?"}
-    C -->|"no"| X1["BudgetExceeded"]
-    D -->|"no"| X1
-    C -->|"yes"| E["accumulate total"]
-    D -->|"yes"| E
+    A["For each Leg"] --> B{"netPayment<br/><= I.maxNetPay?<br/>one comparison,<br/>both directions"}
+    B -->|"no"| X1["BudgetExceeded"]
+    B -->|"yes"| E["accumulate total"]
     E --> F{"sum of all<br/>netPayment == 0<br/>exactly?"}
     F -->|"no"| X2["PaymentImbalance"]
-    F -->|"yes"| G["For each payer"]
-    G --> H{"USDC.balanceOf >= amount<br/>AND allowance >= amount?"}
+    F -->|"yes"| G["ownerNet = SIGNED sum<br/>of that owner's legs<br/>+80 and −30 nets to +50"]
+    G --> H{"for every NET DEBTOR:<br/>balanceOf and allowance<br/>>= ownerNet?"}
     H -->|"no"| X3["InsufficientPaymentCapacity"]
     H -->|"yes"| I["Safe to transfer"]
 
@@ -586,7 +615,13 @@ flowchart TB
     class X1,X2,X3 bad
 ```
 
-Integer USDC, no rounding tolerance — the sum is exactly zero or the proposal is rejected. Capacity is checked for every payer **before any transfer**, because failing partway through a batch wastes gas and produces a confusing revert.
+`netPayment <= maxNetPay` is a **single** comparison, correct in both directions: positive is a debit ceiling, negative is a credit floor, and receiving more makes `netPayment` more negative. Splitting it into a payer branch and a receiver branch inverts the receiver case — a draft of this spec did exactly that, accepting anyone who received *less* than their floor.
+
+Integer USDC, no rounding tolerance — the sum is exactly zero or the proposal is rejected.
+
+Capacity is checked on the owner's **signed net position**, not per leg and not on the sum of positive legs. An owner holding legs of `+80` and `-30` nets to `+50` and needs 50, not 80 — anything else contradicts the phrase *net settlement*. One address may hold several intents, and an issuer normally does, so a per-leg check would also pass two `+80` debits against a 100 USDC balance and then fail mid-transfer.
+
+Routing is specified rather than left open: **pull every debit into the settlement contract, then push every credit**, two deterministic passes in owner order. `Σ ownerNet == 0` follows from V7, so the passes balance exactly. Pairwise debtor-to-creditor routing would require inventing a matching, which is an arbitrary choice no implementation should be left to make.
 
 Approval is a spending allowance, not a reservation. A user can spend their balance elsewhere after signing, which is why V8 reads live state rather than trusting a commitment.
 
@@ -605,7 +640,7 @@ flowchart TB
     G -->|"yes"| H["Add to candidate set"]
     H --> I{"Caps<br/>exhausted?"}
     I -->|"no"| D
-    I -->|"yes"| J["Rank: min total net payment<br/>ties to fewer participants<br/>then lowest gas"]
+    I -->|"yes"| J["Rank: min gross cash moved<br/>ties to fewer participants<br/>then smallest intent-hash set"]
     J --> K["Re-verify freshness<br/>against chain state"]
     K --> L["eth_call simulate"]
     L --> M["Submit propose + execute<br/>in one transaction"]
@@ -649,9 +684,11 @@ erDiagram
     INTENT {
         hash Bytes PK
         owner Bytes
+        eventId Int
+        offered String
         state String
-        sessionMask Int
-        sectionMask Int
+        sessionMask BigInt
+        sectionMask BigInt
         exactCount Int
         mustShareSession Boolean
         mustShareSection Boolean
@@ -668,11 +705,36 @@ erDiagram
     }
     SETTLEMENT_LEG {
         id String PK
+        intent Bytes FK
+        owner Bytes
+        received String
         netPayment BigInt
     }
 ```
 
 Indexed events: `TicketMinted`, `TicketEscrowed`, `TicketWithdrawn`, `TicketRedeemed`, `IntentCommitted`, `IntentRevoked`, `Settled`.
+
+```solidity
+event IntentCommitted(
+    bytes32 indexed intentHash,
+    address indexed owner,
+    uint32  indexed eventId,
+    uint256[] offered,
+    uint256 sessionMask,
+    uint256 sectionMask,
+    uint8   exactCount,
+    bool    mustShareSession,
+    bool    mustShareSection,
+    bool    mustBeAdjacent,
+    int256  maxNetPay,
+    uint64  deadline,
+    uint256 nonce
+);
+```
+
+`IntentRegistry` stores only `hash → owner, state`, so the matching conditions exist on-chain **only in this event**. If the event omits a field, the subgraph cannot reconstruct it and the solver cannot match on it.
+
+`eventId` and `offered` are not optional fields. Without them the solver cannot tell which tickets an intent is actually putting up, and the pool is not reconstructible — which would make the claim that The Graph supplies the live matching inputs untrue. `SETTLEMENT_LEG` likewise carries its `owner` and `received` ids so a settlement can be explained after the fact.
 
 The subgraph is discovery and prefiltering. Chain state at execution is authoritative — balances and allowances move, an indexer lags, and the contract re-validates everything regardless.
 
@@ -712,10 +774,11 @@ sequenceDiagram
     SET-->>SOL: would succeed
     SOL->>SET: settle in one transaction
 
-    SET->>REG: read committed predicates
-    SET->>SET: V1 V2 V3 V4 V5 V6 V7 V8
-    SET->>ESC: transfer tickets between owners
+    SET->>REG: check intentHash state == LIVE
+    SET->>SET: V0 V1 V2 V3 V4 V5 V6 V7 V8
+    SET->>REG: mark intents SETTLED (effects first)
     SET->>USDC: net payments, sum equals zero
+    SET->>ESC: releaseBatch — tickets to recipients
 
     SET-->>A: Settled, Saturday B14 and B15, paid 18 USDC
     SET-->>B: Settled
@@ -758,10 +821,10 @@ sequenceDiagram
     V->>SET: unsold Saturday sits in escrow
     SOL->>SET: settle including venue as a participant
     SET->>A: A receives Saturday from venue
-    SET->>V: venue receives A's Friday
-    SET->>SET: that Friday satisfies C in the same transaction
-    SET->>SET: C's Sunday satisfies B
-    Note over A,SET: One issuer ticket started a four-party chain
+    SET->>SET: A's Friday goes directly to C
+    SET->>SET: C's Sunday goes to B
+    SET->>V: venue settles per its own predicate
+    Note over A,SET: The venue injected an asset. Each ticket received exactly once — V4 holds.
 ```
 
 ---
@@ -817,13 +880,19 @@ The market changes around a standing intent. That is what live indexed data is f
 ## Questions we expect
 
 **Isn't this just a multi-party NFT swap?**
-Multi-party barter exists — NeoSwap did it in 2022 with budgets, reserve prices and combinatorial optimisation. Their flow is: bid on specific known items, receive a proposed trade, then everyone signs it. Ours is: sign an outcome predicate once, and any future combination inside those bounds is already approved. Proposal authorisation versus outcome authorisation.
+Multi-party barter exists — NeoSwap did it in 2022 with budgets, reserve prices and combinatorial optimisation. Its documented flow is: bring items to a room, bid on the specific items you see, receive a proposed trade, then every participant approves *that proposal* before it can execute. Their AI-recommended trades follow the same shape. We scope the comparison to that documented flow; their litepaper describes always-on rebalancing as future work, and we make no claim about later products. Ours is: sign an outcome predicate once, and any future combination inside those bounds needs no further approval. Proposal authorisation versus outcome authorisation.
+
+To be precise about what that does and does not buy: it removes the post-match round trip, not the need for participants to exist. And it is one signature *per intent* — you sign again if the intent expires, is revoked, or changes.
 
 **Isn't this CoW Protocol?**
 CoW clears fungible tokens at a uniform price. Tickets are non-fungible and carry per-person bundle constraints — four seats must share a session and a section. No uniform clearing price exists, so what gets verified is not a price but each participant's declared conditions.
 
 **Isn't this Seaport criteria orders?**
-Seaport can express "any NFT matching this criterion", and that part is not new. Seaport matches bilaterally. Ours composes many asynchronous predicates into a multi-party reallocation with net cash settlement, without asking anyone to approve a concrete trade.
+Seaport can express "any NFT matching this criterion", and that part is genuinely not new — predicate-based orders are established. Nor is Seaport limited to two parties: `matchOrders` settles any number of orders together, and zones allow custom validation around fulfilment. Seaport is a general settlement engine, and a sufficiently determined team could build something like this on top of it.
+
+The difference is what the predicate is about, and what is first-class. A criteria order constrains *which asset may fill one side of my order*. An intent here constrains *the outcome of this settlement for me* — the bundle I must receive, its internal relationships (same session, same section, adjacent seats), and the maximum cash I will part with. Relational bundle constraints and per-participant cash bounds are the primitives, not something assembled from them.
+
+> You don't sign the asset you want. You sign the post-settlement outcome you're willing to accept.
 
 **Hasn't the theory been done?**
 Yes, and we cite it. Top Trading Cycles dates to 1974; kidney exchange is its best-known application; a 2026 Imperial paper studies exactly this for Wimbledon ballot winners, including price differences between courts and dates. Matching-market research shows the reallocation can be improved. We made the conditional replacement executable — signed predicates, on-chain enforcement, asynchronous settlement, issuer inventory as a standing participant.
@@ -832,7 +901,7 @@ Yes, and we cite it. Top Trading Cycles dates to 1974; kidney exchange is its be
 Buyers and sellers participate in the same pool, so a chain can terminate in cash at either end. Issuer inventory can start one. A closed cycle is one solution shape, not a requirement.
 
 **Two solutions are both valid — who picks?**
-The contract checks conditions; it does not rank. Selection is the solver's, and the rule is published: minimise total net payment, ties break toward fewer participants, then lowest gas. The interface separates *your limit*, *what you actually paid*, and *why this candidate*. We never call a result optimal — the search is bounded.
+The contract checks conditions; it does not rank. Selection is the solver's, and the rule is published: minimise gross cash moved — `sum of max(netPayment, 0)` — with ties breaking toward fewer participants, then toward the lexicographically smallest ordered set of intent hashes — a hash comparison rather than gas, so ranking is deterministic from the inputs alone. Gross rather than net, because V7 forces the net total to zero on every valid settlement, so a net objective would rank nothing. The interface separates *your limit*, *what you actually paid*, and *why this candidate*. We never call a result optimal — the search is bounded.
 
 **How do I know the solver isn't cheating me?**
 You don't have to. The contract validates the final state against the predicate you signed. A malicious solver can propose anything; V1–V8 refuse it. Try it in the demo.
@@ -846,8 +915,11 @@ No. ERC-20 approval is a spending allowance, not a reservation, and escrowed tic
 **Does this work with my Ticketmaster tickets?**
 No. Only tickets issued by contracts in our registry. Minting an NFT from a PDF transfers nothing. This is a post-allocation reshuffling layer for issuer-native tickets, not a replacement for existing platforms.
 
+**Couldn't a centralised platform just do this?**
+Yes. A sufficiently motivated ticketing platform could search its own inventory, reserve a replacement, take back the old tickets, net the cash and commit — no blockchain required. We do not claim otherwise. The difference is who may propose a solution and who decides whether it executes: there, the platform's search, rules and settlement must all be trusted; here, anyone may propose, and a signed predicate plus the contract decide whether the proposal is allowed to execute. Discovery can be permissionless; authorisation does not have to trust the solver.
+
 **Why do tickets have to be NFTs?**
-Because the contract has to be able to refuse. Adjacency, cohesion and conservation are checked against on-chain ticket data; escrow ownership and redemption status are read at settlement; the transfer itself is what makes the reshuffle atomic. If a ticket were a database row, none of that could happen and users would be back to trusting our server.
+They are not mathematically required — a database can run an atomic transaction, check seat adjacency and update ownership, and we said above that a centralised platform could do all of this. What changes is *who is the authority*. With a database, our backend performs the final reallocation and users trust that it did so correctly. With issuer-native onchain tickets, ticket state and transfer are enforceable by the same settlement contract that validates the signed predicates, so nobody has to trust our backend — including us.
 
 **What stops scalpers?**
 Nothing here. This reallocates tickets that have already been sold; it creates no seats and prevents no bot from buying them in the first place.
@@ -900,7 +972,7 @@ forge test --gas-report
 forge script script/Deploy.s.sol --rpc-url $ARC_RPC --broadcast
 ```
 
-`foundry.toml` sets `evm_version = "paris"` — Arc Testnet has known PUSH0 compatibility issues with newer EVM versions. Gas estimation on some USDC writes is unreliable, so deployment scripts pass explicit gas limits.
+`foundry.toml` sets `evm_version = "paris"` — a current workaround for the documented open PUSH0 compatibility issue on Arc Testnet. Arc's chain docs describe the execution environment as Prague, so treat this as a present-state workaround and re-test before any mainnet deployment. Gas estimation on some USDC writes is also unreliable, so deployment scripts pass explicit gas limits.
 
 ### Deployment
 

@@ -9,6 +9,16 @@ signed conditions.
 
 ---
 
+## The premise
+
+**Outcome authorisation, not proposal authorisation.**
+
+The user signs once and leaves. They never see the trade that executes. Every condition they
+care about must be enforceable by the contract in their absence, against a solver nobody
+trusts.
+
+Resolve design questions against this: *would this still work if the user never came back?*
+
 ## The governing rule
 
 **No promise without a check.**
@@ -75,18 +85,54 @@ The demo shows the contract refusing a bad proposal. A generic revert proves not
 **Validation runs in this order and every step is unconditional:**
 
 ```
-V1 intent validity      state == live, deadline unpassed, signature recovers to owner
-V2 escrow ownership     every offered ticket escrowed by that intent's owner
+V0 settlement shape     intents.length == legs.length; each intentHash appears exactly once;
+                        each Intent hashes to the key it is presented under. Leg has no
+                        participant field — the recipient is intent.owner
+V1 intent validity      state[intentHash] == LIVE, deadline unpassed. No ecrecover here —
+                        settle() has no signatures. commit() authenticated once; V0 binds
+                        the supplied struct to the live hash
+V2 escrow ownership     every offered ticket escrowed by that intent's owner NOW, and every
+   and event binding    offered ticket's eventId == intent.eventId — clearing is within one
+                        event, so eventId is the market, not just the desired outcome
 V3 ticket status        none redeemed
 V4 conservation         exact bijection between offered and received
 V5 per-participant      eventId, masks, exactCount, cohesion, adjacency
 V6 per-participant      netPayment within maxNetPay
 V7 payment balance      sum of netPayment == 0, exactly
-V8 payment capacity     each payer's USDC balance and allowance cover their leg
+V8 payment capacity     ownerNet = SIGNED sum of that owner's legs; check only net debtors
+                        against ownerNet. +80 and -30 nets to 50, not 80. Routing: pull all
+                        debits into the contract, then push all credits — two deterministic
+                        passes in owner order, never pairwise matching
 ```
 
-Only then transfer. **Checks first, effects, then interactions** — no partial state on a
-failed batch.
+Only then transfer, **in this order**:
+
+```
+1  mark every intent LIVE -> SETTLED          ← effects
+2  USDC transfers                              ← interactions
+3  Escrow.releaseBatch                         ← interactions
+4  emit
+```
+
+Effects before interactions, always. `safeTransferFrom` calls into the recipient; moving a
+ticket while its intent is still `LIVE` opens a reentrant window against stale state. Marking
+first is safe because any later revert rolls the marking back with it.
+
+`Escrow.deposit` rejects redeemed tickets, and `Escrow.withdraw` is depositor-only —
+*unconditional* means no time lock and no settlement approval, never that anyone may call it.
+Both clear `depositor[id]` before transferring.
+
+Tickets leave escrow through `Escrow.releaseBatch(ids, to)` marked `onlySettlement`. The escrow
+owns the NFT once deposited, so `Settlement` cannot transfer it directly and must not hold
+blanket operator approval. Inside `releaseBatch`, clear `depositor[tokenId]` **before**
+`safeTransferFrom` — the transfer calls into the recipient.
+
+`sessionId` and `sectionId` are normalised class ids and **must be < 256**, enforced in
+`mint` — they index bit positions in a `uint256` mask, so id 300 mints a ticket no predicate
+can ever accept. `row` and `seat` keep the full `uint16` range; they are compared numerically.
+
+Masks are `uint256`, not `uint16`. Sixteen session or section classes is not enough for a real
+venue, and the storage saved is not worth capping the product.
 
 **Bitmaps over loops.** Session and section acceptance is a single `&`. Cohesion compares
 against the first element. Adjacency sorts seats and verifies a consecutive run.
@@ -99,11 +145,18 @@ against the first element. Adjacency sorts seats and verifies a consecutive run.
 
 | Field | Rule |
 |---|---|
-| `exactCount` | Exactly, never a minimum. Asking for two must not yield three |
+| `exactCount` | Exactly, never a minimum. Asking for two must not yield three. **`0` is valid** — that is a pure seller, and V5 must handle an empty `receives` without touching `receives[0]` |
 | `mustShareSection` | Distinct from `sectionMask`. Two acceptable sections is not "both in the same one" |
 | `mustShareSession` | Same distinction |
-| `mustBeAdjacent` | Same section, same row, consecutive seats. Only checkable because we issue the tickets |
-| `maxNetPay` | Signed. Positive is a debit ceiling, negative is a credit floor |
+| `mustBeAdjacent` | **Same session AND same section AND same row AND consecutive seats**, independently of the cohesion flags — seat numbers are only comparable within one session, section and row. Requires `exactCount >= 2`, enforced at commit. Only checkable because we issue the tickets |
+| `maxNetPay` | Signed. Positive is a debit ceiling, negative is a credit floor. **V6 is one comparison — `netPayment <= maxNetPay` — never two branches.** Splitting it inverts the receiver case, accepting anyone who gets less than their floor |
+
+**Never compute or store a platform price for a ticket.** Valuation is subjective — the same seat is worth different amounts to different people. Participants state reservation constraints (`maxNetPay`), and validity means every participant's own constraint holds. There is no oracle, no price feed and no assessed value anywhere in this system, and adding one would change what the product is.
+
+**Issuer intents use the same struct.** Unsold inventory is deposited into the same escrow and
+committed as an ordinary intent with negative `maxNetPay` and wide masks. No `if (isIssuer)`
+anywhere in `Settlement` — a returned ticket must be able to satisfy the next participant
+inside the same transaction, which only works if the issuer flows through the identical path.
 | `deadline` | Checked in V1. Expiry is a rejection, not a filter |
 
 ---
@@ -116,7 +169,31 @@ invalidates every committed intent** and requires reconfiguring the frontend dom
 This is a correctness requirement, not configuration. Never describe a chain migration as
 changing an RPC URL.
 
-Nonces are per-owner and single-use. Revocation is explicit and separate from ticket
+`commit()` is **permissionless** — anyone may relay it, because the EIP-712 signature is what
+authenticates `intent.owner`. Requiring `msg.sender == owner` would make the typed-data
+signature redundant. `revoke()` is **owner-only**.
+
+`settle()` carries `nonReentrant`. Effects already precede interactions, but `safeTransferFrom`
+reaches `onERC721Received` and there is no reason to permit a nested settlement from inside a
+callback.
+
+Tickets enter escrow by **pull**: `deposit()` calls `transferFrom` after the caller approves.
+If `IERC721Receiver` is implemented at all, it must revert for transfers not originating in
+`deposit()` — a direct `safeTransferFrom` would leave `depositor[id] == address(0)` and strand
+the ticket permanently.
+
+`hashIntent` has **one** definition, shared by frontend and contract. EIP-712 hashes
+positionally, so typehash string, struct order and `abi.encode` order must match exactly, and
+`offered` hashes as `keccak256(abi.encodePacked(...))`. Keep a JSON fixture whose digest is
+asserted equal in TypeScript and Solidity — without it, drift surfaces at commit as *signature
+does not recover to owner*, which reads like a wallet bug.
+
+**Nonces are reserved in `commit`, not at settlement.** `usedNonce[owner][nonce]` is set when
+the intent is committed and never cleared — revoking does not return a nonce. Two different
+intents from the same owner hash differently, so without this check both could be `LIVE` under
+the same nonce. Settlement's only state effect is `LIVE -> SETTLED`.
+
+Revocation is explicit and separate from ticket
 withdrawal — withdrawing tickets does not revoke intents referencing them; V2 catches that at
 settlement.
 
@@ -147,6 +224,16 @@ rejects_revoked_intent
 rejects_withdrawn_ticket
 rejects_redeemed_ticket
 rejects_conservation_violation
+rejects_id_at_or_above_mask_width
+pure_seller_with_exact_count_zero_settles
+rejects_adjacency_flag_with_exact_count_below_two
+rejects_deposit_of_redeemed_ticket
+rejects_withdraw_by_non_depositor
+rejects_duplicate_nonce_at_commit
+commit_by_third_party_relay_succeeds
+rejects_revoke_by_non_owner
+owner_net_uses_signed_sum_not_positive_sum
+hash_intent_matches_typescript_vector
 rejects_insufficient_payment_capacity
 ```
 
@@ -161,8 +248,15 @@ Off-chain, TypeScript, deterministic given the same inputs.
 
 **Publish the ranking rule and never call the result optimal:**
 
-> Among valid reshuffles found within the search budget, minimise total net payment. Ties
-> break toward fewer participants, then lowest gas.
+> Among valid reshuffles found within the search budget, minimise **gross cash moved** —
+> `sum of max(netPayment, 0)` over all legs. Ties break toward fewer participants, then lowest
+> the lexicographically smallest ordered set of intent hashes.
+
+The last tie-break is a hash comparison, not gas: the solver must be deterministic from its
+inputs, and gas estimation is unreliable on Arc. Measure gas, report it, never rank on it.
+
+Gross, not net: V7 forces `sum(netPayment) == 0` on every valid settlement, so a net-total
+objective is constant and ranks nothing.
 
 The search is bounded. *No solution found* is not *no solution exists*.
 
@@ -179,8 +273,9 @@ transaction hash
 ```
 
 Verify freshness against chain state before submitting; the indexer lags. Simulate with
-`eth_call`, then submit propose-and-execute in one transaction so no window exists between
-them.
+`eth_call`, then submit immediately. The two are separate RPC calls and a window exists
+between them — simulation does not lock state. Safety comes from revalidation at execution,
+not from the absence of a window.
 
 ---
 
@@ -188,7 +283,7 @@ them.
 
 | Never | Instead |
 |---|---|
-| "optimal", "best price" | "lowest total net payment among candidates found" |
+| "optimal", "best price" | "least cash moved among candidates found within the search budget" |
 | "eliminates the failure mode" | "the user need not be online; settlement still requires intents, tickets and payment capacity to remain valid" |
 | "no grief risk" | "simulation reduces known failures; a failed proposal costs the proposer gas" |
 | "mathematically impossible to be strategy-proof" | "this implementation makes no incentive-compatibility claim" |

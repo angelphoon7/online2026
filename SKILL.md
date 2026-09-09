@@ -1,5 +1,5 @@
 ---
-name: reshuffle
+name: reshuffle-build
 description: Build RESHUFFLE — a multi-party conditional exchange for event tickets on Arc, where participants sign the outcome they will accept and settlement executes only when every signed condition holds. Use this skill for any work on the RESHUFFLE contracts, solver, subgraph, agent, frontend, or tests, including TicketNFT, Escrow, IntentRegistry, Settlement, intent encoding, seat adjacency checks, net USDC settlement, and the demo scenes. Read it before writing any contract code, since the constraint language decides what the product may promise.
 ---
 
@@ -7,14 +7,68 @@ description: Build RESHUFFLE — a multi-party conditional exchange for event ti
 
 **A market for outcomes, not listings.**
 
-Every marketplace makes you sell what you have, then buy what you want, and the risk in
-between is yours. RESHUFFLE lets a user sign the outcome they would accept — *take my two
+Official exchange exists but is narrowly bounded — typically same event, venue and date. When
+the replacement falls outside those bounds, resale reduces it to two independent actions: sell
+what you have, then buy what you want, and the risk in between is yours. RESHUFFLE lets a user sign the outcome they would accept — *take my two
 Friday tickets, but only if I simultaneously receive exactly two adjacent Saturday seats in one
 section, and I pay no more than 30 USDC net* — and nothing moves until a whole outcome exists
 that satisfies every participant's own signed conditions.
 
 `docs/RESHUFFLE_PRD.md` states what the product promises. `docs/RESHUFFLE_TRD.md` states how
 each promise is checked. Read both before writing contract code.
+
+## The premise everything follows from
+
+**Outcome authorisation, not proposal authorisation.**
+
+NeoSwap's documented 2022 flow asks *"here is the trade, do you approve it?"* — participants
+bring NFTs to a room, bid on what they see, the algorithm proposes a concrete trade, and a
+contract is then created for every participant to sign. Its AI-recommended trades follow the
+same shape: proposed, then accepted by all parties.
+
+Scope the claim to that documented flow. Their litepaper describes an always-on rebalancing
+system as future work, and there is no evidence either way about what later products do. RESHUFFLE
+says *"here are the boundaries; any future trade inside them is already approved."*
+
+State it precisely, because both halves are easy to overclaim:
+
+- **One signature per intent**, not one ever. A user signs again when an intent expires, is
+  revoked, or is changed.
+- **What is removed is the post-match round trip**, not the need for people to be awake. Prior
+  systems can notify participants and collect approvals over time; the cost is that a
+  discovered proposal is dead until everyone returns to approve *that specific proposal*.
+
+> You don't sign the asset you want. You sign the post-settlement state you're willing to
+> accept.
+
+That is the whole reason the contract validates so much. The user is not present when their
+tickets move, so every condition they care about has to be enforceable without them, against a
+solver nobody trusts.
+
+When a design question comes up, resolve it against this sentence. *Would this still work if
+the user never came back?* If not, it is the wrong design.
+
+Related distinctions worth keeping straight, because a judge will raise them:
+
+| Prior work | What it does | What is different here |
+|---|---|---|
+| Seaport | criteria items, multi-order `matchOrders`, extensible validation via zones | a general settlement engine, not an application. Relational bundle constraints and per-user cash bounds are not first-class there |
+| NeoSwap | multi-party barter, budgets, combinatorial search | requires final approval from every participant |
+| CoW Protocol | signed intents cleared in batches | fungible tokens at a uniform price; no bundle constraints |
+| Top Trading Cycles, kidney exchange | the matching theory itself | one-shot mechanism, no persistence, no cash settlement |
+
+Cite these. Do not claim novelty the project does not have — the contribution is the
+combination and its execution model, not the mechanism.
+
+**Never claim a centralised platform could not do this.** A sufficiently motivated ticketing
+platform absolutely could: search its own inventory, reserve a replacement, return the old
+tickets, net the cash, commit. No blockchain required. The honest proposition is about who is
+allowed to propose and who decides whether a proposal may execute:
+
+> Discovery can be permissionless; authorisation does not have to trust the solver.
+
+The platform version requires trusting the platform's search, its rules and its settlement.
+Here anyone may propose, and a signed predicate plus the contract decide whether it executes.
 
 ## The rule that governs everything
 
@@ -72,6 +126,14 @@ undergraduate algorithms exercise with a wallet connector.
 requires reconfiguring the frontend domain. This is a correctness requirement, not a
 configuration detail. Never describe a migration as "just changing the RPC".
 
+**The issuer is a participant, not a special case.** Unsold inventory is deposited into the
+same escrow and committed as an ordinary intent — negative `maxNetPay`, wide masks, cohesion
+flags off. There must be no separate code path and no privileged settlement branch. The value
+of doing it this way is that a returned ticket satisfies the next participant inside the same
+transaction rather than going back on a shelf, which is what makes a chain possible where no
+closed user-to-user cycle exists. If you find yourself writing `if (isIssuer)` in
+`Settlement`, stop — the design is wrong.
+
 **`exactCount`, never `minCount`.** A user asking for two seats must not receive three. A
 minimum cannot express "exactly".
 
@@ -89,8 +151,9 @@ anything, and never claim funds are locked.
 
 **Simulation does not lock state.** `eth_call` evaluates against one state. A participant can
 withdraw afterwards and the real transaction still fails. Simulation reduces known failures; it
-does not guarantee success. Propose and execute in one transaction so no window exists between
-them.
+does not guarantee success, and `eth_call` plus the submitted transaction are two separate
+calls with a real window between them. Safety comes from revalidation at execution, not from
+pretending the window is absent.
 
 **Check payment capacity before any transfer.** Failing partway through a batch of ERC-20
 transfers wastes gas and produces a confusing revert.
@@ -114,7 +177,7 @@ These claims will be broken by one follow-up question.
 
 | Do not write | Write instead |
 |---|---|
-| "Optimal" or "best price" | "Lowest total net payment among the candidates found within the search budget" |
+| "Optimal" or "best price" | "Least cash moved among the candidates found within the search budget" |
 | "Eliminates the failure mode" | "The user need not be online; settlement still requires intents, tickets and payment capacity to remain valid" |
 | "No grief risk" | "Simulation reduces known failures; a failed proposal costs the proposer gas" |
 | "Mathematically impossible to be strategy-proof" | "This implementation makes no incentive-compatibility claim" |
