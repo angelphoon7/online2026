@@ -1,0 +1,25 @@
+script/SeedDemo.s.sol
+  93fd18a659792c87 1-229
+app/reshuffle/page.tsx
+  93fd18a659792c87 429-475,498-502,516-634
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2-bit.10+672fbf0",
+  "base_commit_sha": "60e8d904ad3a41a63b1053435004a5f233677a89",
+  "prompts": {
+    "93fd18a659792c87": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f0f2ab6-d83d-4eeb-8701-23d2f6e178af",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "angel.phoon",
+      "messages": [],
+      "total_additions": 402,
+      "total_deletions": 1,
+      "accepted_lines": 3054,
+      "overriden_lines": 0
+    }
+  }
+}
