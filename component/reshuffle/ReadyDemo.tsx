@@ -1,0 +1,146 @@
+"use client";
+
+import Link from 'next/link';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Hex } from 'viem';
+import { useWallet } from '@/lib/hooks/useWallet';
+import { submitSettlement, waitForTransaction } from '@/lib/contracts';
+import { findSettlement, confirmSettlementEvidence, type SettlementProposal, type SolveEvidence } from '@/lib/solve-api';
+import { formatUSDC, truncateAddress } from '@/lib/format';
+import { CHAIN, sessionName, sectionName } from '@/lib/config';
+import ArcGasNotice from './ArcGasNotice';
+import SettlementView from './SettlementView';
+import EvidencePanel from './EvidencePanel';
+
+interface DemoIntent {
+  hash: Hex; owner: string; offered: string[]; exactCount: number;
+  maxNetPay: string; deadline: string; state: number; expired: boolean;
+  sessionMask: string; sectionMask: string; mustBeAdjacent: boolean;
+}
+type Status = 'pending' | 'simulated' | 'submitting' | 'settled' | 'failed';
+
+function acceptedNames(mask: string, name: (id: number) => string) {
+  return Array.from({ length: 256 }, (_, id) => id).filter(id => (BigInt(mask) & (1n << BigInt(id))) !== 0n).map(name).join(', ') || 'None';
+}
+
+export default function ReadyDemo() {
+  const { account, chainId, connect } = useWallet();
+  const [intents, setIntents] = useState<DemoIntent[]>([]);
+  const [selected, setSelected] = useState<Hex[]>([]);
+  const [proposal, setProposal] = useState<SettlementProposal | null>(null);
+  const [evidence, setEvidence] = useState<SolveEvidence | null>(null);
+  const [status, setStatus] = useState<Status>('pending');
+  const [busy, setBusy] = useState(true);
+  const [error, setError] = useState('');
+  const [txHash, setTxHash] = useState<Hex>();
+  const [block, setBlock] = useState('');
+  const started = useRef(false);
+
+  const solve = useCallback(async (hashes: Hex[]) => {
+    setBusy(true); setError(''); setProposal(null); setEvidence(null); setTxHash(undefined); setStatus('pending');
+    try {
+      const result = await findSettlement(hashes.map(hash => ({ hash })));
+      setProposal(result.proposal); setEvidence(result.evidence);
+      setStatus(result.evidence.simulationResult?.success ? 'simulated' : 'pending');
+      if (result.proposal && !result.evidence.simulationResult?.success) setError('Latest simulation failed. Refresh chain state before submitting.');
+    } catch (e) { setError(e instanceof Error ? e.message : 'Unable to solve'); }
+    finally { setBusy(false); }
+  }, []);
+
+  const refresh = useCallback(async () => {
+    setBusy(true); setError(''); setProposal(null); setEvidence(null); setStatus('pending'); setTxHash(undefined);
+    try {
+      const response = await fetch('/api/demo', { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      setIntents(data.intents); setBlock(data.blockNumber);
+      const hashes = (data.intents as DemoIntent[]).map(i => i.hash);
+      setSelected(hashes);
+      await solve(hashes);
+    } catch (e) { setError(e instanceof Error ? e.message : 'Unable to read demo'); setBusy(false); }
+  }, [solve]);
+
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    void refresh();
+  }, [refresh]);
+
+  async function submit() {
+    if (!account || chainId !== 5042002 || !proposal || !evidence?.simulationResult?.success) return;
+    setBusy(true); setStatus('submitting'); setError('');
+    try {
+      // Re-read and simulate just before asking the proposer to submit. Execution
+      // still revalidates every condition; this does not reserve chain state.
+      const fresh = await findSettlement(selected.map(hash => ({ hash })));
+      if (!fresh.proposal || !fresh.evidence.simulationResult?.success) throw new Error('Demo state changed. Refresh to inspect the latest result.');
+      setProposal(fresh.proposal); setEvidence(fresh.evidence);
+      const hash = await submitSettlement(account, fresh.proposal.intents, fresh.proposal.legs);
+      setTxHash(hash);
+      await waitForTransaction(hash);
+      const confirmed = await confirmSettlementEvidence(fresh.evidence.id, hash);
+      setEvidence(confirmed);
+      if (confirmed.receipt) setBlock(confirmed.receipt.blockNumber);
+      setStatus('settled');
+      const settled = new Set(fresh.proposal.legs.map(l => l.intentHash));
+      setIntents(prev => prev.map(i => settled.has(i.hash) ? { ...i, state: 3 } : i));
+    } catch (e) {
+      setStatus('failed'); setError(e instanceof Error ? e.message : 'Settlement failed');
+    } finally { setBusy(false); }
+  }
+
+  return <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 p-6 text-white">
+    <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-5">
+      <Link href="/" className="font-bold">RESHUFFLE</Link>
+      <Link href="/reshuffle" className="text-sm text-blue-300">Create your own intent →</Link>
+    </header>
+    <div>
+      <h1 className="text-3xl font-bold">Live settlement demo</h1>
+      <p className="mt-3 max-w-3xl text-white/60">The participants have already signed their conditions and deposited their tickets. Explore the live intents and run the solver without connecting a wallet. A proposer only needs a funded Arc wallet to submit the settlement.</p>
+    </div>
+    <ArcGasNotice />
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <p className="text-sm text-white/60">{block ? `Intent status from Arc block ${block}` : 'Reading Arc Testnet…'}</p>
+      <button disabled={busy} onClick={() => void refresh()} className="rounded border border-white/20 px-4 py-2 disabled:opacity-40">Refresh live state</button>
+    </div>
+    <div className="grid gap-4 md:grid-cols-3">
+      {intents.map((intent, index) => <article key={intent.hash} className="rounded-lg border border-white/15 bg-white/5 p-4">
+        <label className="flex items-center gap-3 font-medium">
+          <input type="checkbox" checked={selected.includes(intent.hash)} disabled={busy} onChange={e => {
+            setSelected(prev => e.target.checked ? [...prev, intent.hash] : prev.filter(h => h !== intent.hash));
+            setProposal(null); setEvidence(null); setStatus('pending'); setTxHash(undefined); setError('');
+          }} />
+          Participant {index + 1}
+        </label>
+        <p className="mt-3 text-sm text-blue-300">{['Not committed', 'LIVE', 'REVOKED', 'SETTLED'][intent.state] ?? 'Unknown'}{intent.expired && intent.state === 1 ? ' · expired' : ''}</p>
+        <p className="mt-2 text-sm text-white/60" title={intent.owner}>{truncateAddress(intent.owner)}</p>
+        <p className="mt-3 text-sm">Offers tickets {intent.offered.map(id => `#${id}`).join(', ')}</p>
+        <p className="mt-2 text-sm text-white/60">Wants exactly {intent.exactCount} {intent.mustBeAdjacent ? 'adjacent ' : ''}tickets</p>
+        <p className="mt-2 text-sm text-white/60">{acceptedNames(intent.sessionMask, sessionName)} · {acceptedNames(intent.sectionMask, sectionName)}</p>
+        <p className="mt-2 text-sm">{BigInt(intent.maxNetPay) >= 0n ? `Pay at most ${formatUSDC(BigInt(intent.maxNetPay))}` : `Receive at least ${formatUSDC(-BigInt(intent.maxNetPay))}`} USDC</p>
+        <p className="mt-2 text-xs text-white/50">Expires {new Date(Number(intent.deadline) * 1000).toLocaleString()}</p>
+        <a className="mt-3 block text-xs text-blue-300 underline" href={`https://testnet.arcscan.app/address/${intent.owner}`} target="_blank" rel="noreferrer">View participant on Arc</a>
+      </article>)}
+    </div>
+    <div>
+      <p className="mb-3 text-sm text-white/60">Try excluding a participant and search again. This changes the solver input; signed intents stay unchanged on-chain.</p>
+      <button disabled={busy || selected.length < 2} onClick={() => void solve(selected)} className="rounded bg-white/10 px-4 py-2 disabled:opacity-40">Find settlement ({selected.length} selected)</button>
+      {selected.length < 2 && intents.length > 0 && <p className="mt-2 text-sm text-white/60">Select at least two intents.</p>}
+    </div>
+    {busy && <p role="status" className="text-blue-300">{status === 'submitting' ? 'Waiting for submission and confirmed receipt…' : 'Checking chain state, searching and simulating…'}</p>}
+    {error && <p role="alert" className="break-words rounded border border-red-400/30 p-4 text-red-300">{error}</p>}
+    {!busy && evidence && !proposal && <div className="rounded border border-amber-400/30 p-4 text-amber-200">
+      <p>No solution found within the search bound.</p>
+      {intents.some(i => i.state !== 1 || i.expired) && <p className="mt-2 text-sm">This shared demo has changed or expired. The operator can prepare the next round; the evidence below shows the current result.</p>}
+    </div>}
+    {proposal && <>
+      <SettlementView legs={proposal.legs} gross={proposal.gross} candidateCount={proposal.candidatesFound}
+        status={status} txHash={txHash} evidence={evidence}
+        onSubmit={!busy && account && chainId === 5042002 && CHAIN.id === 5042002 ? () => void submit() : undefined} />
+      {status === 'simulated' && !account && <button onClick={() => void connect().catch(() => setError('Wallet connection was not completed.'))} className="self-start rounded bg-blue-600 px-4 py-2">Connect proposer wallet to settle</button>}
+      {status === 'simulated' && account && chainId !== 5042002 && <p className="text-amber-200">Switch your wallet to Arc Testnet (5042002) to submit.</p>}
+      {status === 'settled' && <p className="text-sm text-white/60">This round is complete. The operator can rerun demo:prepare for the next recording.</p>}
+    </>}
+    <EvidencePanel evidence={evidence} />
+  </main>;
+}

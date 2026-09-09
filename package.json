@@ -10,6 +10,8 @@
     "start": "next start",
     "lint": "eslint",
     "arc:check": "node scripts/check-arc.mjs",
+    "predemo:prepare": "npm --prefix solver run build",
+    "demo:prepare": "node scripts/prepare-demo.mjs",
     "arc:deploy:simulate": "node scripts/deploy-arc.mjs",
     "arc:deploy": "node scripts/arc-live.mjs deploy",
     "arc:seed": "node scripts/arc-live.mjs seed",

@@ -17,10 +17,10 @@ export default function Home() {
             is guaranteed.
           </p>
           <Link
-            href="/reshuffle"
+            href="/demo"
             className="inline-flex rounded-lg bg-blue-600 px-8 py-3 text-lg font-medium text-white transition-colors hover:bg-blue-500"
           >
-            Launch App
+            Try Live Demo
           </Link>
         </div>
 
