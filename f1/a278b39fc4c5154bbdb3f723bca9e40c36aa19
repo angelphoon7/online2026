@@ -1,0 +1,21 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2-bit.10+672fbf0",
+  "base_commit_sha": "f1a278b39fc4c5154bbdb3f723bca9e40c36aa19",
+  "prompts": {
+    "93fd18a659792c87": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f0f2ab6-d83d-4eeb-8701-23d2f6e178af",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "angel.phoon",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 6,
+      "accepted_lines": 73067,
+      "overriden_lines": 0
+    }
+  }
+}
