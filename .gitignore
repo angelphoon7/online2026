@@ -49,3 +49,5 @@ next-env.d.ts
 /.arc-journal.json
 /.arc-journal.json.tmp
 /solver/dist/
+/.data/
+/.arc-settlements.json*

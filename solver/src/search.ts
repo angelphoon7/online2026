@@ -35,7 +35,10 @@ export function search(
 
       const poolSize = subset.reduce((s, i) => s + i.offered.length, 0);
       const neededSize = subset.reduce((s, i) => s + i.exactCount, 0);
-      if (poolSize !== neededSize) continue;
+      if (poolSize !== neededSize) {
+        excluded.push({ intentHashes: subset.map(hashIntent), reason: 'V4: Offered and received ticket counts differ' });
+        continue;
+      }
 
       const pool = subset.flatMap((i) => i.offered);
       const hashes = subset.map((i) => hashIntent(i));
@@ -46,7 +49,7 @@ export function search(
         continue;
       }
 
-      const assignments = findAssignments(subset, pool, state, 100);
+      const assignments = findAssignments(subset, pool, state, 100, startTime + config.timeoutMs);
       if (assignments.length === 0) {
         excluded.push({
           intentHashes: hashes,
@@ -127,14 +130,15 @@ export function findAssignments(
   subset: Intent[],
   pool: bigint[],
   state: ChainState,
-  limit: number
+  limit: number,
+  deadline = Number.POSITIVE_INFINITY
 ): bigint[][][] {
   const results: bigint[][][] = [];
   const used = new Set<bigint>();
   const current: bigint[][] = Array.from({ length: subset.length }, () => []);
 
   function backtrack(idx: number): void {
-    if (results.length >= limit) return;
+    if (results.length >= limit || Date.now() > deadline) return;
 
     if (idx === subset.length) {
       if (used.size === pool.length) {
@@ -162,7 +166,7 @@ export function findAssignments(
     });
 
     for (const combo of combinations(eligible, intent.exactCount)) {
-      if (results.length >= limit) return;
+      if (results.length >= limit || Date.now() > deadline) return;
 
       if (intent.mustShareSession) {
         const sessions = new Set(combo.map((id) => state.ticketMeta.get(id)!.sessionId));

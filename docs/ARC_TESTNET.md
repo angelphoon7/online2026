@@ -54,6 +54,8 @@ A 使用 `.env` 的部署钱包。B/C 的专用测试私钥保存于被 Git 忽�
 
 重启 `npm.cmd run dev`，打开 `/reshuffle`。将浏览器钱包切换到 Arc Testnet 并连接，即可加载链上票据和意图；按 Refresh 更新状态。需要操作 A 的票据或撤销 A 的意图时，在自己的本地钱包中导入 `.env` 的测试密钥；B/C 对应 `.env.seed`。私钥不进入网页代码。
 
-当前页面用 RPC 日志读取意图，尚未接入 The Graph；`SUBGRAPH_URL` 和 `SUBGRAPH_API_KEY` 仍留空。`deployments/arc-testnet.json` 的 `startBlock` 与合约地址可用于后续索引配置。这次部署与 seed 不代表网页已公开托管。
+当前页面用 RPC 日志读取意图，并调用服务端 `/api/solve` 完成求解与模拟；确认回执通过 `/api/evidence/{id}/receipt` 核验。尚未接入 The Graph；`SUBGRAPH_URL` 和 `SUBGRAPH_API_KEY` 仍留空。`deployments/arc-testnet.json` 的 `startBlock` 与合约地址可用于后续索引配置。这次部署与 seed 不代表网页已公开托管。
+
+十轮真实结算使用 `npm.cmd run arc:settle:ten`，具体启动顺序见 [backend 说明](../server/README.md)。每轮确认回执和证据保存在 `deployments/settlements/`。完成后原始 seed 意图已 SETTLED，下一组待演示意图在 `deployments/demo-ready.json`；`arc:verify` 和 `arc:seed:simulate` 优先检查这一组。不要用原始 `arc:seed` 重置已经成交的状态。
 
 切换网络或重部署 IntentRegistry 后，EIP-712 的 chainId / verifyingContract 会变化，原来的意图签名不能沿用，必须重新签署并提交。

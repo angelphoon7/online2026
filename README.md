@@ -1001,3 +1001,25 @@ We build on existing work and say so.
 | CoW Protocol | Signed intents cleared in batches, coincidence of wants |
 
 None of them combines persistent outcome predicates, asynchronous multi-party clearing without re-approval, issuer inventory as a standing participant, and net cash settlement over non-fungible bundles. That combination is what this implements.
+
+
+<!-- BEGIN ARC SETTLEMENTS -->
+## Confirmed Arc Testnet settlements
+
+Ten demonstration settlements on Arc Testnet (chain ID 5042002), using the same 12 tickets across three controlled test wallets. Each round commits fresh signed conditions; the backend searches current chain state and simulates before the local runner submits. These are repeatable integration demonstrations, not evidence of organic market demand.
+
+| Round | Block | Confirmed transaction |
+| --- | --- | --- |
+| 1 | 61266588 | [0xb729bccb47a92fd5775f0f1974818058a0e20282d76389575e1f9cbc1a4146bb](https://testnet.arcscan.app/tx/0xb729bccb47a92fd5775f0f1974818058a0e20282d76389575e1f9cbc1a4146bb) |
+| 2 | 61266673 | [0xec86d53308e935a71325ee62a8dd1af9a7aa7f82fbcf0d735e1e93b739114dd3](https://testnet.arcscan.app/tx/0xec86d53308e935a71325ee62a8dd1af9a7aa7f82fbcf0d735e1e93b739114dd3) |
+| 3 | 61266753 | [0x30c51121dc88e05bb94bdc164555f29131ecce314b303e12638a48596df7df07](https://testnet.arcscan.app/tx/0x30c51121dc88e05bb94bdc164555f29131ecce314b303e12638a48596df7df07) |
+| 4 | 61266819 | [0xe15a4645a810d7a88b384df7b73fcf0233e1af6dd946807147c28deb0e727859](https://testnet.arcscan.app/tx/0xe15a4645a810d7a88b384df7b73fcf0233e1af6dd946807147c28deb0e727859) |
+| 5 | 61266894 | [0x6642c04d38c1c9423f3109261a4ed26da68266beed7f39211eaabda8c8db2d04](https://testnet.arcscan.app/tx/0x6642c04d38c1c9423f3109261a4ed26da68266beed7f39211eaabda8c8db2d04) |
+| 6 | 61266967 | [0x3d613f3e32f01ee35a5829343bbc6db73bec31cdba0e7e6ae14337ea23b604c8](https://testnet.arcscan.app/tx/0x3d613f3e32f01ee35a5829343bbc6db73bec31cdba0e7e6ae14337ea23b604c8) |
+| 7 | 61267051 | [0x8fb078b9743c3e3f107162505ef1b66a54eb0c9c2f81d6c8a1a135b4176e09a3](https://testnet.arcscan.app/tx/0x8fb078b9743c3e3f107162505ef1b66a54eb0c9c2f81d6c8a1a135b4176e09a3) |
+| 8 | 61267118 | [0x9b64f8b52f88affce9fb6f49b06b09e14ccbb8af8dec2ba0cf992570a4efdf38](https://testnet.arcscan.app/tx/0x9b64f8b52f88affce9fb6f49b06b09e14ccbb8af8dec2ba0cf992570a4efdf38) |
+| 9 | 61267198 | [0x3979f0de503bf45d352be0d90eb8ba9a841099c47841f1271ad0797dea063122](https://testnet.arcscan.app/tx/0x3979f0de503bf45d352be0d90eb8ba9a841099c47841f1271ad0797dea063122) |
+| 10 | 61267278 | [0x3875f8f525e7bd826898a0f8f6b7838e79f3caa83cd742fe024c21fac90f2296](https://testnet.arcscan.app/tx/0x3875f8f525e7bd826898a0f8f6b7838e79f3caa83cd742fe024c21fac90f2296) |
+
+Full per-round proposals, exclusions, simulation results and verified receipts: [settlement evidence](deployments/settlements/). Backend setup: [server documentation](server/README.md).
+<!-- END ARC SETTLEMENTS -->

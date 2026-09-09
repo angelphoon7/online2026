@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "npm --prefix solver run build",
+    "prebuild": "npm --prefix solver run build",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -12,7 +14,8 @@
     "arc:deploy": "node scripts/arc-live.mjs deploy",
     "arc:seed": "node scripts/arc-live.mjs seed",
     "arc:verify": "node scripts/arc-live.mjs verify",
-    "arc:seed:simulate": "npm --prefix solver run build && node scripts/verify-arc-seed.mjs"
+    "arc:seed:simulate": "npm --prefix solver run build && node scripts/verify-arc-seed.mjs",
+    "arc:settle:ten": "node scripts/settle-arc-ten.mjs"
   },
   "dependencies": {
     "next": "16.3.4",

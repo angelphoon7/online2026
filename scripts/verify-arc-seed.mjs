@@ -10,7 +10,8 @@ if (await client.getChainId() !== 5042002) throw new Error('Wrong network.');
 const block = await client.getBlock();
 const abi = name => JSON.parse(fs.readFileSync(`out/${name}.sol/${name}.json`, 'utf8')).abi;
 const read = (name, functionName, args) => client.readContract({ address: deployment.contracts[name], abi: abi(name), functionName, args, blockNumber: block.number });
-const intents = deployment.seed.intents.map(record => {
+const records = fs.existsSync('deployments/demo-ready.json') ? JSON.parse(fs.readFileSync('deployments/demo-ready.json', 'utf8')).intents : deployment.seed.intents;
+const intents = records.map(record => {
   const intent = { ...record, offered: record.offered.map(BigInt) };
   for (const field of ['sessionMask', 'sectionMask', 'maxNetPay', 'deadline', 'nonce']) intent[field] = BigInt(intent[field]);
   if (hashIntent(intent) !== record.hash) throw new Error('Seed struct hash mismatch.');

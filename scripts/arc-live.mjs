@@ -136,8 +136,11 @@ if (mode === 'seed') {
     save();
   }
 }
-if (journal.seed?.intents.length === 3) {
-  for (const intent of journal.seed.intents) {
+const activeSeed = mode === 'verify' && fs.existsSync('deployments/demo-ready.json')
+  ? { ...journal.seed, intents: JSON.parse(fs.readFileSync('deployments/demo-ready.json', 'utf8')).intents }
+  : journal.seed;
+if (activeSeed?.intents.length === 3) {
+  for (const intent of activeSeed.intents) {
     const state = await read('IntentRegistry', 'state', [intent.hash]);
     if (state !== 1) throw new Error(`Seed intent is no longer LIVE: ${intent.hash} (state ${state}). Existing outcomes will not be reset.`);
     if (BigInt(intent.deadline) < (await client.getBlock()).timestamp) throw new Error('Seed expired; create new signed intents.');
@@ -146,7 +149,7 @@ if (journal.seed?.intents.length === 3) {
       if ((await read('TicketNFT', 'ownerOf', [BigInt(id)])).toLowerCase() !== journal.contracts.Escrow.toLowerCase()) throw new Error('NFT is not in escrow.');
     }
   }
-  journal.verified = { blockNumber: (await client.getBlockNumber()).toString(), ticketCount: journal.seed.tickets.length, liveIntentCount: journal.seed.intents.length };
+  journal.verified = { blockNumber: (await client.getBlockNumber()).toString(), ticketCount: activeSeed.tickets.length, liveIntentCount: activeSeed.intents.length, intentHashes: activeSeed.intents.map(i => i.hash) };
   save();
 }
 publicManifest();

@@ -286,30 +286,10 @@ export async function submitSettlement(
     abi: settlementAbi,
     functionName: 'settle',
     args: [intents, legs],
+    gas: 8000000n,
     chain: NETWORK,
   });
 }
-
-export async function simulateSettlement(
-  intents: IntentParams[],
-  legs: { intentHash: Hex; receives: bigint[]; netPayment: bigint }[]
-): Promise<{ success: boolean; error?: string }> {
-  const client = getPublicClient();
-  try {
-    await client.simulateContract({
-      address: CONTRACTS.settlement,
-      abi: settlementAbi,
-      functionName: 'settle',
-      args: [intents, legs],
-    });
-    return { success: true };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { success: false, error: message };
-  }
-}
-
-// ── USDC ──
 
 export async function approveUSDC(account: Address, amount: bigint) {
   const wallet = getWalletClient();
