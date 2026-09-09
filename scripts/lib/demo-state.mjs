@@ -16,7 +16,8 @@ export async function checkDemo(client, deployment, records) {
   const block = await client.getBlock();
   const read = (name, functionName, args) => client.readContract({ address: deployment.contracts[name], abi: abis[name], functionName, args, blockNumber: block.number });
   const state = { ticketMeta: new Map(), depositor: new Map(), intentState: new Map(), usdcBalance: new Map(), usdcAllowance: new Map(), blockTimestamp: block.timestamp };
-  await Promise.all(intents.map(async intent => {
+  // Keep RPC bursts bounded when checking the three participants.
+  for (const intent of intents) {
     state.intentState.set(intent.hash, await read('IntentRegistry', 'state', [intent.hash]));
     await Promise.all(intent.offered.map(async id => {
       const [meta, depositor] = await Promise.all([read('TicketNFT', 'meta', [id]), read('Escrow', 'depositor', [id])]);
@@ -30,7 +31,7 @@ export async function checkDemo(client, deployment, records) {
     ]);
     state.usdcBalance.set(intent.owner.toLowerCase(), balance);
     state.usdcAllowance.set(intent.owner.toLowerCase(), allowance);
-  }));
+  }
   const searchConfig = { maxParticipants: 3, maxCandidates: 100, timeoutMs: 5000 };
   const start = performance.now();
   const result = solve(intents, state, searchConfig);

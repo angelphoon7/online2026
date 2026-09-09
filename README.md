@@ -32,6 +32,8 @@ You never give up your tickets unless the whole replacement arrives.
 
 ## Ready-to-settle demo
 
+**Act one is confirmed: three participants exchanged six tickets in one Arc Testnet settlement, at block 61301567.** [Real transaction](https://testnet.arcscan.app/tx/0xdc54e3971c04dc533b1ad3604cd29368cb67556d265fb093b60e146e5e6f3143) · [Six-transfer evidence](deployments/act-one.json) · [Scene and verification instructions](docs/DEMO_ACT_ONE.md). Open `/demo/act-one` in the running app to verify and display the completed exchange. The separate twelve-ticket `/demo` remains the interactive pending round.
+
 With the existing Arc deployment and local operator credentials configured:
 
 ```bash

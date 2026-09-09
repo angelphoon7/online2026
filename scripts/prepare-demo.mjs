@@ -22,7 +22,7 @@ async function main() {
   for (const [name, env] of Object.entries({ TicketNFT: 'TICKET_NFT', Escrow: 'ESCROW', IntentRegistry: 'INTENT_REGISTRY', Settlement: 'SETTLEMENT' })) {
     if (!same(deployment.contracts[name], process.env[`NEXT_PUBLIC_${env}`])) throw new Error(`Deployment and .env disagree on ${name}.`);
   }
-  const client = createPublicClient({ transport: http(process.env.ARC_RPC, { timeout: 20000, retryCount: 2 }) });
+  const client = createPublicClient({ transport: http(process.env.ARC_RPC, { timeout: 20000, retryCount: 3, retryDelay: 1000 }) });
   if (await client.getChainId() !== 5042002) throw new Error('RPC returned the wrong chain.');
   const read = (name, functionName, args = []) => client.readContract({ address: deployment.contracts[name], abi: abis[name], functionName, args });
   for (const [getter, expected] of [['ticketNFT', deployment.contracts.TicketNFT], ['registry', deployment.contracts.IntentRegistry], ['escrow', deployment.contracts.Escrow], ['usdc', deployment.usdc]]) {
