@@ -124,49 +124,20 @@ This is why the contract checks session, section, count, cohesion, adjacency, bu
 
 ## High-level architecture
 
-```mermaid
-flowchart TB
-    subgraph UI["USER LAYER"]
-        direction LR
-        SW["Swapper<br/>has tickets, wants others"]
-        BY["Buyer<br/>wants tickets, pays USDC"]
-        SL["Seller<br/>has tickets, wants USDC"]
-        IS["Issuer<br/>unsold inventory"]
-    end
+![RESHUFFLE architecture: Next.js frontend, Node.js solver and evidence backend, and four Arc Testnet contracts with USDC settlement and native gas.](docs/diagrams/architecture.svg)
 
-    subgraph CHAIN["ARC TESTNET — USDC as native gas"]
-        direction TB
-        TN["TicketNFT<br/>packed metadata, redemption"]
-        ES["Escrow<br/>custody, free withdrawal"]
-        IR["IntentRegistry<br/>EIP-712 signed conditions"]
-        ST["Settlement<br/>V1 to V8, atomic execution"]
-        TN --- ES
-        ES --- IR
-        IR --- ST
-    end
+**Presentation downloads:** [4K PNG](docs/diagrams/architecture.png) · [Scalable SVG](docs/diagrams/architecture.svg) · [Export instructions](docs/diagrams/README.md).
 
-    subgraph OFF["DISCOVERY AND SOLVING"]
-        direction TB
-        SG["Subgraph<br/>live intent pool"]
-        SV["Solver<br/>bounded combinatorial search"]
-        AG["Agent<br/>parse, query, explain"]
-        SG --> SV
-        SV --> AG
-    end
-
-    UI -->|"one signature each"| CHAIN
-    CHAIN -->|"events"| SG
-    SV -->|"propose plus execute<br/>in one transaction"| ST
-    ST -->|"tickets move, USDC nets"| UI
-```
+This diagram reflects the current implementation. The backend reconstructs intents from Arc RPC logs, searches, simulates and verifies receipts; the submitting wallet broadcasts the settlement transaction. The Graph adapter is planned. The confirmed USDC distribution groups payments by wallet and excludes gas from its zero-sum total.
 
 ### Trust model
 
 | Layer | Responsibility | Trusted? |
 |---|---|---|
 | Frontend | Collect conditions, obtain one signature | No |
+| Backend | Read state, simulate, persist evidence and verify receipts | No — onchain execution revalidates the proposal |
 | Solver | Find a satisfying combination | **No** — the contract re-checks everything |
-| Subgraph | Discovery and prefiltering | **No** — chain state at execution is authoritative |
+| Arc RPC / planned subgraph | Discovery and state reads | **No** — chain state at execution is authoritative |
 | Settlement | Verify every signed condition | Yes — this is the trust anchor |
 
 ### The issuer is a participant, not an operator
