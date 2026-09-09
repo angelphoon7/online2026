@@ -1,0 +1,144 @@
+{
+  "source": "Arc RPC state; subgraph not configured",
+  "blockNumber": "61265057",
+  "searchConfig": {
+    "maxParticipants": 3,
+    "maxCandidates": 100,
+    "timeoutMs": 5000
+  },
+  "runtimeMs": 17.177099999999882,
+  "timestamp": "2026-09-09T17:21:15.348Z",
+  "intentsConsidered": 3,
+  "candidatesFound": 1,
+  "candidatesExcluded": [
+    {
+      "intentHashes": [
+        "0xc949a6342f2a98d05bbc557a85da6d02cdaa293aca21d0c46f750a40a56e8ed8",
+        "0x3dd1dad0d737f344ea7d26cfa5a829e6c42ea09f42d9c4427d507e8c8f2dafe8"
+      ],
+      "reason": "No valid ticket assignment satisfying all predicates"
+    },
+    {
+      "intentHashes": [
+        "0xc949a6342f2a98d05bbc557a85da6d02cdaa293aca21d0c46f750a40a56e8ed8",
+        "0xf137915852622b0572694c0235753e65da6d1ed67f404940c4eea7e3fe686835"
+      ],
+      "reason": "No valid ticket assignment satisfying all predicates"
+    },
+    {
+      "intentHashes": [
+        "0x3dd1dad0d737f344ea7d26cfa5a829e6c42ea09f42d9c4427d507e8c8f2dafe8",
+        "0xf137915852622b0572694c0235753e65da6d1ed67f404940c4eea7e3fe686835"
+      ],
+      "reason": "No feasible payment distribution"
+    }
+  ],
+  "chosen": {
+    "intentHashes": [
+      "0xc949a6342f2a98d05bbc557a85da6d02cdaa293aca21d0c46f750a40a56e8ed8",
+      "0x3dd1dad0d737f344ea7d26cfa5a829e6c42ea09f42d9c4427d507e8c8f2dafe8",
+      "0xf137915852622b0572694c0235753e65da6d1ed67f404940c4eea7e3fe686835"
+    ],
+    "gross": "100000",
+    "reason": "Least cash moved among 1 candidate found within the search budget: 100000 gross, 3 participants"
+  },
+  "proposal": {
+    "intents": [
+      {
+        "hash": "0xc949a6342f2a98d05bbc557a85da6d02cdaa293aca21d0c46f750a40a56e8ed8",
+        "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+        "offered": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ],
+        "eventId": 1,
+        "sessionMask": "2",
+        "sectionMask": "1",
+        "exactCount": 4,
+        "mustShareSession": true,
+        "mustShareSection": true,
+        "mustBeAdjacent": true,
+        "maxNetPay": "100000",
+        "deadline": "1791566172",
+        "nonce": "0"
+      },
+      {
+        "hash": "0x3dd1dad0d737f344ea7d26cfa5a829e6c42ea09f42d9c4427d507e8c8f2dafe8",
+        "owner": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "offered": [
+          "4",
+          "5",
+          "6",
+          "7"
+        ],
+        "eventId": 1,
+        "sessionMask": "1",
+        "sectionMask": "2",
+        "exactCount": 4,
+        "mustShareSession": true,
+        "mustShareSection": true,
+        "mustBeAdjacent": true,
+        "maxNetPay": "0",
+        "deadline": "1791566172",
+        "nonce": "0"
+      },
+      {
+        "hash": "0xf137915852622b0572694c0235753e65da6d1ed67f404940c4eea7e3fe686835",
+        "owner": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "offered": [
+          "8",
+          "9",
+          "10",
+          "11"
+        ],
+        "eventId": 1,
+        "sessionMask": "1",
+        "sectionMask": "1",
+        "exactCount": 4,
+        "mustShareSession": true,
+        "mustShareSection": true,
+        "mustBeAdjacent": true,
+        "maxNetPay": "-100000",
+        "deadline": "1791566172",
+        "nonce": "0"
+      }
+    ],
+    "legs": [
+      {
+        "intentHash": "0xc949a6342f2a98d05bbc557a85da6d02cdaa293aca21d0c46f750a40a56e8ed8",
+        "receives": [
+          "4",
+          "5",
+          "6",
+          "7"
+        ],
+        "netPayment": "100000"
+      },
+      {
+        "intentHash": "0x3dd1dad0d737f344ea7d26cfa5a829e6c42ea09f42d9c4427d507e8c8f2dafe8",
+        "receives": [
+          "8",
+          "9",
+          "10",
+          "11"
+        ],
+        "netPayment": "0"
+      },
+      {
+        "intentHash": "0xf137915852622b0572694c0235753e65da6d1ed67f404940c4eea7e3fe686835",
+        "receives": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ],
+        "netPayment": "-100000"
+      }
+    ]
+  },
+  "simulationResult": {
+    "success": true
+  }
+}

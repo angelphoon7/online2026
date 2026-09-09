@@ -2,6 +2,7 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+solc_version = "0.8.36"
 # Keep deployment bytecode on the Paris EVM target.
 evm_version = "paris"
 via_ir = true

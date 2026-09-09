@@ -20,6 +20,8 @@ import {
   simulateSettlement,
   redeemTicket,
   getNextTokenId,
+  getCommittedIntents,
+  waitForTransaction,
 } from '@/lib/contracts';
 import { CONTRACTS, EVENT_ID, sessionName, sectionName } from '@/lib/config';
 import TicketCard from '@/component/reshuffle/TicketCard';
@@ -122,6 +124,11 @@ export default function ReshufflePage() {
         }
       }
       setTickets(loadedTickets);
+
+      const committed = await getCommittedIntents();
+      setIntents(committed);
+      const ownerNonces = committed.filter(i => i.owner.toLowerCase() === account.toLowerCase()).map(i => i.nonce);
+      setNonce(ownerNonces.reduce((next, used) => used >= next ? used + 1n : next, 0n));
 
       const bal = await getUSDCBalance(account);
       setUsdcBalance(bal);
@@ -380,7 +387,8 @@ export default function ReshufflePage() {
                         nonce: intentNonce,
                       };
                       addLog(`Signing intent (nonce ${intentNonce})...`);
-                      await signAndCommitIntent(account, intentParams);
+                      const commitTx = await signAndCommitIntent(account, intentParams);
+                      await waitForTransaction(commitTx);
                       const intentHash = await hashIntent(intentParams);
                       addLog(`Intent committed: ${intentHash.slice(0, 10)}...`);
                       setIntents((prev) => [

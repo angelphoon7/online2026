@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { loadEnvFile } from 'node:process';
 
 // Match Foundry: deployment settings come from .env, not .env.local.
@@ -31,7 +32,8 @@ const forgeArgs = [
 console.log(args.includes('--broadcast') ? 'Broadcasting deployment to Arc Testnet.' : 'Simulating deployment; no transactions will be sent.');
 console.log(`Script gas limit: ${gasLimit}; transaction gas estimate multiplier: 130%.`);
 // The private key stays in the environment; never put it on the command line.
-const result = spawnSync('forge', forgeArgs, { stdio: 'inherit', shell: false });
+const forge = existsSync('.tools/foundry/forge.exe') ? '.tools/foundry/forge.exe' : 'forge';
+const result = spawnSync(forge, forgeArgs, { stdio: 'inherit', shell: false });
 if (result.error) {
   console.error(result.error.code === 'ENOENT'
     ? 'Foundry is missing from PATH. Install Foundry and open a new terminal.'

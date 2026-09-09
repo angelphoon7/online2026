@@ -1,3 +1,5 @@
+import { defineChain } from 'viem';
+
 export const CONTRACTS = {
   ticketNFT: (process.env.NEXT_PUBLIC_TICKET_NFT ?? '') as `0x${string}`,
   escrow: (process.env.NEXT_PUBLIC_ESCROW ?? '') as `0x${string}`,
@@ -11,6 +13,13 @@ export const CHAIN = {
   rpcUrl: process.env.NEXT_PUBLIC_RPC_URL ?? 'http://127.0.0.1:8545',
   name: 'Arc Testnet',
 };
+
+export const NETWORK = defineChain({
+  id: CHAIN.id,
+  name: CHAIN.name,
+  nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
+  rpcUrls: { default: { http: [CHAIN.rpcUrl] } },
+});
 
 export const EVENT_ID = 1;
 

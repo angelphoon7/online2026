@@ -7,10 +7,11 @@ import {
   http,
   encodeFunctionData,
   decodeFunctionResult,
+  parseAbiItem,
   type Hex,
   type Address,
 } from 'viem';
-import { CHAIN, CONTRACTS } from './config';
+import { CHAIN, CONTRACTS, NETWORK } from './config';
 import {
   ticketNFTAbi,
   escrowAbi,
@@ -28,12 +29,40 @@ function getProvider() {
 
 export function getPublicClient() {
   return createPublicClient({
+    chain: NETWORK,
     transport: http(CHAIN.rpcUrl),
   });
 }
 
+// Direct chain discovery for the deployment demo; this is not subgraph evidence.
+export async function getCommittedIntents() {
+  const client = getPublicClient();
+  const latest = await client.getBlockNumber();
+  const start = process.env.NEXT_PUBLIC_DEPLOYMENT_BLOCK;
+  if (!start) throw new Error('Missing deployment start block');
+  const event = parseAbiItem('event IntentCommitted(bytes32 indexed intentHash,address indexed owner,uint32 indexed eventId,uint256[] offered,uint256 sessionMask,uint256 sectionMask,uint8 exactCount,bool mustShareSession,bool mustShareSection,bool mustBeAdjacent,int256 maxNetPay,uint64 deadline,uint256 nonce)');
+  const intents = [];
+  for (let from = BigInt(start); from <= latest; from += 10000n) {
+    const to = from + 9999n < latest ? from + 9999n : latest;
+    const logs = await client.getLogs({ address: CONTRACTS.intentRegistry, event, fromBlock: from, toBlock: to, strict: true });
+    for (const { args } of logs) {
+      if (args.eventId !== 1) continue;
+      const state = await getIntentState(args.intentHash);
+      intents.push({ ...args, offered: [...args.offered], hash: args.intentHash, state });
+    }
+  }
+  return intents;
+}
+
+export async function waitForTransaction(hash: Hex) {
+  const receipt = await getPublicClient().waitForTransactionReceipt({ hash });
+  if (receipt.status !== 'success') throw new Error(`Transaction reverted: ${hash}`);
+  return receipt;
+}
+
 export function getWalletClient() {
   return createWalletClient({
+    chain: NETWORK,
     transport: custom(getProvider()),
   });
 }
@@ -97,7 +126,7 @@ export async function approveNFTsForEscrow(account: Address) {
     abi: ticketNFTAbi,
     functionName: 'setApprovalForAll',
     args: [CONTRACTS.escrow, true],
-    chain: null,
+    chain: NETWORK,
   });
 }
 
@@ -109,7 +138,7 @@ export async function depositTickets(account: Address, tokenIds: bigint[]) {
     abi: escrowAbi,
     functionName: 'deposit',
     args: [tokenIds],
-    chain: null,
+    chain: NETWORK,
   });
 }
 
@@ -121,7 +150,7 @@ export async function withdrawTickets(account: Address, tokenIds: bigint[]) {
     abi: escrowAbi,
     functionName: 'withdraw',
     args: [tokenIds],
-    chain: null,
+    chain: NETWORK,
   });
 }
 
@@ -217,7 +246,7 @@ export async function signAndCommitIntent(
     abi: intentRegistryAbi,
     functionName: 'commit',
     args: [intent, sig],
-    chain: null,
+    chain: NETWORK,
   });
 }
 
@@ -239,7 +268,7 @@ export async function revokeIntent(account: Address, intentHash: Hex) {
     abi: intentRegistryAbi,
     functionName: 'revoke',
     args: [intentHash],
-    chain: null,
+    chain: NETWORK,
   });
 }
 
@@ -257,7 +286,7 @@ export async function submitSettlement(
     abi: settlementAbi,
     functionName: 'settle',
     args: [intents, legs],
-    chain: null,
+    chain: NETWORK,
   });
 }
 
@@ -290,7 +319,7 @@ export async function approveUSDC(account: Address, amount: bigint) {
     abi: erc20Abi,
     functionName: 'approve',
     args: [CONTRACTS.settlement, amount],
-    chain: null,
+    chain: NETWORK,
   });
 }
 
@@ -314,6 +343,6 @@ export async function redeemTicket(account: Address, tokenId: bigint) {
     abi: ticketNFTAbi,
     functionName: 'redeem',
     args: [tokenId],
-    chain: null,
+    chain: NETWORK,
   });
 }

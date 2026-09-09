@@ -1,0 +1,420 @@
+{
+  "chainId": 5042002,
+  "rpc": "https://rpc.testnet.arc.io",
+  "deployer": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+  "usdc": "0x3600000000000000000000000000000000000000",
+  "contracts": {
+    "TicketNFT": "0xb2490568bb27c9c38588e3b5511ee3980892cce4",
+    "Escrow": "0x07ab57380db7df630fab2d3d3a1019a5a890b018",
+    "IntentRegistry": "0x479b4455f494679dcdd6f6f32e93e08682deda75",
+    "Settlement": "0x75872168f2d6ae13c7d9258159e59025fd9b5eae"
+  },
+  "startBlock": "61264501",
+  "transactions": [
+    {
+      "label": "deploy:TicketNFT",
+      "hash": "0x180d9a5501cc9a4d3ed5ad95523425627452758cf86cccf21624ce3c10ffafa0",
+      "status": "success",
+      "blockNumber": "61264501",
+      "contractAddress": "0xb2490568bb27c9c38588e3b5511ee3980892cce4"
+    },
+    {
+      "label": "deploy:Escrow",
+      "hash": "0xc5c42c944843e7df6771636b8bc1425627411e421221c5e5d4f3a4e06b63193b",
+      "status": "success",
+      "blockNumber": "61264510",
+      "contractAddress": "0x07ab57380db7df630fab2d3d3a1019a5a890b018"
+    },
+    {
+      "label": "deploy:IntentRegistry",
+      "hash": "0x9c4aa2932b945431527a2ec8ed328db2f8fc0f1733d826e4993a593b8fd52ded",
+      "status": "success",
+      "blockNumber": "61264518",
+      "contractAddress": "0x479b4455f494679dcdd6f6f32e93e08682deda75"
+    },
+    {
+      "label": "deploy:Settlement",
+      "hash": "0xfa2ef61fd1fbe309858ad70ca828ee0377b5e3605373ab7cfee968f23c5273fb",
+      "status": "success",
+      "blockNumber": "61264529",
+      "contractAddress": "0x75872168f2d6ae13c7d9258159e59025fd9b5eae"
+    },
+    {
+      "label": "configure:escrow",
+      "hash": "0xdb36baf382a5ed8b3d60c05f513e5b9f60264f9cf8308ed3b4d3eb3b0b8edf9e",
+      "status": "success",
+      "blockNumber": "61264538",
+      "contractAddress": null
+    },
+    {
+      "label": "configure:registry",
+      "hash": "0x79a2357b0f5ea1e2c28d6a0c1e982758acf298f006cfb7e18bbefa4a71330178",
+      "status": "success",
+      "blockNumber": "61264546",
+      "contractAddress": null
+    },
+    {
+      "label": "configure:issuer",
+      "hash": "0x1a8819877107114a46584120610cd42864c8ebca30312cd1069cb18d79a584a2",
+      "status": "success",
+      "blockNumber": "61264555",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:fund:1",
+      "hash": "0x8471ead3f6fb8428a60ea6f417c287a18ab19c67ad11521bee307a55cd4937c6",
+      "status": "success",
+      "blockNumber": "61264658",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:fund:2",
+      "hash": "0x64a605accb145e3176acb80360fe1cfc04546f6f4a85ac1a934bd5d6cb384565",
+      "status": "success",
+      "blockNumber": "61264668",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:mint:0",
+      "hash": "0xb97908cedbe61806c76b95b0c55253bc0eb075dacdced33754be26d0451b4f26",
+      "status": "success",
+      "blockNumber": "61264678",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:mint:1",
+      "hash": "0xba3148e77859221d7b7090237ca43acfa453809a42a9d45f68d38e06f1112260",
+      "status": "success",
+      "blockNumber": "61264686",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:mint:2",
+      "hash": "0x80094b6eeeff309bb9e9bcdafedef33c0f6b38aa3aee4551d1996ab44ca5ac18",
+      "status": "success",
+      "blockNumber": "61264696",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:mint:3",
+      "hash": "0x4e393ea5ce545fe8dbc6cec8d2fe01c7c9b7ded116cb78c98be11b7f4040cc4b",
+      "status": "success",
+      "blockNumber": "61264698",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:mint:4",
+      "hash": "0x9aab732cfff3d1834ae60144c45900c2cf65ac0dd2d0c41fa3204c72b4f774e1",
+      "status": "success",
+      "blockNumber": "61264705",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:mint:5",
+      "hash": "0x8f900d4722ca00fad29d02fdc234ec69e0564e667dcd4425f7558a76a2bb41db",
+      "status": "success",
+      "blockNumber": "61264715",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:mint:6",
+      "hash": "0x82585e9b9ce6b2c93e03598bbdb80036941fdd839a2af5df409404712389140d",
+      "status": "success",
+      "blockNumber": "61264718",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:mint:7",
+      "hash": "0xce5de32ec9385fafe66ed4fb236b289839adb39c05b7c27023fabfdfd5221735",
+      "status": "success",
+      "blockNumber": "61264722",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:mint:8",
+      "hash": "0x142522ab117a95e3b59ac08dec73c34942a5c1efdd252a645665e4fcffc279a0",
+      "status": "success",
+      "blockNumber": "61264731",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:mint:9",
+      "hash": "0x864977dd1f86300233f276ae4ce4cc90651cdc7f066f2a8eba8842a58e2175bf",
+      "status": "success",
+      "blockNumber": "61264738",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:mint:10",
+      "hash": "0x85cb53e237bf2d166f811bcda924fc5ffd041f69ea344f6d1e6e2af5432cba0e",
+      "status": "success",
+      "blockNumber": "61264741",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:mint:11",
+      "hash": "0xefc38933fd4289c8f05ba3f65c2bc2cacefb732bbec8d511af0a7406601d8d72",
+      "status": "success",
+      "blockNumber": "61264750",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:approveNFT:0",
+      "hash": "0x8f473b59a7725e489fb5c810f18a1d3e0f848593a6d1362af85b6fae2162d1cd",
+      "status": "success",
+      "blockNumber": "61264758",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:deposit:0",
+      "hash": "0x9d6bddf873195c2dc8d72cd69e9617bd67af2416510c5876ba18c9bc09686c8e",
+      "status": "success",
+      "blockNumber": "61264761",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:approveUSDC:0",
+      "hash": "0xb239f7be09f17befa8450fe316af08ff49ee5343ed7bc62cdea11e6efd69282e",
+      "status": "success",
+      "blockNumber": "61264770",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:commit:0",
+      "hash": "0x0e4bba7643f7c496e1c275267d579fc3a3baad03aac1b9bda7c8804fff88a758",
+      "status": "success",
+      "blockNumber": "61264778",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:approveNFT:1",
+      "hash": "0xe28d7e46ac9021105ed3f5409a349eff4f43e03bd11828eb4072895ced643fad",
+      "status": "success",
+      "blockNumber": "61264787",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:deposit:1",
+      "hash": "0x429098412f337b29ac51d463f3a4a9c8c93108063a18bbbd357aefbd3b95cafd",
+      "status": "success",
+      "blockNumber": "61264796",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:approveUSDC:1",
+      "hash": "0x22144b64415e9c8b18099e851a7a71cc801fef6ee444f139bd728cf05719aa79",
+      "status": "success",
+      "blockNumber": "61264798",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:commit:1",
+      "hash": "0x57b3b09eaee2136df57d5eab31d5ae0677f1e3221f689e0d373687972a4d5e41",
+      "status": "success",
+      "blockNumber": "61264807",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:approveNFT:2",
+      "hash": "0x0ba36d760bee1ec1a2f95591117677dc39f3f99d855ef36f56692fb473ef37f1",
+      "status": "success",
+      "blockNumber": "61264816",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:deposit:2",
+      "hash": "0x519dc86d2a1a3b01c0b09e02199f53ffca5e0be799beafa29835218aa166aa7f",
+      "status": "success",
+      "blockNumber": "61264818",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:approveUSDC:2",
+      "hash": "0x72457f428c605d0336b10fd8f0054d753f69a7f76410b6655e299b57436fa2c2",
+      "status": "success",
+      "blockNumber": "61264827",
+      "contractAddress": null
+    },
+    {
+      "label": "seed:commit:2",
+      "hash": "0x37293d6f172151566b164e4d6d493192cb4d061c65f254b669b873102270054f",
+      "status": "success",
+      "blockNumber": "61264836",
+      "contractAddress": null
+    }
+  ],
+  "seed": {
+    "accounts": [
+      "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+      "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+      "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB"
+    ],
+    "firstTokenId": "0",
+    "deadline": "1791566172",
+    "intents": [
+      {
+        "hash": "0xc949a6342f2a98d05bbc557a85da6d02cdaa293aca21d0c46f750a40a56e8ed8",
+        "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+        "offered": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ],
+        "eventId": 1,
+        "sessionMask": "2",
+        "sectionMask": "1",
+        "exactCount": 4,
+        "mustShareSession": true,
+        "mustShareSection": true,
+        "mustBeAdjacent": true,
+        "maxNetPay": "100000",
+        "deadline": "1791566172",
+        "nonce": "0"
+      },
+      {
+        "hash": "0x3dd1dad0d737f344ea7d26cfa5a829e6c42ea09f42d9c4427d507e8c8f2dafe8",
+        "owner": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "offered": [
+          "4",
+          "5",
+          "6",
+          "7"
+        ],
+        "eventId": 1,
+        "sessionMask": "1",
+        "sectionMask": "2",
+        "exactCount": 4,
+        "mustShareSession": true,
+        "mustShareSection": true,
+        "mustBeAdjacent": true,
+        "maxNetPay": "0",
+        "deadline": "1791566172",
+        "nonce": "0"
+      },
+      {
+        "hash": "0xf137915852622b0572694c0235753e65da6d1ed67f404940c4eea7e3fe686835",
+        "owner": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "offered": [
+          "8",
+          "9",
+          "10",
+          "11"
+        ],
+        "eventId": 1,
+        "sessionMask": "1",
+        "sectionMask": "1",
+        "exactCount": 4,
+        "mustShareSession": true,
+        "mustShareSection": true,
+        "mustBeAdjacent": true,
+        "maxNetPay": "-100000",
+        "deadline": "1791566172",
+        "nonce": "0"
+      }
+    ],
+    "tickets": [
+      {
+        "tokenId": "0",
+        "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+        "sessionId": 0,
+        "sectionId": 0,
+        "row": 1,
+        "seat": 1
+      },
+      {
+        "tokenId": "1",
+        "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+        "sessionId": 0,
+        "sectionId": 0,
+        "row": 1,
+        "seat": 2
+      },
+      {
+        "tokenId": "2",
+        "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+        "sessionId": 0,
+        "sectionId": 0,
+        "row": 1,
+        "seat": 3
+      },
+      {
+        "tokenId": "3",
+        "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+        "sessionId": 0,
+        "sectionId": 0,
+        "row": 1,
+        "seat": 4
+      },
+      {
+        "tokenId": "4",
+        "owner": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "sessionId": 1,
+        "sectionId": 0,
+        "row": 1,
+        "seat": 1
+      },
+      {
+        "tokenId": "5",
+        "owner": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "sessionId": 1,
+        "sectionId": 0,
+        "row": 1,
+        "seat": 2
+      },
+      {
+        "tokenId": "6",
+        "owner": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "sessionId": 1,
+        "sectionId": 0,
+        "row": 1,
+        "seat": 3
+      },
+      {
+        "tokenId": "7",
+        "owner": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "sessionId": 1,
+        "sectionId": 0,
+        "row": 1,
+        "seat": 4
+      },
+      {
+        "tokenId": "8",
+        "owner": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "sessionId": 0,
+        "sectionId": 1,
+        "row": 1,
+        "seat": 1
+      },
+      {
+        "tokenId": "9",
+        "owner": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "sessionId": 0,
+        "sectionId": 1,
+        "row": 1,
+        "seat": 2
+      },
+      {
+        "tokenId": "10",
+        "owner": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "sessionId": 0,
+        "sectionId": 1,
+        "row": 1,
+        "seat": 3
+      },
+      {
+        "tokenId": "11",
+        "owner": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "sessionId": 0,
+        "sectionId": 1,
+        "row": 1,
+        "seat": 4
+      }
+    ]
+  },
+  "verified": {
+    "blockNumber": "61265125",
+    "ticketCount": 12,
+    "liveIntentCount": 3
+  }
+}

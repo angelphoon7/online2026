@@ -9,7 +9,10 @@
     "lint": "eslint",
     "arc:check": "node scripts/check-arc.mjs",
     "arc:deploy:simulate": "node scripts/deploy-arc.mjs",
-    "arc:deploy": "node scripts/deploy-arc.mjs --broadcast"
+    "arc:deploy": "node scripts/arc-live.mjs deploy",
+    "arc:seed": "node scripts/arc-live.mjs seed",
+    "arc:verify": "node scripts/arc-live.mjs verify",
+    "arc:seed:simulate": "npm --prefix solver run build && node scripts/verify-arc-seed.mjs"
   },
   "dependencies": {
     "next": "16.3.4",
