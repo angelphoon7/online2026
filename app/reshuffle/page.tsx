@@ -5,6 +5,7 @@ import { useWallet } from '@/lib/hooks/useWallet';
 import { formatUSDC, truncateAddress } from '@/lib/format';
 import {
   getTicketMeta,
+  getTicketOwner,
   getDepositor,
   getIntentState,
   getUSDCBalance,
@@ -12,6 +13,7 @@ import {
   depositTickets,
   withdrawTickets,
   signAndCommitIntent,
+  hashIntent,
   revokeIntent,
   approveUSDC,
   submitSettlement,
@@ -25,6 +27,7 @@ import IntentCard from '@/component/reshuffle/IntentCard';
 import IntentForm from '@/component/reshuffle/IntentForm';
 import SettlementView from '@/component/reshuffle/SettlementView';
 import EvidencePanel from '@/component/reshuffle/EvidencePanel';
+import { findSettlement, type SettlementProposal } from '@/lib/find-settlement';
 import type { Address, Hex } from 'viem';
 
 interface Ticket {
@@ -66,6 +69,23 @@ export default function ReshufflePage() {
   const [selectedTickets, setSelectedTickets] = useState<Set<bigint>>(new Set());
   const [log, setLog] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showIntentForm, setShowIntentForm] = useState(false);
+  const [nonce, setNonce] = useState(0n);
+  const [proposal, setProposal] = useState<SettlementProposal | null>(null);
+  const [settlementStatus, setSettlementStatus] = useState<
+    'pending' | 'simulating' | 'simulated' | 'submitting' | 'settled' | 'failed'
+  >('pending');
+  const [settlementError, setSettlementError] = useState<string>();
+  const [settlementTxHash, setSettlementTxHash] = useState<string>();
+  const [evidence, setEvidence] = useState<{
+    timestamp: string;
+    intentsConsidered: number;
+    candidatesFound: number;
+    candidatesExcluded: { intentHashes: string[]; reason: string }[];
+    chosen: { intentHashes: string[]; gross: string; reason: string } | null;
+    simulationResult?: { success: boolean; error?: string };
+    transactionHash?: string;
+  } | null>(null);
 
   const addLog = useCallback((msg: string) => {
     setLog((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
@@ -81,11 +101,21 @@ export default function ReshufflePage() {
           const meta = await getTicketMeta(i);
           const depositor = await getDepositor(i);
           const isEscrowed = depositor !== '0x0000000000000000000000000000000000000000';
+          let ticketOwner: string | undefined;
+          if (isEscrowed) {
+            ticketOwner = depositor;
+          } else {
+            try {
+              ticketOwner = await getTicketOwner(i);
+            } catch {
+              // token may not exist
+            }
+          }
           loadedTickets.push({
             tokenId: i,
             ...meta,
             escrowed: isEscrowed,
-            owner: isEscrowed ? depositor : undefined,
+            owner: ticketOwner,
           });
         } catch {
           break;
@@ -293,8 +323,105 @@ export default function ReshufflePage() {
                   }
                 }}
               />
+              <ActionButton
+                label={`Redeem ${selectedTickets.size} ticket${selectedTickets.size > 1 ? 's' : ''}`}
+                loading={loading}
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    for (const id of selectedTickets) {
+                      addLog(`Redeeming ticket #${id}...`);
+                      await redeemTicket(account, id);
+                    }
+                    addLog(`Redeemed successfully`);
+                    setSelectedTickets(new Set());
+                    await loadData();
+                  } catch (err) {
+                    addLog(`Redeem failed: ${err instanceof Error ? err.message : String(err)}`);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              />
             </section>
           )}
+
+          {/* Create Intent */}
+          <section className="flex flex-col gap-2">
+            {!showIntentForm ? (
+              <button
+                type="button"
+                onClick={() => setShowIntentForm(true)}
+                className="rounded border border-dashed border-white/20 px-4 py-3 text-sm text-white/60 transition-colors hover:border-white/40 hover:text-white/80"
+              >
+                + Create Intent {selectedTickets.size > 0 ? `(offering ${selectedTickets.size} selected)` : '(pure buyer)'}
+              </button>
+            ) : (
+              <>
+                <IntentForm
+                  offeredTickets={[...selectedTickets]}
+                  loading={loading}
+                  onSubmit={async (params) => {
+                    setLoading(true);
+                    try {
+                      const intentNonce = nonce;
+                      const intentParams = {
+                        owner: account,
+                        offered: params.offered,
+                        eventId: params.eventId,
+                        sessionMask: params.sessionMask,
+                        sectionMask: params.sectionMask,
+                        exactCount: params.exactCount,
+                        mustShareSession: params.mustShareSession,
+                        mustShareSection: params.mustShareSection,
+                        mustBeAdjacent: params.mustBeAdjacent,
+                        maxNetPay: params.maxNetPay,
+                        deadline: params.deadline,
+                        nonce: intentNonce,
+                      };
+                      addLog(`Signing intent (nonce ${intentNonce})...`);
+                      await signAndCommitIntent(account, intentParams);
+                      const intentHash = await hashIntent(intentParams);
+                      addLog(`Intent committed: ${intentHash.slice(0, 10)}...`);
+                      setIntents((prev) => [
+                        ...prev,
+                        {
+                          hash: intentHash,
+                          owner: account,
+                          offered: params.offered,
+                          exactCount: params.exactCount,
+                          sessionMask: params.sessionMask,
+                          sectionMask: params.sectionMask,
+                          mustShareSession: params.mustShareSession,
+                          mustShareSection: params.mustShareSection,
+                          mustBeAdjacent: params.mustBeAdjacent,
+                          maxNetPay: params.maxNetPay,
+                          deadline: params.deadline,
+                          nonce: intentNonce,
+                          state: 1,
+                        },
+                      ]);
+                      setNonce((n) => n + 1n);
+                      setShowIntentForm(false);
+                      setSelectedTickets(new Set());
+                      await loadData();
+                    } catch (err) {
+                      addLog(`Intent failed: ${err instanceof Error ? err.message : String(err)}`);
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowIntentForm(false)}
+                  className="text-xs text-white/40 hover:text-white/60"
+                >
+                  Cancel
+                </button>
+              </>
+            )}
+          </section>
 
           {/* Intents */}
           {intents.length > 0 && (

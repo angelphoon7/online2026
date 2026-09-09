@@ -221,6 +221,16 @@ export async function signAndCommitIntent(
   });
 }
 
+export async function hashIntent(intent: IntentParams): Promise<Hex> {
+  const client = getPublicClient();
+  return client.readContract({
+    address: CONTRACTS.intentRegistry,
+    abi: intentRegistryAbi,
+    functionName: 'hashIntent',
+    args: [intent],
+  }) as Promise<Hex>;
+}
+
 export async function revokeIntent(account: Address, intentHash: Hex) {
   const wallet = getWalletClient();
   return wallet.writeContract({
