@@ -1,5 +1,5 @@
 ---
-name: reshuffle-build
+name: reshuffle
 description: Build RESHUFFLE — a multi-party conditional exchange for event tickets on Arc, where participants sign the outcome they will accept and settlement executes only when every signed condition holds. Use this skill for any work on the RESHUFFLE contracts, solver, subgraph, agent, frontend, or tests, including TicketNFT, Escrow, IntentRegistry, Settlement, intent encoding, seat adjacency checks, net USDC settlement, and the demo scenes. Read it before writing any contract code, since the constraint language decides what the product may promise.
 ---
 
