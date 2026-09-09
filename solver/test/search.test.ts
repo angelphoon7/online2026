@@ -6,9 +6,9 @@ import type { Intent, ChainState, Address, SearchConfig } from '../src/types.js'
 import { INTENT_STATE } from '../src/types.js';
 
 const EVENT_ID = 1;
-const alice: Address = '0x000000000000000000000000000000000000A11c';
-const bob: Address = '0x000000000000000000000000000000000000B0b0';
-const charlie: Address = '0x000000000000000000000000000000000000C0c0';
+const alice: Address = '0x000000000000000000000000000000000000a11c';
+const bob: Address = '0x000000000000000000000000000000000000b0b0';
+const charlie: Address = '0x000000000000000000000000000000000000c0c0';
 
 function buildState(intents: Intent[]): ChainState {
   const state: ChainState = {
