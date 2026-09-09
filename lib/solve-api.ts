@@ -11,6 +11,7 @@ export interface SolveEvidence {
   chosen: { intentHashes: string[]; gross: string; reason: string } | null;
   simulationResult?: { success: boolean; error?: string };
   transactionHash?: string;
+  receipt?: { status: string; blockNumber: string; confirmed: boolean };
 }
 export interface SettlementProposal {
   evidenceId: string;

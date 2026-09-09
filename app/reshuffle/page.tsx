@@ -515,6 +515,7 @@ export default function ReshufflePage() {
                 status={settlementStatus}
                 error={settlementError}
                 txHash={settlementTxHash}
+                evidence={evidence}
                 onSubmit={
                   settlementStatus === 'simulated'
                     ? async () => {

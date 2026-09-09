@@ -2,6 +2,8 @@
 
 import { formatUSDC, truncateAddress } from '@/lib/format';
 import { CHAIN } from '@/lib/config';
+import type { SolveEvidence } from '@/lib/solve-api';
+import SettlementPayments from './SettlementPayments';
 
 interface LegDisplay {
   intentHash: string;
@@ -18,6 +20,7 @@ interface SettlementViewProps {
   status: 'pending' | 'simulating' | 'simulated' | 'submitting' | 'settled' | 'failed';
   error?: string;
   txHash?: string;
+  evidence?: SolveEvidence | null;
   onSimulate?: () => void;
   onSubmit?: () => void;
 }
@@ -29,18 +32,23 @@ export default function SettlementView({
   status,
   error,
   txHash,
+  evidence,
   onSimulate,
   onSubmit,
 }: SettlementViewProps) {
   return (
     <div className="flex flex-col gap-4 rounded-lg border border-white/10 bg-white/5 p-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-medium text-white">Proposed Settlement</h3>
+        <h3 className="font-medium text-white">{status === 'settled' ? 'Settlement complete' : 'Proposed Settlement'}</h3>
         <span className="text-xs text-white/40">
           Least cash moved among {candidateCount} candidate{candidateCount !== 1 ? 's' : ''} found
           within the search budget
         </span>
       </div>
+
+      {status === 'settled' && txHash && evidence?.transactionHash === txHash && evidence.receipt?.confirmed && evidence.receipt.status === 'success' && (
+        <SettlementPayments legs={legs} txHash={txHash} blockNumber={evidence.receipt.blockNumber} evidenceId={evidence.id} />
+      )}
 
       <div className="text-sm text-white/60">
         Gross cash moved: <span className="text-white">{formatUSDC(gross)} USDC</span>
@@ -57,6 +65,7 @@ export default function SettlementView({
       )}
 
       <div className="flex flex-col gap-2">
+        <h4 className="text-xs font-medium text-white/50">Ticket outcomes and signed limits · per intent</h4>
         {legs.map((leg) => (
           <div
             key={leg.intentHash}
