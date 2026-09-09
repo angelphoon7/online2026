@@ -1,5 +1,7 @@
 # RESHUFFLE
 
+**Target Arc bounties: Best DeFi / Onchain Finance · Launch on Testnet & Push to Mainnet — [category confirmation pending](#bounty-category-verification).**
+
 **A market for outcomes, not listings.**
 
 You never give up your tickets unless the whole replacement arrives.
@@ -802,6 +804,10 @@ sequenceDiagram
 ---
 
 ## Sponsor tracks
+
+### Bounty category verification
+
+The two Arc targets stated above are the project's originally selected categories. Checked on 2026-09-09: the [current official ETHOnline 2026 prize page](https://ethglobal.com/events/ethonline2026/prizes#arc) does not list “Launch on Testnet & Push to Mainnet”. Confirm the current category names and availability with the organizer or submission form before submitting; this README does not establish eligibility or register either bounty.
 
 | Sponsor | Track | Why |
 |---|---|---|
