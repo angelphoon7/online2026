@@ -1,0 +1,51 @@
+solver/test/hash.test.ts
+  93fd18a659792c87 1-70
+tsconfig.json
+  93fd18a659792c87 33
+solver/test/search.test.ts
+  93fd18a659792c87 1-357
+solver/src/rank.ts
+  93fd18a659792c87 1-25
+solver/src/evidence.ts
+  93fd18a659792c87 1-42
+solver/src/validate.ts
+  93fd18a659792c87 1-308
+solver/tsconfig.json
+  93fd18a659792c87 1-17
+solver/src/solve.ts
+  93fd18a659792c87 1-50
+solver/test/validate.test.ts
+  93fd18a659792c87 1-468
+solver/src/search.ts
+  93fd18a659792c87 1-232
+solver/src/index.ts
+  93fd18a659792c87 1-21
+solver/src/hash.ts
+  93fd18a659792c87 1-58
+solver/src/types.ts
+  93fd18a659792c87 1-88
+solver/package.json
+  93fd18a659792c87 1-18
+solver/vitest.config.ts
+  93fd18a659792c87 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2-bit.10+672fbf0",
+  "base_commit_sha": "75f3c087ef2eade75cb38481af687650b64b233a",
+  "prompts": {
+    "93fd18a659792c87": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f0f2ab6-d83d-4eeb-8701-23d2f6e178af",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "angel.phoon",
+      "messages": [],
+      "total_additions": 1762,
+      "total_deletions": 1,
+      "accepted_lines": 74823,
+      "overriden_lines": 0
+    }
+  }
+}
