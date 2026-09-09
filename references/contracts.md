@@ -46,8 +46,8 @@ struct Intent {
     address   owner;
     uint256[] offered;
     uint32    eventId;
-    uint16    sessionMask;
-    uint16    sectionMask;
+    uint256   sessionMask;
+    uint256   sectionMask;
     uint8     exactCount;
     bool      mustShareSession;
     bool      mustShareSection;
@@ -84,9 +84,9 @@ Nonces are per-owner, single-use.
 ```solidity
 struct Leg {
     bytes32   intentHash;
-    address   participant;
     uint256[] receives;
     int256    netPayment;      // >0 pays, <0 receives
+    // No participant field — the recipient is intent.owner
 }
 
 function settle(Intent[] calldata intents, Leg[] calldata legs) external;
@@ -96,11 +96,16 @@ function settle(Intent[] calldata intents, Leg[] calldata legs) external;
 
 Every step unconditional. Checks, then effects, then interactions.
 
-**V1 — intent validity.** `state == live`, `block.timestamp <= deadline`, signature recovers to
-`owner`.
+**V0 — settlement shape.** `intents.length == legs.length`; each intentHash appears exactly
+once; each Intent hashes to the key it is presented under.
 
-**V2 — escrow ownership.** Every ticket in `offered` is escrowed by that intent's owner *now*.
-Catches withdrawal after commitment.
+**V1 — intent validity.** `state == LIVE`, `block.timestamp <= deadline`. No ecrecover —
+settle() receives no signatures. Authentication happened once at commit(); V0 binds the
+supplied struct to the live hash.
+
+**V2 — escrow ownership and event binding.** Every ticket in `offered` is escrowed by that
+intent's owner *now*, AND every offered ticket's eventId == intent.eventId. Catches withdrawal
+after commitment and ensures clearing is within one event.
 
 **V3 — status.** No ticket redeemed.
 
@@ -123,18 +128,24 @@ mustBeAdjacent   same section, same row, seats form a consecutive run
 
 This check carries the product. Bitmaps, not loops.
 
-**V6 — budget.** `netPayment <= maxNetPay` for positive, `netPayment >= maxNetPay` for
-negative.
+**V6 — budget.** `netPayment <= maxNetPay` — one comparison, both directions. Positive is a
+debit ceiling, negative is a credit floor. Splitting it inverts the receiver case.
 
 **V7 — payment balance.** Sum of all `netPayment` is exactly zero. Integer USDC, no tolerance.
 
-**V8 — capacity.** Each payer's USDC balance and allowance cover their leg, checked before any
-transfer. Approval is a spending allowance, not a reservation.
+**V8 — capacity.** ownerNet = SIGNED sum of that owner's legs. Only net debtors are checked,
+against ownerNet — an owner with +80 and -30 needs 50, not 80. Routing: pull every debit to
+the contract, then push every credit — two deterministic passes in owner order.
 
-### Effects
+### Effects — in this order
 
-Transfer tickets from escrow to recipients. Transfer USDC between legs. Mark intents settled.
-Emit `Settled` with enough detail for the subgraph.
+1. Mark every intent LIVE → SETTLED (effects first)
+2. USDC transfers — pull debits, then push credits
+3. Escrow.releaseBatch — clear depositor, then safeTransferFrom
+4. Emit Settled
+
+Effects before interactions. safeTransferFrom calls into the recipient; marking first is safe
+because a revert anywhere rolls the SETTLED writes back with it.
 
 ### Errors
 
