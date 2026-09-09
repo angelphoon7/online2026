@@ -6,6 +6,8 @@
 
 You never give up your tickets unless the whole replacement arrives.
 
+[Circle integration: products used, contract addresses, deployment transactions and design decisions](docs/CIRCLE_INTEGRATION.md).
+
 <!-- Live demo: TBD · Video: TBD -->
 
 ---
