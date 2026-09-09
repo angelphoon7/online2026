@@ -426,7 +426,53 @@ export default function ReshufflePage() {
           {/* Intents */}
           {intents.length > 0 && (
             <section>
-              <h2 className="mb-3 text-lg font-medium">Live Intents</h2>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-lg font-medium">Live Intents ({intents.filter((i) => i.state === 1).length})</h2>
+                {intents.filter((i) => i.state === 1).length >= 2 && (
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={async () => {
+                      setLoading(true);
+                      setProposal(null);
+                      setSettlementStatus('pending');
+                      setSettlementError(undefined);
+                      setSettlementTxHash(undefined);
+                      try {
+                        const liveIntents = intents.filter((i) => i.state === 1);
+                        addLog(`Searching for settlement among ${liveIntents.length} intents...`);
+                        const result = await findSettlement(liveIntents);
+                        if (result) {
+                          setProposal(result);
+                          setEvidence({
+                            timestamp: new Date().toISOString(),
+                            intentsConsidered: liveIntents.length,
+                            candidatesFound: result.candidatesFound,
+                            candidatesExcluded: result.candidatesExcluded,
+                            chosen: {
+                              intentHashes: result.legs.map((l) => l.intentHash),
+                              gross: `${result.gross}`,
+                              reason: result.reason,
+                            },
+                            simulationResult: undefined,
+                            transactionHash: undefined,
+                          });
+                          addLog(`Found settlement: ${result.legs.length} legs, gross ${result.gross}`);
+                        } else {
+                          addLog('No valid settlement found within the search budget');
+                        }
+                      } catch (err) {
+                        addLog(`Search failed: ${err instanceof Error ? err.message : String(err)}`);
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    className="rounded bg-green-600 px-4 py-1.5 text-sm text-white transition-colors hover:bg-green-500 disabled:opacity-50"
+                  >
+                    Find Settlement
+                  </button>
+                )}
+              </div>
               <div className="flex flex-col gap-2">
                 {intents.map((i) => (
                   <IntentCard
@@ -449,6 +495,11 @@ export default function ReshufflePage() {
                             try {
                               addLog(`Revoking intent ${i.hash.slice(0, 10)}...`);
                               await revokeIntent(account, i.hash);
+                              setIntents((prev) =>
+                                prev.map((pi) =>
+                                  pi.hash === i.hash ? { ...pi, state: 2 } : pi
+                                )
+                              );
                               addLog('Revoked');
                               await loadData();
                             } catch (err) {
@@ -460,6 +511,127 @@ export default function ReshufflePage() {
                   />
                 ))}
               </div>
+            </section>
+          )}
+
+          {/* Settlement proposal */}
+          {proposal && (
+            <section className="flex flex-col gap-3">
+              <SettlementView
+                legs={proposal.legs}
+                gross={proposal.gross}
+                candidateCount={proposal.candidatesFound}
+                status={settlementStatus}
+                error={settlementError}
+                txHash={settlementTxHash}
+                onSimulate={
+                  settlementStatus === 'pending'
+                    ? async () => {
+                        setSettlementStatus('simulating');
+                        try {
+                          const liveIntents = intents.filter((i) => i.state === 1);
+                          const intentParams = liveIntents.map((i) => ({
+                            owner: i.owner,
+                            offered: i.offered,
+                            eventId: EVENT_ID,
+                            sessionMask: i.sessionMask,
+                            sectionMask: i.sectionMask,
+                            exactCount: i.exactCount,
+                            mustShareSession: i.mustShareSession,
+                            mustShareSection: i.mustShareSection,
+                            mustBeAdjacent: i.mustBeAdjacent,
+                            maxNetPay: i.maxNetPay,
+                            deadline: i.deadline,
+                            nonce: i.nonce,
+                          }));
+                          const legs = proposal.legs.map((l) => ({
+                            intentHash: l.intentHash,
+                            receives: l.receives,
+                            netPayment: l.netPayment,
+                          }));
+                          const sim = await simulateSettlement(intentParams, legs);
+                          setEvidence((prev) =>
+                            prev ? { ...prev, simulationResult: sim } : null
+                          );
+                          if (sim.success) {
+                            addLog('Simulation passed');
+                            setSettlementStatus('simulated');
+                          } else {
+                            addLog(`Simulation failed: ${sim.error}`);
+                            setSettlementError(sim.error);
+                            setSettlementStatus('failed');
+                          }
+                        } catch (err) {
+                          const msg = err instanceof Error ? err.message : String(err);
+                          addLog(`Simulation error: ${msg}`);
+                          setSettlementError(msg);
+                          setSettlementStatus('failed');
+                        }
+                      }
+                    : undefined
+                }
+                onSubmit={
+                  settlementStatus === 'simulated'
+                    ? async () => {
+                        setSettlementStatus('submitting');
+                        try {
+                          const liveIntents = intents.filter((i) => i.state === 1);
+                          const intentParams = liveIntents.map((i) => ({
+                            owner: i.owner,
+                            offered: i.offered,
+                            eventId: EVENT_ID,
+                            sessionMask: i.sessionMask,
+                            sectionMask: i.sectionMask,
+                            exactCount: i.exactCount,
+                            mustShareSession: i.mustShareSession,
+                            mustShareSection: i.mustShareSection,
+                            mustBeAdjacent: i.mustBeAdjacent,
+                            maxNetPay: i.maxNetPay,
+                            deadline: i.deadline,
+                            nonce: i.nonce,
+                          }));
+                          const legs = proposal.legs.map((l) => ({
+                            intentHash: l.intentHash,
+                            receives: l.receives,
+                            netPayment: l.netPayment,
+                          }));
+
+                          // Approve USDC for debtors
+                          for (const leg of proposal.legs) {
+                            if (leg.netPayment > 0n && leg.owner.toLowerCase() === account.toLowerCase()) {
+                              addLog(`Approving USDC...`);
+                              await approveUSDC(account, leg.netPayment);
+                            }
+                          }
+
+                          addLog('Submitting settlement...');
+                          const txHash = await submitSettlement(account, intentParams, legs);
+                          const hash = typeof txHash === 'string' ? txHash : String(txHash);
+                          setSettlementTxHash(hash);
+                          setEvidence((prev) =>
+                            prev ? { ...prev, transactionHash: hash } : null
+                          );
+                          addLog(`Settled! tx: ${hash.slice(0, 10)}...`);
+                          setSettlementStatus('settled');
+                          setIntents((prev) =>
+                            prev.map((i) =>
+                              proposal.legs.some((l) => l.intentHash === i.hash)
+                                ? { ...i, state: 3 }
+                                : i
+                            )
+                          );
+                          await loadData();
+                        } catch (err) {
+                          const msg = err instanceof Error ? err.message : String(err);
+                          addLog(`Settlement failed: ${msg}`);
+                          setSettlementError(msg);
+                          setSettlementStatus('failed');
+                        }
+                      }
+                    : undefined
+                }
+              />
+              <EvidencePanel evidence={evidence} />
             </section>
           )}
         </div>
