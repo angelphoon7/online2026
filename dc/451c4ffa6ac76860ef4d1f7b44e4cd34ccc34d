@@ -1,0 +1,14 @@
+README.md
+  h_bdccacbe896d8c 34-37,100-101,166-167,211-214,231-232,261-264,280-285,292-677,785-788,807-808
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2-bit.10+672fbf0",
+  "base_commit_sha": "dc451c4ffa6ac76860ef4d1f7b44e4cd34ccc34d",
+  "prompts": {},
+  "humans": {
+    "h_bdccacbe896d8c": {
+      "author": "angel.phoon"
+    }
+  }
+}
