@@ -10,8 +10,10 @@ import {Settlement} from "../src/Settlement.sol";
 contract Deploy is Script {
     function run() external {
         address usdc = vm.envAddress("USDC_ADDRESS");
+        uint256 deployerKey = vm.envUint("PRIVATE_KEY");
+        address deployer = vm.addr(deployerKey);
 
-        vm.startBroadcast();
+        vm.startBroadcast(deployerKey);
 
         TicketNFT ticketNFT = new TicketNFT();
         Escrow escrow = new Escrow(address(ticketNFT));
@@ -25,7 +27,7 @@ contract Deploy is Script {
 
         escrow.setSettlement(address(settlement));
         registry.setSettlement(address(settlement));
-        ticketNFT.registerIssuer(msg.sender);
+        ticketNFT.registerIssuer(deployer);
 
         vm.stopBroadcast();
 

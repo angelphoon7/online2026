@@ -2,6 +2,7 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+# Keep deployment bytecode on the Paris EVM target.
 evm_version = "paris"
 via_ir = true
 optimizer = true
@@ -10,3 +11,6 @@ remappings = [
     "forge-std/=lib/forge-std/src/",
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"
 ]
+
+[rpc_endpoints]
+arc_testnet = "${ARC_RPC}"

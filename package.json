@@ -6,10 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "arc:check": "node scripts/check-arc.mjs",
+    "arc:deploy:simulate": "node scripts/deploy-arc.mjs",
+    "arc:deploy": "node scripts/deploy-arc.mjs --broadcast"
   },
   "dependencies": {
-    "@worldcoin/idkit": "^4.2.3",
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
