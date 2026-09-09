@@ -1,0 +1,43 @@
+foundry.toml
+  93fd18a659792c87 1-12
+.gitmodules
+  93fd18a659792c87 1-3
+src/Escrow.sol
+  93fd18a659792c87 1-65
+test/Settlement.t.sol
+  93fd18a659792c87 1-861
+src/TicketNFT.sol
+  93fd18a659792c87 1-87
+test/helpers/Fixture.sol
+  93fd18a659792c87 1-171
+script/Deploy.s.sol
+  93fd18a659792c87 1-37
+references/contracts.md
+  93fd18a659792c87 49-50,89,99-100,102-108,131-132,136-140,142-145,147-148
+src/IntentRegistry.sol
+  93fd18a659792c87 1-164
+test/helpers/MockUSDC.sol
+  93fd18a659792c87 1-16
+src/Settlement.sol
+  93fd18a659792c87 1-383
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2-bit.10+672fbf0",
+  "base_commit_sha": "0912f040f2604e98c5b2d77f3f381bf7dad2c110",
+  "prompts": {
+    "93fd18a659792c87": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f0f2ab6-d83d-4eeb-8701-23d2f6e178af",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "angel.phoon",
+      "messages": [],
+      "total_additions": 153612,
+      "total_deletions": 16,
+      "accepted_lines": 153607,
+      "overriden_lines": 0
+    }
+  }
+}
