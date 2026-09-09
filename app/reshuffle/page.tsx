@@ -2,13 +2,12 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
-import { formatUSDC, truncateAddress } from '@/lib/format';
+import { truncateAddress } from '@/lib/format';
 import {
   getTicketMeta,
   getTicketOwner,
   getDepositor,
   getIntentState,
-  getUSDCBalance,
   approveNFTsForEscrow,
   depositTickets,
   withdrawTickets,
@@ -28,6 +27,8 @@ import IntentCard from '@/component/reshuffle/IntentCard';
 import IntentForm from '@/component/reshuffle/IntentForm';
 import SettlementView from '@/component/reshuffle/SettlementView';
 import EvidencePanel from '@/component/reshuffle/EvidencePanel';
+import ArcGasNotice from '@/component/reshuffle/ArcGasNotice';
+import ArcWalletBalance from '@/component/reshuffle/ArcWalletBalance';
 import { findSettlement, confirmSettlementEvidence, type SettlementProposal, type SolveEvidence } from '@/lib/solve-api';
 import type { Address, Hex } from 'viem';
 
@@ -62,11 +63,10 @@ interface IntentDisplay {
 type DemoScene = 'overview' | 'cycle' | 'chain' | 'refusal';
 
 export default function ReshufflePage() {
-  const { account, connect } = useWallet();
+  const { account, chainId, connect } = useWallet();
   const [scene, setScene] = useState<DemoScene>('overview');
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [intents, setIntents] = useState<IntentDisplay[]>([]);
-  const [usdcBalance, setUsdcBalance] = useState<bigint>(0n);
   const [selectedTickets, setSelectedTickets] = useState<Set<bigint>>(new Set());
   const [log, setLog] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -121,8 +121,6 @@ export default function ReshufflePage() {
       const ownerNonces = committed.filter(i => i.owner.toLowerCase() === account.toLowerCase()).map(i => i.nonce);
       setNonce(ownerNonces.reduce((next, used) => used >= next ? used + 1n : next, 0n));
 
-      const bal = await getUSDCBalance(account);
-      setUsdcBalance(bal);
     } catch (err) {
       addLog(`Error loading: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -134,9 +132,10 @@ export default function ReshufflePage() {
 
   if (!account) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-black">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-black p-6">
         <h1 className="mb-6 text-3xl font-bold text-white">RESHUFFLE</h1>
         <p className="mb-4 text-white/60">A market for outcomes, not listings.</p>
+        <div className="mb-6 w-full max-w-xl"><ArcGasNotice /></div>
         <button
           type="button"
           onClick={connect}
@@ -154,14 +153,15 @@ export default function ReshufflePage() {
       <header className="flex items-center justify-between border-b border-white/10 px-6 py-4">
         <h1 className="text-xl font-bold">RESHUFFLE</h1>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-white/60">
-            {formatUSDC(usdcBalance)} USDC
-          </span>
           <span className="rounded-full border border-white/10 px-3 py-1 text-sm">
             {truncateAddress(account)}
           </span>
         </div>
       </header>
+
+      <div className="px-6 py-4">
+        <ArcWalletBalance key={account} account={account} walletChainId={chainId} />
+      </div>
 
       {/* Scene tabs */}
       <nav className="flex gap-1 border-b border-white/10 px-6">

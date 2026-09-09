@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import ArcGasNotice from '@/component/reshuffle/ArcGasNotice';
 
 export default function Home() {
   return (
@@ -21,6 +22,10 @@ export default function Home() {
           >
             Launch App
           </Link>
+        </div>
+
+        <div className="w-full max-w-3xl">
+          <ArcGasNotice />
         </div>
 
         <div className="mt-8 grid max-w-3xl grid-cols-3 gap-6">

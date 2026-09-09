@@ -1,6 +1,7 @@
 "use client";
 
 import { formatUSDC, truncateAddress } from '@/lib/format';
+import { CHAIN } from '@/lib/config';
 
 interface LegDisplay {
   intentHash: string;
@@ -44,6 +45,16 @@ export default function SettlementView({
       <div className="text-sm text-white/60">
         Gross cash moved: <span className="text-white">{formatUSDC(gross)} USDC</span>
       </div>
+
+      {CHAIN.id === 5042002 && (
+        <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-3 py-2 text-sm">
+          <p className="font-medium text-emerald-300">Network fees paid in USDC · No second token needed</p>
+          <p className="mt-1 text-xs leading-relaxed text-white/60">
+            The submitting wallet pays gas in USDC. Network fees are additional to the
+            ticket payments and signed payment limits shown here.
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-col gap-2">
         {legs.map((leg) => (
