@@ -4,22 +4,6 @@
 
 You never give up your tickets unless the whole replacement arrives.
 
-<!-- Live demo: TBD · Video: TBD -->
-
----
-
-## Contents
-
-- [The problem](#the-problem)
-- [The solution](#the-solution)
-- [High-level architecture](#high-level-architecture)
-- [Sponsor technology map](#sponsor-technology-map)
-- [Component flows](#component-flows)
-- [Sequence diagrams](#sequence-diagrams)
-- [Sponsor tracks](#sponsor-tracks)
-- [Questions we expect](#questions-we-expect)
-- [Limitations](#limitations)
-- [Repository](#repository)
 
 ---
 
@@ -47,9 +31,10 @@ flowchart LR
     C -.->|"replacement gone"| E["Left with<br/>nothing"]
     D -.->|"bought first"| F["Carrying<br/>two sets"]
 
-    style C fill:#FAEEDA,stroke:#BA7517,color:#412402
-    style E fill:#FCEBEB,stroke:#A32D2D,color:#501313
-    style F fill:#FCEBEB,stroke:#A32D2D,color:#501313
+    classDef bad fill:#FCEBEB,stroke:#A32D2D,stroke-width:1px,color:#501313
+    classDef decide fill:#FAEEDA,stroke:#BA7517,stroke-width:1px,color:#412402
+    class E,F bad
+    class C decide
 ```
 
 Official exchange usually requires the same event, venue and date, so changing dates is not an exchange at all — it is a sale followed by a purchase.
@@ -65,10 +50,6 @@ flowchart LR
     A -. "✗ B doesn't want Friday" .-> B
     B -. "✗ C doesn't want Saturday" .-> C
     C -. "✗ A doesn't want Sunday" .-> A
-
-    style A fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
-    style B fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
-    style C fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
 ```
 
 No two people can trade. All three together can. Every pairwise negotiation fails, and the trade that works involves everyone at once.
@@ -100,11 +81,6 @@ flowchart TD
         D["VALID UNTIL<br/>Friday 18:00"]
         G --> R --> P --> D
     end
-
-    style G fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
-    style R fill:#EEEDFE,stroke:#534AB7,color:#26215C
-    style P fill:#EEEDFE,stroke:#534AB7,color:#26215C
-    style D fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
 ```
 
 A solver later composes many such intents — including buyers, sellers and unsold issuer inventory — into a reallocation where everyone's signed conditions hold at once. The contract verifies each condition independently and settles atomically.
@@ -121,11 +97,8 @@ flowchart TD
     C --> D["The solver is untrusted"]
     D --> E["The outcome predicate must be<br/>independently enforceable on-chain"]
 
-    style A fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
-    style B fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
-    style C fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
-    style D fill:#FAEEDA,stroke:#BA7517,color:#412402
-    style E fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
+    class E ok
 ```
 
 This is why the contract checks session, section, count, cohesion, adjacency, budget, expiry and redemption status. Not to be thorough — because nobody is there to click *confirm*.
@@ -168,10 +141,6 @@ flowchart TB
     CHAIN -->|"events"| SG
     SV -->|"propose plus execute<br/>in one transaction"| ST
     ST -->|"tickets move, USDC nets"| UI
-
-    style UI fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
-    style CHAIN fill:#E6F1FB,stroke:#185FA5,color:#042C53
-    style OFF fill:#EEEDFE,stroke:#534AB7,color:#26215C
 ```
 
 ### Trust model
@@ -194,10 +163,8 @@ flowchart LR
     C -->|"Sunday returned"| B["B"]
     B -->|"Saturday"| V
 
-    style V fill:#E1F5EE,stroke:#0F6E56,color:#04342C
-    style A fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
-    style B fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
-    style C fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
+    class V ok
 ```
 
 One issuer ticket does not complete a single upgrade — it starts a chain. The returned Friday immediately satisfies the next person's predicate, in the same transaction.
@@ -221,9 +188,6 @@ flowchart TB
         G2["Intent pool discovery<br/>mappings cannot be<br/>enumerated on-chain"]
         G3["Persistent intents<br/>new inventory makes an old<br/>intent satisfiable"]
     end
-
-    style ARC fill:#E6F1FB,stroke:#185FA5,color:#042C53
-    style GRAPH fill:#EEEDFE,stroke:#534AB7,color:#26215C
 ```
 
 ---
@@ -244,9 +208,10 @@ flowchart TD
 
     D -.->|"withdrawable at any time"| D
 
-    style C fill:#FAEEDA,stroke:#BA7517,color:#412402
-    style E fill:#E1F5EE,stroke:#0F6E56,color:#04342C
-    style G fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
+    classDef decide fill:#FAEEDA,stroke:#BA7517,stroke-width:1px,color:#412402
+    class E ok
+    class C decide
 ```
 
 ### 2. Discovery and solving
@@ -263,10 +228,8 @@ flowchart TD
     H -->|"no"| C
     H -->|"yes"| I["Submit propose plus execute<br/>in one transaction"]
 
-    style D fill:#FAEEDA,stroke:#BA7517,color:#412402
-    style H fill:#FAEEDA,stroke:#BA7517,color:#412402
-    style E fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
-    style I fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
+    class I ok
 ```
 
 Simulation and submission are one transaction with no window between them. A participant withdrawing in the meantime causes a revert — the proposer loses gas, which is why simulation comes first.
@@ -295,15 +258,10 @@ flowchart TD
     V8 -->|"no"| E8["InsufficientPaymentCapacity"]
     V8 -->|"yes"| X["Transfer tickets<br/>Settle USDC<br/>Mark settled<br/>Emit"]
 
-    style X fill:#E1F5EE,stroke:#0F6E56,color:#04342C
-    style E1 fill:#FCEBEB,stroke:#A32D2D,color:#501313
-    style E2 fill:#FCEBEB,stroke:#A32D2D,color:#501313
-    style E3 fill:#FCEBEB,stroke:#A32D2D,color:#501313
-    style E4 fill:#FCEBEB,stroke:#A32D2D,color:#501313
-    style E5 fill:#FCEBEB,stroke:#A32D2D,color:#501313
-    style E6 fill:#FCEBEB,stroke:#A32D2D,color:#501313
-    style E7 fill:#FCEBEB,stroke:#A32D2D,color:#501313
-    style E8 fill:#FCEBEB,stroke:#A32D2D,color:#501313
+    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
+    classDef bad fill:#FCEBEB,stroke:#A32D2D,stroke-width:1px,color:#501313
+    class X ok
+    class E1,E2,E3,E4,E5,E6,E7,E8 bad
 ```
 
 Checks first, effects second, interactions last. Nothing transfers until all eight pass.
@@ -319,14 +277,404 @@ flowchart TD
     D -->|"no"| F["redeem sets status<br/>permanently"]
     F --> G["Ticket can never re-enter<br/>escrow or a reshuffle"]
 
-    style B fill:#FAEEDA,stroke:#BA7517,color:#412402
-    style D fill:#FAEEDA,stroke:#BA7517,color:#412402
-    style C fill:#FCEBEB,stroke:#A32D2D,color:#501313
-    style E fill:#FCEBEB,stroke:#A32D2D,color:#501313
-    style G fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
+    classDef bad fill:#FCEBEB,stroke:#A32D2D,stroke-width:1px,color:#501313
+    classDef decide fill:#FAEEDA,stroke:#BA7517,stroke-width:1px,color:#412402
+    class G ok
+    class C,E bad
+    class B decide
 ```
 
 A ticket sitting in escrow must be withdrawn first — revoke the intent, withdraw, then redeem.
+
+---
+
+## Technical reference
+
+### Data model
+
+```mermaid
+classDiagram
+    class TicketMeta {
+        uint32 eventId
+        uint16 sessionId
+        uint16 sectionId
+        uint16 row
+        uint16 seat
+        uint8 status
+        note "one storage slot, one SLOAD per read"
+    }
+
+    class Intent {
+        address owner
+        uint256[] offered
+        uint32 eventId
+        uint16 sessionMask
+        uint16 sectionMask
+        uint8 exactCount
+        bool mustShareSession
+        bool mustShareSection
+        bool mustBeAdjacent
+        int256 maxNetPay
+        uint64 deadline
+        uint256 nonce
+    }
+
+    class Leg {
+        bytes32 intentHash
+        address participant
+        uint256[] receives
+        int256 netPayment
+    }
+
+    class IntentState {
+        uint8 NONE
+        uint8 LIVE
+        uint8 REVOKED
+        uint8 SETTLED
+    }
+
+    TicketMeta "n" --o "1" Intent : offered by tokenId
+    Intent "1" --> "1" Leg : matched by intentHash
+    TicketMeta "n" --o "1" Leg : received by tokenId
+    Intent "1" --> "1" IntentState : keyed by hash
+```
+
+`exactCount` is exact, never a minimum — a user asking for two seats must not receive three.
+
+`mustShareSection` is not implied by `sectionMask`. *Floor or Tier 1 are both acceptable* and *both my tickets must be in the same one* are different statements; two mask bits set does not imply cohesion.
+
+`maxNetPay` is signed: positive is a debit ceiling, negative is a credit floor. One field covers both payers and receivers.
+
+### Contract call graph
+
+```mermaid
+flowchart TB
+    U["User EOA"]
+    SOL["Solver EOA"]
+
+    subgraph TN["TicketNFT · ERC-721"]
+        direction TB
+        T1["mint(to, TicketMeta)<br/>onlyRegisteredIssuer"]
+        T2["redeem(tokenId)<br/>onlyCurrentOwner"]
+        T3["meta(tokenId) → TicketMeta"]
+        T4["transferFrom(from, to, id)<br/>onlySettlement"]
+    end
+
+    subgraph ES["Escrow"]
+        direction TB
+        E1["deposit(uint256[] ids)"]
+        E2["withdraw(uint256[] ids)<br/>unconditional"]
+        E3["depositor(tokenId) → address"]
+        E4["release(id, to)<br/>onlySettlement"]
+    end
+
+    subgraph IR["IntentRegistry"]
+        direction TB
+        I1["commit(Intent, bytes sig)<br/>verifies EIP-712"]
+        I2["revoke(bytes32 hash)<br/>onlyOwner"]
+        I3["state(hash) → uint8"]
+        I4["markSettled(hash)<br/>onlySettlement"]
+    end
+
+    subgraph ST["Settlement"]
+        direction TB
+        S1["settle(Intent[], Leg[])"]
+        S2["_validate() internal<br/>V1 to V8"]
+        S3["_execute() internal"]
+    end
+
+    USDC["USDC · ERC-20"]
+
+    U -->|"1 approve + deposit"| E1
+    U -->|"2 sign then commit"| I1
+    U -->|"approve spend cap"| USDC
+    SOL -->|"3 propose + execute"| S1
+    S1 --> S2
+    S2 -->|"read"| I3
+    S2 -->|"read"| E3
+    S2 -->|"read"| T3
+    S2 -->|"read balance + allowance"| USDC
+    S2 --> S3
+    S3 -->|"release tickets"| E4
+    S3 -->|"transfer"| T4
+    S3 -->|"transferFrom net amounts"| USDC
+    S3 -->|"mark settled"| I4
+    U -->|"anytime"| E2
+    U -->|"after settlement"| T2
+
+    classDef decide fill:#FAEEDA,stroke:#BA7517,stroke-width:1px,color:#412402
+    class S2 decide
+```
+
+`Settlement` is the only contract permitted to move a ticket out of escrow. Users can always withdraw, but they cannot transfer directly to each other — every reallocation goes through validation.
+
+### Ticket lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Minted : mint by registered issuer
+    Minted --> Escrowed : deposit
+    Escrowed --> Minted : withdraw, unconditional
+    Escrowed --> Reallocated : settle, V1 to V8 all pass
+    Reallocated --> Escrowed : new owner deposits again
+    Minted --> Redeemed : redeem by current owner
+    Redeemed --> [*] : terminal, can never re-enter escrow
+
+    note right of Escrowed
+        V2 reads depositor(tokenId)
+        at settlement time, not at
+        commit time
+    end note
+
+    note right of Redeemed
+        V3 rejects any leg
+        containing a redeemed ticket
+    end note
+```
+
+A ticket in escrow cannot be redeemed. Revoke the intent, withdraw, then redeem.
+
+### Intent lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> None
+    None --> Live : commit with valid EIP-712 signature
+    Live --> Revoked : revoke by owner
+    Live --> Settled : settle succeeds
+    Live --> Live : deadline not yet passed
+    Revoked --> [*]
+    Settled --> [*]
+
+    note right of Live
+        V1 checks state == LIVE
+        and block.timestamp <= deadline.
+        An expired intent is rejected,
+        not silently filtered.
+    end note
+
+    note right of Settled
+        Terminal. The nonce is consumed,
+        so the same signature cannot
+        be replayed.
+    end note
+```
+
+### EIP-712 commitment
+
+```mermaid
+flowchart TB
+    subgraph D["Domain separator"]
+        direction TB
+        D1["name: RESHUFFLE"]
+        D2["version: 1"]
+        D3["chainId"]
+        D4["verifyingContract"]
+    end
+
+    subgraph H["Struct hash"]
+        direction TB
+        H1["INTENT_TYPEHASH"]
+        H2["owner, eventId"]
+        H3["keccak256 of offered[]"]
+        H4["sessionMask, sectionMask"]
+        H5["exactCount, cohesion flags"]
+        H6["maxNetPay, deadline, nonce"]
+    end
+
+    D --> DIG["digest = keccak256(<br/>0x1901, domainSeparator, structHash)"]
+    H --> DIG
+    DIG --> SIG["user signs once"]
+    SIG --> REC["ecrecover at settlement<br/>must equal intent.owner"]
+
+    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
+    class REC ok
+```
+
+`chainId` and `verifyingContract` are inside the domain. **Redeploying the contracts or moving to another network invalidates every committed intent** and requires reconfiguring the frontend domain. This is a correctness requirement, not a configuration detail — a chain migration is not a matter of changing an RPC URL.
+
+### V4 — conservation, in detail
+
+The check that stops entitlement being created or destroyed.
+
+```mermaid
+flowchart TB
+    A["Collect all offered ids<br/>across every Intent"] --> B["Collect all received ids<br/>across every Leg"]
+    B --> C{"len(offered) ==<br/>len(received)?"}
+    C -->|"no"| X["ConservationViolated"]
+    C -->|"yes"| D["Mark each offered id<br/>in a scratch map"]
+    D --> E{"any id<br/>marked twice?"}
+    E -->|"yes"| X
+    E -->|"no"| F["Walk received ids"]
+    F --> G{"every received id<br/>present in the map?"}
+    G -->|"no"| X
+    G -->|"yes"| H["Unmark as we go"]
+    H --> I{"map fully<br/>drained?"}
+    I -->|"no"| X
+    I -->|"yes"| J["Exact bijection proven"]
+
+    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
+    classDef bad fill:#FCEBEB,stroke:#A32D2D,stroke-width:1px,color:#501313
+    class J ok
+    class X bad
+```
+
+Length equality alone is insufficient — it would admit a proposal that duplicates one ticket and drops another. The scratch map must be fully drained.
+
+### V5 — per-participant predicate, in detail
+
+Runs once per leg. Bitmask operations rather than array scans.
+
+```mermaid
+flowchart TB
+    A["For leg L with intent I"] --> B{"len(L.receives)<br/>== I.exactCount?"}
+    B -->|"no"| E1["CountMismatch"]
+    B -->|"yes"| C["Load TicketMeta<br/>for each received id"]
+    C --> D{"every m.eventId<br/>== I.eventId?"}
+    D -->|"no"| E2["WrongEvent"]
+    D -->|"yes"| F{"(1 shl m.sessionId)<br/>and I.sessionMask != 0<br/>for all?"}
+    F -->|"no"| E3["SessionNotAccepted"]
+    F -->|"yes"| G{"(1 shl m.sectionId)<br/>and I.sectionMask != 0<br/>for all?"}
+    G -->|"no"| E4["SectionNotAccepted"]
+    G -->|"yes"| H{"I.mustShareSession?"}
+    H -->|"yes"| H2{"all sessionId equal<br/>to the first?"}
+    H2 -->|"no"| E5["NotSameSession"]
+    H -->|"no"| J
+    H2 -->|"yes"| J{"I.mustShareSection?"}
+    J -->|"yes"| J2{"all sectionId equal<br/>to the first?"}
+    J2 -->|"no"| E6["NotSameSection"]
+    J -->|"no"| K
+    J2 -->|"yes"| K{"I.mustBeAdjacent?"}
+    K -->|"no"| OK["Predicate satisfied"]
+    K -->|"yes"| L{"all row equal?"}
+    L -->|"no"| E7["SeatsNotAdjacent"]
+    L -->|"yes"| M["Sort seats ascending"]
+    M --> N{"seat[i+1] - seat[i]<br/>== 1 for all i?"}
+    N -->|"no"| E7
+    N -->|"yes"| OK
+
+    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
+    classDef bad fill:#FCEBEB,stroke:#A32D2D,stroke-width:1px,color:#501313
+    class OK ok
+    class E1,E2,E3,E4,E5,E6,E7 bad
+```
+
+Adjacency is checkable only because we issue the tickets and guarantee seat numbers are consecutive integers within a row. It does not generalise to arbitrary venues.
+
+### V6 to V8 — money
+
+```mermaid
+flowchart TB
+    A["For each Leg"] --> B{"netPayment > 0?"}
+    B -->|"yes, payer"| C{"netPayment<br/><= I.maxNetPay?"}
+    B -->|"no, receiver"| D{"netPayment<br/>>= I.maxNetPay?"}
+    C -->|"no"| X1["BudgetExceeded"]
+    D -->|"no"| X1
+    C -->|"yes"| E["accumulate total"]
+    D -->|"yes"| E
+    E --> F{"sum of all<br/>netPayment == 0<br/>exactly?"}
+    F -->|"no"| X2["PaymentImbalance"]
+    F -->|"yes"| G["For each payer"]
+    G --> H{"USDC.balanceOf >= amount<br/>AND allowance >= amount?"}
+    H -->|"no"| X3["InsufficientPaymentCapacity"]
+    H -->|"yes"| I["Safe to transfer"]
+
+    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
+    classDef bad fill:#FCEBEB,stroke:#A32D2D,stroke-width:1px,color:#501313
+    class I ok
+    class X1,X2,X3 bad
+```
+
+Integer USDC, no rounding tolerance — the sum is exactly zero or the proposal is rejected. Capacity is checked for every payer **before any transfer**, because failing partway through a batch wastes gas and produces a confusing revert.
+
+Approval is a spending allowance, not a reservation. A user can spend their balance elsewhere after signing, which is why V8 reads live state rather than trusting a commitment.
+
+### Solver internals
+
+```mermaid
+flowchart TB
+    A["Query subgraph<br/>live intents + escrow state"] --> B["Filter by eventId<br/>and unexpired deadline"]
+    B --> C["Build candidate graph<br/>node = intent<br/>edge = this bundle could satisfy that predicate"]
+    C --> D["Enumerate reallocations<br/>within caps:<br/>maxParticipants, maxCandidates, timeout"]
+    D --> E{"Candidate<br/>satisfies every<br/>predicate locally?"}
+    E -->|"no"| D
+    E -->|"yes"| F["Solve payment vector<br/>subject to per-participant<br/>maxNetPay and sum == 0"]
+    F --> G{"Feasible?"}
+    G -->|"no"| D
+    G -->|"yes"| H["Add to candidate set"]
+    H --> I{"Caps<br/>exhausted?"}
+    I -->|"no"| D
+    I -->|"yes"| J["Rank: min total net payment<br/>ties to fewer participants<br/>then lowest gas"]
+    J --> K["Re-verify freshness<br/>against chain state"]
+    K --> L["eth_call simulate"]
+    L --> M["Submit propose + execute<br/>in one transaction"]
+
+    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
+    classDef decide fill:#FAEEDA,stroke:#BA7517,stroke-width:1px,color:#412402
+    class M ok
+    class E,G,I decide
+```
+
+This is a combinatorial exchange and clearing it is NP-hard. The search is bounded and the caps are published. *No solution found* means *none found within the search bound*, not *none exists*.
+
+The solver duplicates the contract's constraint logic so proposals do not fail on-chain, but that duplication is an optimisation, not a guarantee — a different solver could submit anything, and V1–V8 still refuse it.
+
+### Subgraph schema
+
+```mermaid
+erDiagram
+    TICKET ||--o{ ESCROW_POSITION : "has"
+    TICKET }o--o{ INTENT : "offered in"
+    TICKET }o--o{ SETTLEMENT_LEG : "received in"
+    INTENT ||--o| SETTLEMENT_LEG : "matched by"
+    SETTLEMENT ||--|{ SETTLEMENT_LEG : "contains"
+
+    TICKET {
+        id String PK
+        eventId Int
+        sessionId Int
+        sectionId Int
+        row Int
+        seat Int
+        owner Bytes
+        redeemed Boolean
+    }
+    ESCROW_POSITION {
+        id String PK
+        depositor Bytes
+        depositedAt BigInt
+        active Boolean
+    }
+    INTENT {
+        hash Bytes PK
+        owner Bytes
+        state String
+        sessionMask Int
+        sectionMask Int
+        exactCount Int
+        mustShareSession Boolean
+        mustShareSection Boolean
+        mustBeAdjacent Boolean
+        maxNetPay BigInt
+        deadline BigInt
+        committedAt BigInt
+    }
+    SETTLEMENT {
+        id String PK
+        proposer Bytes
+        blockNumber BigInt
+        participantCount Int
+    }
+    SETTLEMENT_LEG {
+        id String PK
+        netPayment BigInt
+    }
+```
+
+Indexed events: `TicketMinted`, `TicketEscrowed`, `TicketWithdrawn`, `TicketRedeemed`, `IntentCommitted`, `IntentRevoked`, `Settled`.
+
+The subgraph is discovery and prefiltering. Chain state at execution is authoritative — balances and allowances move, an indexer lags, and the contract re-validates everything regardless.
 
 ---
 
@@ -434,9 +782,10 @@ flowchart TD
     A -->|"yes"| C["USDC nets across all participants"]
     C --> D["A −50 · D −100<br/>B +120 · C +30<br/>sum equals zero"]
 
-    style A fill:#FAEEDA,stroke:#BA7517,color:#412402
-    style B fill:#FCEBEB,stroke:#A32D2D,color:#501313
-    style D fill:#E6F1FB,stroke:#185FA5,color:#042C53
+    classDef bad fill:#FCEBEB,stroke:#A32D2D,stroke-width:1px,color:#501313
+    classDef decide fill:#FAEEDA,stroke:#BA7517,stroke-width:1px,color:#412402
+    class B bad
+    class A decide
 ```
 
 Money is not appended at the end. Delivery gates payment, and every participant's cash position resolves in the same settlement.
@@ -455,8 +804,8 @@ flowchart LR
     S --> R["The same intent<br/>becomes satisfiable"]
     R --> X["Settles, with the user<br/>doing nothing"]
 
-    style N fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
-    style X fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
+    class X ok
 ```
 
 The market changes around a standing intent. That is what live indexed data is for.
