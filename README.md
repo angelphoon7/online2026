@@ -18,6 +18,7 @@ You never give up your tickets unless the whole replacement arrives.
 - [Technical reference](#technical-reference)
 - [Sequence diagrams](#sequence-diagrams)
 - [Sponsor tracks](#sponsor-tracks)
+- [App Kits evaluation](#app-kits-evaluation)
 - [Questions we expect](#questions-we-expect)
 - [Limitations](#limitations)
 - [Repository](#repository)
@@ -807,6 +808,12 @@ sequenceDiagram
 | **Arc** | Best DeFi / Onchain Finance | Conditional delivery and multi-party net settlement for non-fungible entitlements. Ticket delivery determines whether payment is permitted; every participant's debits and credits correspond within one settlement |
 | **The Graph** | AI Use Case — From Scratch | Live indexed data drives the solver and the agent. Change a budget and the answer changes, because the pool is re-queried |
 | **Arc** | Launch on Testnet & Push to Mainnet | *Conditional.* Its examples include stablecoin settlement and escrow logic added to a marketplace. Mainnet readiness is a separate bar — confirming what qualifies before committing |
+
+### App Kits evaluation
+
+**Evaluated on 2026-09-09; not integrated.** App Kit's [Send](https://docs.arc.io/app-kit/send) supports USDC transfers on Arc Testnet. The reviewed [public API](https://docs.arc.io/app-kit/references/sdk-reference) does not provide a drop-in module for our NFT custody, signed seat conditions and multi-owner net settlement. Individual sends would not preserve the existing transaction's combined payment and ticket checks.
+
+We retain Escrow and Settlement for that execution path. Bridge and Unified Balance could support future wallet funding; currency conversion and treasury yield are outside this demo's scope. This is our response to the Arc track's relevance criterion, not a claim of App Kits usage. See the [capability comparison, official sources and presentation answer](docs/APP_KITS_EVALUATION.md), including an assessment of Arc's separate ERC-8183 escrow example.
 
 ### How Arc is load-bearing
 
