@@ -12,8 +12,8 @@ You never give up your tickets unless the whole replacement arrives.
 
 - [The problem](#the-problem)
 - [The solution](#the-solution)
-- [How it works](#how-it-works)
-- [Architecture](#architecture)
+- [High-level architecture](#high-level-architecture)
+- [Sponsor technology map](#sponsor-technology-map)
 - [Component flows](#component-flows)
 - [Sequence diagrams](#sequence-diagrams)
 - [Sponsor tracks](#sponsor-tracks)
@@ -39,28 +39,36 @@ Users are already expressing conditional replacement in natural language. There 
 
 ### Why current systems can't help
 
-Every marketplace splits the operation in two:
+```mermaid
+flowchart LR
+    A["You hold<br/>Friday x2"] --> B["SELL<br/>on resale"]
+    B --> C{"Risk window<br/>is yours"}
+    C --> D["BUY<br/>Saturday x2"]
+    C -.->|"replacement gone"| E["Left with<br/>nothing"]
+    D -.->|"bought first"| F["Carrying<br/>two sets"]
 
-```
-    SELL what you have          BUY what you want
-           │                            │
-           └──────────  ???  ───────────┘
-                   the risk in
-                   between is yours
+    style C fill:#FAEEDA,stroke:#BA7517,color:#412402
+    style E fill:#FCEBEB,stroke:#A32D2D,color:#501313
+    style F fill:#FCEBEB,stroke:#A32D2D,color:#501313
 ```
 
-Sell first and the replacement may be gone. Buy first and you carry two sets. Official exchange usually requires the same event, venue and date, so changing dates is not an exchange at all — it is a sale followed by a purchase.
+Official exchange usually requires the same event, venue and date, so changing dates is not an exchange at all — it is a sale followed by a purchase.
 
 ### And sometimes no bilateral trade exists
 
-```
-  A holds Friday,   wants Saturday
-  B holds Saturday, wants Sunday
-  C holds Sunday,   wants Friday
+```mermaid
+flowchart LR
+    A["A<br/>holds Friday<br/>wants Saturday"]
+    B["B<br/>holds Saturday<br/>wants Sunday"]
+    C["C<br/>holds Sunday<br/>wants Friday"]
 
-  A ↔ B   ✗   B doesn't want Friday
-  B ↔ C   ✗   C doesn't want Saturday
-  C ↔ A   ✗   A doesn't want Sunday
+    A -. "✗ B doesn't want Friday" .-> B
+    B -. "✗ C doesn't want Saturday" .-> C
+    C -. "✗ A doesn't want Sunday" .-> A
+
+    style A fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+    style B fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+    style C fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
 ```
 
 No two people can trade. All three together can. Every pairwise negotiation fails, and the trade that works involves everyone at once.
@@ -82,116 +90,91 @@ Most systems address some of 1–3. Number 4 is what makes the others usable in 
 
 Users sign the **outcome** they will accept, not an order.
 
-```
-  ┌──────────────────────────────────────────────────────┐
-  │  Take my two Friday tickets                          │
-  │                                                      │
-  │  ONLY IF I simultaneously receive                    │
-  │      exactly 2 Saturday tickets                      │
-  │      same section, adjacent seats                    │
-  │      and I pay no more than 30 USDC net              │
-  │                                                      │
-  │  Valid until Friday 18:00                            │
-  └──────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph INTENT["Signed once, then you leave"]
+        direction TB
+        G["GIVE UP<br/>Friday A12, A13"]
+        R["ONLY IF I RECEIVE<br/>exactly 2 Saturday tickets<br/>same section, adjacent seats"]
+        P["AND PAY AT MOST<br/>30 USDC net"]
+        D["VALID UNTIL<br/>Friday 18:00"]
+        G --> R --> P --> D
+    end
+
+    style G fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+    style R fill:#EEEDFE,stroke:#534AB7,color:#26215C
+    style P fill:#EEEDFE,stroke:#534AB7,color:#26215C
+    style D fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
 ```
 
-Sign once, then leave. A solver later composes many such intents — including buyers, sellers and unsold issuer inventory — into a reallocation where everyone's signed conditions hold at once. The contract verifies each condition independently and settles atomically.
+A solver later composes many such intents — including buyers, sellers and unsold issuer inventory — into a reallocation where everyone's signed conditions hold at once. The contract verifies each condition independently and settles atomically.
 
 **Ordinary marketplace:** *How much do you want for your ticket?*
 **RESHUFFLE:** *What would have to be true for you to give it up?*
 
 ### The property that drives the architecture
 
-```
-  asynchronous execution
-            ↓
-  the user is not present at settlement
-            ↓
-  there is no final approval step
-            ↓
-  the solver is untrusted
-            ↓
-  the outcome predicate must be
-  independently enforceable on-chain
+```mermaid
+flowchart TD
+    A["Asynchronous execution"] --> B["User is not present<br/>at settlement"]
+    B --> C["No final approval step"]
+    C --> D["The solver is untrusted"]
+    D --> E["The outcome predicate must be<br/>independently enforceable on-chain"]
+
+    style A fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+    style B fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+    style C fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+    style D fill:#FAEEDA,stroke:#BA7517,color:#412402
+    style E fill:#E1F5EE,stroke:#0F6E56,color:#04342C
 ```
 
 This is why the contract checks session, section, count, cohesion, adjacency, budget, expiry and redemption status. Not to be thorough — because nobody is there to click *confirm*.
 
 ---
 
-## How it works
+## High-level architecture
 
-```
- ┌─────────┐   deposit    ┌─────────┐   sign once   ┌──────────┐
- │  User   │─────────────▶│ Escrow  │──────────────▶│  Intent  │
- └─────────┘  withdrawable└─────────┘   then leave  │ Registry │
-                any time                            └────┬─────┘
-                                                         │ events
-                                                         ▼
-                                                  ┌─────────────┐
-                                                  │  Subgraph   │
-                                                  │ intent pool │
-                                                  └──────┬──────┘
-                                                         │ query
-                                                         ▼
-                                                  ┌─────────────┐
-                                                  │   Solver    │
-                                                  │   search    │
-                                                  └──────┬──────┘
-                                                         │ propose + execute
-                                                         ▼
-                                                  ┌─────────────┐
-                                                  │ Settlement  │
-                                                  │  V1 … V8    │
-                                                  └──────┬──────┘
-                                                         │ all pass
-                                                         ▼
-                                              tickets move · USDC nets
-                                                new holder can redeem
-```
+```mermaid
+flowchart TB
+    subgraph UI["USER LAYER"]
+        direction LR
+        SW["Swapper<br/>has tickets, wants others"]
+        BY["Buyer<br/>wants tickets, pays USDC"]
+        SL["Seller<br/>has tickets, wants USDC"]
+        IS["Issuer<br/>unsold inventory"]
+    end
 
-### The issuer is a participant, not an operator
+    subgraph CHAIN["ARC TESTNET — USDC as native gas"]
+        direction TB
+        TN["TicketNFT<br/>packed metadata, redemption"]
+        ES["Escrow<br/>custody, free withdrawal"]
+        IR["IntentRegistry<br/>EIP-712 signed conditions"]
+        ST["Settlement<br/>V1 to V8, atomic execution"]
+        TN --- ES
+        ES --- IR
+        IR --- ST
+    end
 
-Unsold inventory joins the same graph. This is what stops a reshuffle from requiring a closed cycle:
+    subgraph OFF["DISCOVERY AND SOLVING"]
+        direction TB
+        SG["Subgraph<br/>live intent pool"]
+        SV["Solver<br/>bounded combinatorial search"]
+        AG["Agent<br/>parse, query, explain"]
+        SG --> SV
+        SV --> AG
+    end
 
-```
-   Venue inventory
-         │  Saturday
-         ▼
-         A ──── Friday returned ────▶ C
-                                     │  Sunday returned
-                                     ▼
-                                     B
+    UI -->|"one signature each"| CHAIN
+    CHAIN -->|"events"| SG
+    SV -->|"propose plus execute<br/>in one transaction"| ST
+    ST -->|"tickets move, USDC nets"| UI
+
+    style UI fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+    style CHAIN fill:#E6F1FB,stroke:#185FA5,color:#042C53
+    style OFF fill:#EEEDFE,stroke:#534AB7,color:#26215C
 ```
 
-One issuer ticket does not complete a single upgrade — it starts a chain. The returned Friday immediately satisfies the next person's predicate.
-
----
-
-## Architecture
-
-```
-┌───────────────────────────────────────────────────────────────┐
-│  Frontend — swapper / buyer / seller, single-operator mode     │
-└──────────────────────────┬────────────────────────────────────┘
-                           │ one EIP-712 signature per intent
-┌──────────────────────────▼────────────────────────────────────┐
-│  Arc Testnet — EVM, USDC as native gas                        │
-│                                                               │
-│   TicketNFT        packed metadata, redemption                 │
-│   Escrow           custody, unconditional withdrawal           │
-│   IntentRegistry   signed conditions, revocation               │
-│   Settlement       V1–V8 validation, atomic execution          │
-└──────────────────────────┬────────────────────────────────────┘
-                           │ events
-┌──────────────────────────▼────────────────────────────────────┐
-│  Subgraph — reconstructs the live intent pool                  │
-└──────────────────────────┬────────────────────────────────────┘
-                           │ GraphQL
-┌──────────────────────────▼────────────────────────────────────┐
-│  Solver + Agent — search, simulate, propose, explain           │
-└───────────────────────────────────────────────────────────────┘
-```
+### Trust model
 
 | Layer | Responsibility | Trusted? |
 |---|---|---|
@@ -200,119 +183,147 @@ One issuer ticket does not complete a single upgrade — it starts a chain. The 
 | Subgraph | Discovery and prefiltering | **No** — chain state at execution is authoritative |
 | Settlement | Verify every signed condition | Yes — this is the trust anchor |
 
+### The issuer is a participant, not an operator
+
+Unsold inventory joins the same graph. This is what stops a reshuffle from requiring a closed cycle.
+
+```mermaid
+flowchart LR
+    V["Venue<br/>unsold Saturday"] -->|"Saturday"| A["A"]
+    A -->|"Friday returned"| C["C"]
+    C -->|"Sunday returned"| B["B"]
+    B -->|"Saturday"| V
+
+    style V fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+    style A fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+    style B fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+    style C fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+```
+
+One issuer ticket does not complete a single upgrade — it starts a chain. The returned Friday immediately satisfies the next person's predicate, in the same transaction.
+
+---
+
+## Sponsor technology map
+
+```mermaid
+flowchart TB
+    subgraph ARC["ARC"]
+        direction TB
+        A1["Best DeFi / Onchain Finance<br/>conditional delivery plus<br/>multi-party net settlement"]
+        A2["Launch on Testnet and Mainnet<br/>escrow and stablecoin settlement<br/>added to a marketplace"]
+        A3["USDC as native gas<br/>no separate gas token<br/>for users"]
+    end
+
+    subgraph GRAPH["THE GRAPH"]
+        direction TB
+        G1["AI Use Case, From Scratch<br/>live indexed data drives<br/>solver and agent decisions"]
+        G2["Intent pool discovery<br/>mappings cannot be<br/>enumerated on-chain"]
+        G3["Persistent intents<br/>new inventory makes an old<br/>intent satisfiable"]
+    end
+
+    style ARC fill:#E6F1FB,stroke:#185FA5,color:#042C53
+    style GRAPH fill:#EEEDFE,stroke:#534AB7,color:#26215C
+```
+
 ---
 
 ## Component flows
 
 ### 1. Intent creation
 
-```
-   user describes what they want
-              │
-              ▼
-   agent parses into structured conditions
-              │
-              ▼
-   user reviews and confirms the conditions
-              │
-              ▼
-   deposit tickets into escrow ─── withdrawable at any time
-              │
-              ▼
-   sign EIP-712 intent   ← the only signature ever required
-              │
-              ▼
-   commit on-chain, emit IntentCommitted
-              │
-              ▼
-   user closes the tab
+```mermaid
+flowchart TD
+    A["User describes what they want<br/>in natural language"] --> B["Agent parses into<br/>structured conditions"]
+    B --> C{"User reviews<br/>the conditions"}
+    C -->|"edit"| B
+    C -->|"confirm"| D["Deposit tickets into escrow"]
+    D --> E["Sign EIP-712 intent<br/>the only signature ever required"]
+    E --> F["Commit on-chain<br/>emit IntentCommitted"]
+    F --> G["User closes the tab"]
+
+    D -.->|"withdrawable at any time"| D
+
+    style C fill:#FAEEDA,stroke:#BA7517,color:#412402
+    style E fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+    style G fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
 ```
 
 ### 2. Discovery and solving
 
-```
-   fetch live intents from subgraph
-              │
-              ▼
-   verify freshness against chain state ── the indexer lags
-              │
-              ▼
-   search for valid reshuffles ── bounded: participants, candidates, timeout
-              │
-       ┌──────┴──────┐
-       │             │
-   none found     ≥1 found
-       │             │
-       ▼             ▼
-   report        rank by published rule
-   honestly      min total net payment,
-                 ties → fewer participants
-                     │
-                     ▼
-              eth_call simulate
-                     │
-              ┌──────┴──────┐
-              │             │
-           fails         passes
-              │             │
-              ▼             ▼
-          re-solve    submit propose+execute
-                      in one transaction
+```mermaid
+flowchart TD
+    A["Fetch live intents<br/>from subgraph"] --> B["Verify freshness<br/>against chain state"]
+    B --> C["Search for valid reshuffles<br/>bounded by participants,<br/>candidates and timeout"]
+    C --> D{"Any found?"}
+    D -->|"no"| E["Report honestly:<br/>no solution found<br/>within the search bound"]
+    D -->|"yes"| F["Rank by published rule:<br/>min total net payment,<br/>ties to fewer participants"]
+    F --> G["eth_call simulate"]
+    G --> H{"Simulation<br/>passes?"}
+    H -->|"no"| C
+    H -->|"yes"| I["Submit propose plus execute<br/>in one transaction"]
+
+    style D fill:#FAEEDA,stroke:#BA7517,color:#412402
+    style H fill:#FAEEDA,stroke:#BA7517,color:#412402
+    style E fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+    style I fill:#E1F5EE,stroke:#0F6E56,color:#04342C
 ```
 
 Simulation and submission are one transaction with no window between them. A participant withdrawing in the meantime causes a revert — the proposer loses gas, which is why simulation comes first.
 
 ### 3. Settlement validation
 
-```
-                  settle(intents, legs)
-                          │
-                          ▼
-         V1  intent live, unexpired, signature valid?  ──✗──▶ IntentNotLive
-                          │ ✓                                 IntentExpired
-                          ▼
-         V2  every offered ticket escrowed by owner?   ──✗──▶ TicketNotEscrowed
-                          │ ✓
-                          ▼
-         V3  no ticket already redeemed?               ──✗──▶ TicketRedeemed
-                          │ ✓
-                          ▼
-         V4  exact bijection offered ↔ received?       ──✗──▶ ConservationViolated
-                          │ ✓
-                          ▼
-         V5  each bundle satisfies its own predicate?  ──✗──▶ SessionNotAccepted
-             event · session · section · count                SectionNotAccepted
-             cohesion · adjacency                             CountMismatch
-                          │ ✓                                 NotSameSection
-                          │                                   SeatsNotAdjacent
-                          ▼
-         V6  each net payment within signed budget?    ──✗──▶ BudgetExceeded
-                          │ ✓
-                          ▼
-         V7  Σ netPayment == 0 exactly?                ──✗──▶ PaymentImbalance
-                          │ ✓
-                          ▼
-         V8  every payer has balance and allowance?    ──✗──▶ InsufficientPaymentCapacity
-                          │ ✓
-                          ▼
-              transfer tickets · settle USDC · mark settled · emit
+The core of the project. Every guarantee is enforced here or not at all.
+
+```mermaid
+flowchart TD
+    S["settle intents, legs"] --> V1{"V1 intent live,<br/>unexpired,<br/>signature valid?"}
+    V1 -->|"no"| E1["IntentNotLive<br/>IntentExpired"]
+    V1 -->|"yes"| V2{"V2 every offered ticket<br/>escrowed by its owner?"}
+    V2 -->|"no"| E2["TicketNotEscrowed"]
+    V2 -->|"yes"| V3{"V3 no ticket<br/>already redeemed?"}
+    V3 -->|"no"| E3["TicketRedeemed"]
+    V3 -->|"yes"| V4{"V4 exact bijection<br/>offered to received?"}
+    V4 -->|"no"| E4["ConservationViolated"]
+    V4 -->|"yes"| V5{"V5 each bundle satisfies<br/>its own predicate?"}
+    V5 -->|"no"| E5["SessionNotAccepted<br/>SectionNotAccepted<br/>CountMismatch<br/>NotSameSection<br/>SeatsNotAdjacent"]
+    V5 -->|"yes"| V6{"V6 each net payment<br/>within signed budget?"}
+    V6 -->|"no"| E6["BudgetExceeded"]
+    V6 -->|"yes"| V7{"V7 sum of<br/>netPayment is zero?"}
+    V7 -->|"no"| E7["PaymentImbalance"]
+    V7 -->|"yes"| V8{"V8 every payer has<br/>balance and allowance?"}
+    V8 -->|"no"| E8["InsufficientPaymentCapacity"]
+    V8 -->|"yes"| X["Transfer tickets<br/>Settle USDC<br/>Mark settled<br/>Emit"]
+
+    style X fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+    style E1 fill:#FCEBEB,stroke:#A32D2D,color:#501313
+    style E2 fill:#FCEBEB,stroke:#A32D2D,color:#501313
+    style E3 fill:#FCEBEB,stroke:#A32D2D,color:#501313
+    style E4 fill:#FCEBEB,stroke:#A32D2D,color:#501313
+    style E5 fill:#FCEBEB,stroke:#A32D2D,color:#501313
+    style E6 fill:#FCEBEB,stroke:#A32D2D,color:#501313
+    style E7 fill:#FCEBEB,stroke:#A32D2D,color:#501313
+    style E8 fill:#FCEBEB,stroke:#A32D2D,color:#501313
 ```
 
 Checks first, effects second, interactions last. Nothing transfers until all eight pass.
 
 ### 4. Redemption
 
-```
-   holder opens ticket
-          │
-          ▼
-   contract checks current owner ── previous holder fails here
-          │ ✓
-          ▼
-   redeem() sets status permanently
-          │
-          ▼
-   ticket can never re-enter escrow or a reshuffle
+```mermaid
+flowchart TD
+    A["Holder opens ticket"] --> B{"Caller is<br/>current owner?"}
+    B -->|"no"| C["Rejected<br/>previous holder fails here"]
+    B -->|"yes"| D{"Already<br/>redeemed?"}
+    D -->|"yes"| E["Rejected"]
+    D -->|"no"| F["redeem sets status<br/>permanently"]
+    F --> G["Ticket can never re-enter<br/>escrow or a reshuffle"]
+
+    style B fill:#FAEEDA,stroke:#BA7517,color:#412402
+    style D fill:#FAEEDA,stroke:#BA7517,color:#412402
+    style C fill:#FCEBEB,stroke:#A32D2D,color:#501313
+    style E fill:#FCEBEB,stroke:#A32D2D,color:#501313
+    style G fill:#E1F5EE,stroke:#0F6E56,color:#04342C
 ```
 
 A ticket sitting in escrow must be withdrawn first — revoke the intent, withdraw, then redeem.
@@ -321,82 +332,89 @@ A ticket sitting in escrow must be withdrawn first — revoke the intent, withdr
 
 ## Sequence diagrams
 
-### Happy path — a three-way reshuffle
+### Happy path — a three-way reshuffle with nobody online
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant A as Family A
+    participant B as Family B
+    participant C as Family C
+    participant ESC as Escrow
+    participant REG as IntentRegistry
+    participant SUB as Subgraph
+    participant SOL as Solver
+    participant SET as Settlement
+    participant USDC as USDC
+
+    A->>ESC: deposit Friday A12, A13
+    A->>REG: commit signed intent
+    B->>ESC: deposit Saturday
+    B->>REG: commit signed intent
+    C->>ESC: deposit Sunday
+    C->>REG: commit signed intent
+    REG-->>SUB: IntentCommitted events
+
+    Note over A,C: All three go offline. No further signatures.
+
+    SOL->>SUB: query live intent pool
+    SUB-->>SOL: three standing intents
+    SOL->>SOL: bounded search, rank candidates
+    SOL->>SET: eth_call simulate
+    SET-->>SOL: would succeed
+    SOL->>SET: settle in one transaction
+
+    SET->>REG: read committed predicates
+    SET->>SET: V1 V2 V3 V4 V5 V6 V7 V8
+    SET->>ESC: transfer tickets between owners
+    SET->>USDC: net payments, sum equals zero
+
+    SET-->>A: Settled, Saturday B14 and B15, paid 18 USDC
+    SET-->>B: Settled
+    SET-->>C: Settled
 ```
- A     B     C   Frontend  Registry  Subgraph  Solver  Settlement  Escrow  USDC
- │     │     │      │         │         │        │         │         │      │
- ├─────┼─────┼─────▶│         │         │        │         │         │      │
- │  sign intent     ├────────▶│         │        │         │         │      │
- │     ├─────┼─────▶│         │         │        │         │         │      │
- │     │     ├─────▶│         ├────────▶│        │         │         │      │
- │     │     │      │      events       │        │         │         │      │
- │                                                                          │
- │  all three go offline                                                    │
- │                                                                          │
- │     │     │      │         │         ├───────▶│         │         │      │
- │     │     │      │         │   intent pool    │         │         │      │
- │     │     │      │         │         │  search│         │         │      │
- │     │     │      │         │         │        ├────────▶│         │      │
- │     │     │      │         │         │        │ eth_call simulate  │      │
- │     │     │      │         │         │        │◀────────┤ ok      │      │
- │     │     │      │         │         │        ├────────▶│         │      │
- │     │     │      │         │         │        │  settle │         │      │
- │     │     │      │         │◀─────────────────────────  ├ V1 V2 V3       │
- │     │     │      │         │  read intents    │         ├ V4 V5 V6 V7    │
- │     │     │      │         │         │        │         ├────────▶│      │
- │     │     │      │         │         │        │         │   V8    ├─────▶│
- │     │     │      │         │         │        │         │ tickets move   │
- │     │     │      │         │         │        │         ├───────────────▶│
- │     │     │      │         │         │        │         │   net USDC     │
- │◀────┼─────┼──────────────────── Settled ────────────────┤         │      │
- │     │◀────┼──────────────────── Settled ────────────────┤         │      │
- │     │     │◀───────────────────  Settled ───────────────┤         │      │
-```
 
-No participant signed anything after their initial intent.
+### Rejection path — the contract refuses a malicious proposal
 
-### Rejection path — a malicious proposal
+```mermaid
+sequenceDiagram
+    autonumber
+    participant SOL as Malicious solver
+    participant SET as Settlement
+    participant ESC as Escrow
 
-```
- Solver          Settlement                          Result
-   │                  │
-   ├─── settle() ────▶│
-   │                  ├─ V1  intents live          ✓
-   │                  ├─ V2  tickets escrowed      ✓
-   │                  ├─ V3  none redeemed         ✓
-   │                  ├─ V4  conservation holds    ✓
-   │                  ├─ V5  A wanted adjacent,
-   │                  │      proposal gives B14
-   │                  │      and B27               ✗
-   │◀── revert ───────┤
-   │   SeatsNotAdjacent(0x7f3a…)
-   │
-   │  nothing moved · everyone keeps their tickets
+    SOL->>SET: settle with non-adjacent seats
+    SET->>SET: V1 intents live ✓
+    SET->>SET: V2 tickets escrowed ✓
+    SET->>SET: V3 none redeemed ✓
+    SET->>SET: V4 conservation holds ✓
+    SET->>SET: V5 A required adjacent, got B14 and B27 ✗
+    SET--xSOL: revert SeatsNotAdjacent
+    Note over SET,ESC: Nothing moved. Everyone keeps their tickets.
 ```
 
 The guarantee does not rest on trusting our solver. A different solver could submit anything; the contract still refuses.
 
-### Issuer inventory unlocking a chain
+### Issuer inventory unlocking a broken chain
 
-```
- A            Venue        Solver     Settlement
- │              │            │            │
- ├─ wants Saturday; no user holds one     │
- │              │            │            │
- │              ├───────────▶│            │
- │              │  unsold Saturday in escrow
- │              │            │            │
- │              │            ├───────────▶│
- │              │            │   A     ← Saturday (venue)
- │              │            │   venue ← Friday (A)
- │              │            │   C     ← Friday (venue, same tx)
- │              │            │   B     ← Sunday (C)
- │              │            │            │
- │◀───────────────────── Settled ─────────┤
-```
+```mermaid
+sequenceDiagram
+    autonumber
+    participant A as Family A
+    participant V as Venue
+    participant SOL as Solver
+    participant SET as Settlement
 
-The returned Friday satisfies C in the same transaction that gave A a Saturday.
+    A->>SOL: wants Saturday, no user holds one
+    Note over SOL: No closed cycle exists among users
+    V->>SET: unsold Saturday sits in escrow
+    SOL->>SET: settle including venue as a participant
+    SET->>A: A receives Saturday from venue
+    SET->>V: venue receives A's Friday
+    SET->>SET: that Friday satisfies C in the same transaction
+    SET->>SET: C's Sunday satisfies B
+    Note over A,SET: One issuer ticket started a four-party chain
+```
 
 ---
 
@@ -404,19 +422,21 @@ The returned Friday satisfies C in the same transaction that gave A a Saturday.
 
 | Sponsor | Track | Why |
 |---|---|---|
-| **Arc** | Best DeFi / Onchain Finance | Conditional delivery and multi-party net settlement for non-fungible entitlements. Ticket delivery determines whether payment is permitted; multiple participants' debits and credits correspond within one settlement |
+| **Arc** | Best DeFi / Onchain Finance | Conditional delivery and multi-party net settlement for non-fungible entitlements. Ticket delivery determines whether payment is permitted; every participant's debits and credits correspond within one settlement |
 | **The Graph** | AI Use Case — From Scratch | Live indexed data drives the solver and the agent. Change a budget and the answer changes, because the pool is re-queried |
 | **Arc** | Launch on Testnet & Push to Mainnet | *Conditional.* Its examples include stablecoin settlement and escrow logic added to a marketplace. Mainnet readiness is a separate bar — confirming what qualifies before committing |
 
 ### How Arc is load-bearing
 
-```
-   ticket conditions satisfied?
-            │
-            ├── no ──▶ no payment occurs at all
-            │
-            └── yes ─▶ USDC nets across all participants
-                       A −50 · D −100 · B +120 · C +30 · Σ = 0
+```mermaid
+flowchart TD
+    A{"Every ticket condition<br/>satisfied?"} -->|"no"| B["No payment occurs at all"]
+    A -->|"yes"| C["USDC nets across all participants"]
+    C --> D["A −50 · D −100<br/>B +120 · C +30<br/>sum equals zero"]
+
+    style A fill:#FAEEDA,stroke:#BA7517,color:#412402
+    style B fill:#FCEBEB,stroke:#A32D2D,color:#501313
+    style D fill:#E6F1FB,stroke:#185FA5,color:#042C53
 ```
 
 Money is not appended at the end. Delivery gates payment, and every participant's cash position resolves in the same settlement.
@@ -427,11 +447,16 @@ Intents live in a Solidity mapping, and mappings cannot be enumerated on-chain. 
 
 More importantly, intents are **persistent**:
 
-```
-   Monday    intent signed          no solution
-   Tuesday   venue releases 20      the same intent becomes
-             tickets                satisfiable, with the user
-                                    doing nothing
+```mermaid
+flowchart LR
+    M["Monday<br/>intent signed"] --> N["No solution<br/>found"]
+    N --> T["Tuesday<br/>venue releases<br/>20 tickets"]
+    T --> S["Subgraph indexes<br/>new inventory"]
+    S --> R["The same intent<br/>becomes satisfiable"]
+    R --> X["Settles, with the user<br/>doing nothing"]
+
+    style N fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+    style X fill:#E1F5EE,stroke:#0F6E56,color:#04342C
 ```
 
 The market changes around a standing intent. That is what live indexed data is for.
@@ -472,6 +497,9 @@ No. ERC-20 approval is a spending allowance, not a reservation, and escrowed tic
 **Does this work with my Ticketmaster tickets?**
 No. Only tickets issued by contracts in our registry. Minting an NFT from a PDF transfers nothing. This is a post-allocation reshuffling layer for issuer-native tickets, not a replacement for existing platforms.
 
+**Why do tickets have to be NFTs?**
+Because the contract has to be able to refuse. Adjacency, cohesion and conservation are checked against on-chain ticket data; escrow ownership and redemption status are read at settlement; the transfer itself is what makes the reshuffle atomic. If a ticket were a database row, none of that could happen and users would be back to trusting our server.
+
 **What stops scalpers?**
 Nothing here. This reallocates tickets that have already been sold; it creates no seats and prevents no bot from buying them in the first place.
 
@@ -503,7 +531,7 @@ src/
   TicketNFT.sol        ERC-721, packed metadata, redemption
   Escrow.sol           custody, unconditional withdrawal
   IntentRegistry.sol   EIP-712 commitment and revocation
-  Settlement.sol       V1–V8 validation, atomic execution
+  Settlement.sol       V1-V8 validation, atomic execution
 test/
   Settlement.t.sol     the rejection table
 script/
