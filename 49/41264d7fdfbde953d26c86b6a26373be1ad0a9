@@ -1,0 +1,35 @@
+docs/RESHUFFLE_BRIEF.md
+  a05b02b6861160e8 1-270
+references/solver.md
+  a05b02b6861160e8 1-77
+docs/RESHUFFLE_PRD.md
+  a05b02b6861160e8 1-186
+CLAUDE.md
+  a05b02b6861160e8 1
+docs/RESHUFFLE_TRD.md
+  a05b02b6861160e8 1-344
+references/contracts.md
+  a05b02b6861160e8 1-164
+references/demo.md
+  a05b02b6861160e8 1-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2-bit.10+672fbf0",
+  "base_commit_sha": "4941264d7fdfbde953d26c86b6a26373be1ad0a9",
+  "prompts": {
+    "a05b02b6861160e8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "86fe6e77-a3a1-4bd2-9752-c5e224cfd90a",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "angel.phoon",
+      "messages": [],
+      "total_additions": 1144,
+      "total_deletions": 232539,
+      "accepted_lines": 1144,
+      "overriden_lines": 0
+    }
+  }
+}
