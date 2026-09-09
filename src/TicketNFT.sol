@@ -81,6 +81,10 @@ contract TicketNFT is ERC721 {
         emit TicketRedeemedEvt(tokenId, msg.sender);
     }
 
+    function nextTokenId() external view returns (uint256) {
+        return _nextTokenId;
+    }
+
     function isRedeemed(uint256 tokenId) external view returns (bool) {
         return meta[tokenId].status == REDEEMED;
     }
