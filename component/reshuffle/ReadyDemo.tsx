@@ -99,6 +99,7 @@ export default function ReadyDemo() {
       <Link href="/demo/act-one" className="mt-3 inline-block text-sm text-blue-300 underline">Act one: six tickets exchanged in one confirmed transaction →</Link>
       <Link href="/demo/act-two" className="mt-3 block text-sm text-blue-300 underline">Act two: a buyer and seller complete an open chain →</Link>
       <Link href="/demo/act-three" className="mt-3 block text-sm text-blue-300 underline">Act three: the contract rejects a malicious solver →</Link>
+      <Link href="/demo/offline" className="mt-3 block text-sm text-emerald-300 underline">Pre-authorization proof: close the page, the solver still settles →</Link>
       <p className="mt-3 max-w-3xl text-white/60">The participants have already signed their conditions and deposited their tickets. Explore the live intents and run the solver without connecting a wallet. A proposer only needs a funded Arc wallet to submit the settlement.</p>
     </div>
     <ArcGasNotice />

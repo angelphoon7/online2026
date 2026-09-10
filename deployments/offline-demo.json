@@ -1,0 +1,468 @@
+{
+  "chainId": 5042002,
+  "settlement": "0x75872168f2d6ae13c7d9258159e59025fd9b5eae",
+  "readyBlock": "61378323",
+  "participants": [
+    {
+      "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+      "intentHash": "0xa99170602334c3d77fc2192e616d25633f5a8e67d563089f230ddcab4682de1d",
+      "commitTransactionHash": "0x2f2c6c1324001fd339195b695d639b4837afc8ee083abd6217c55ed3772ef404",
+      "nonceAtClose": 127
+    },
+    {
+      "owner": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+      "intentHash": "0x42134bc9b4e4e731a028a4e0cdef32f678145ac39c0f70caafae0751bfc2ec3f",
+      "commitTransactionHash": "0x3867297b07d417dd4f685110afd5486d33cd20a59f7c68e28cccda419698c4c7",
+      "nonceAtClose": 27
+    },
+    {
+      "owner": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+      "intentHash": "0xa8c78ccfb89b6964954822e7ea28747782b0381e5d3f6d1f3c1b7abb81d2aa68",
+      "commitTransactionHash": "0x2705e03c3aff64fe8956523de348c3bb10cde5b404637ae15f17360fd6a3f72d",
+      "nonceAtClose": 26
+    }
+  ],
+  "closure": {
+    "source": "local Chrome CDP harness; not a chain attestation",
+    "mode": "headless controlled test wallet",
+    "browserPid": 34840,
+    "requestedAt": "2026-09-10T09:43:43.504Z",
+    "exitedAt": "2026-09-10T09:43:43.794Z",
+    "exitCode": 0,
+    "signingServerClosedAt": "2026-09-10T09:43:43.795Z",
+    "authorizations": [
+      {
+        "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+        "intentHash": "0xa99170602334c3d77fc2192e616d25633f5a8e67d563089f230ddcab4682de1d",
+        "transactionHash": "0x2f2c6c1324001fd339195b695d639b4837afc8ee083abd6217c55ed3772ef404"
+      },
+      {
+        "owner": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "intentHash": "0x42134bc9b4e4e731a028a4e0cdef32f678145ac39c0f70caafae0751bfc2ec3f",
+        "transactionHash": "0x3867297b07d417dd4f685110afd5486d33cd20a59f7c68e28cccda419698c4c7"
+      },
+      {
+        "owner": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "intentHash": "0xa8c78ccfb89b6964954822e7ea28747782b0381e5d3f6d1f3c1b7abb81d2aa68",
+        "transactionHash": "0x2705e03c3aff64fe8956523de348c3bb10cde5b404637ae15f17360fd6a3f72d"
+      }
+    ]
+  },
+  "setupTransactions": [
+    {
+      "label": "mint:0",
+      "transactionHash": "0x84473fa81e191fd0eb4b1b9a53f421f16965b164bf87244ed91301f0e1580f9c",
+      "blockNumber": "61378220"
+    },
+    {
+      "label": "mint:1",
+      "transactionHash": "0x58b2d28cb07a8ec08abaa85c55f03e15e19e31aee9fe87adf21d91b4c3aa62fd",
+      "blockNumber": "61378228"
+    },
+    {
+      "label": "mint:2",
+      "transactionHash": "0x615686647560655dd286f547d6ee3540fab537feb5fc2fcef9e757e664316567",
+      "blockNumber": "61378237"
+    },
+    {
+      "label": "mint:3",
+      "transactionHash": "0xab003269b4bf275bbad73b612c07c2336def91b010a2770e16bf884e6cec175e",
+      "blockNumber": "61378246"
+    },
+    {
+      "label": "mint:4",
+      "transactionHash": "0x37916b02b454477e290dd49e09b36e37603a9b6c3654e3d99a93f239edf3b608",
+      "blockNumber": "61378255"
+    },
+    {
+      "label": "mint:5",
+      "transactionHash": "0x9571ebcc33472e525d75265a8108a24aac0db2db4bb0868a160076d0d51056fd",
+      "blockNumber": "61378262"
+    },
+    {
+      "label": "deposit:0",
+      "transactionHash": "0x49fc7efc84f7520538d4b0434245852afc5989d195eddf295805988d0addf0e3",
+      "blockNumber": "61378273"
+    },
+    {
+      "label": "commit:0",
+      "transactionHash": "0x2f2c6c1324001fd339195b695d639b4837afc8ee083abd6217c55ed3772ef404",
+      "blockNumber": "61378281"
+    },
+    {
+      "label": "deposit:1",
+      "transactionHash": "0x8d48be8601e9c173e7ea0c4a95ed6e472defcb2f59ae119ed8027c19afcd4027",
+      "blockNumber": "61378291"
+    },
+    {
+      "label": "commit:1",
+      "transactionHash": "0x3867297b07d417dd4f685110afd5486d33cd20a59f7c68e28cccda419698c4c7",
+      "blockNumber": "61378300"
+    },
+    {
+      "label": "deposit:2",
+      "transactionHash": "0xfb14e216fbe51f6dc23daae8d53801c054d0723bc1990d9fbbbd882dc1c96db3",
+      "blockNumber": "61378309"
+    },
+    {
+      "label": "commit:2",
+      "transactionHash": "0x2705e03c3aff64fe8956523de348c3bb10cde5b404637ae15f17360fd6a3f72d",
+      "blockNumber": "61378317"
+    }
+  ],
+  "participantProcess": {
+    "pid": 16156,
+    "exitCode": 0,
+    "exitedAt": "2026-09-10T09:43:46.796Z"
+  },
+  "solverProcess": {
+    "pid": 34184,
+    "startedAt": "2026-09-10T09:43:48.849Z",
+    "address": "0x0dcd390c1df4cd14DE2EB9bbB53271ae9f48e034",
+    "credential": "SOLVER_PRIVATE_KEY only; no participant key in child environment"
+  },
+  "evidence": {
+    "timestamp": "2026-09-10T09:43:54.152Z",
+    "intentsConsidered": 3,
+    "candidatesFound": 1,
+    "candidatesExcluded": [
+      {
+        "intentHashes": [
+          "0x42134bc9b4e4e731a028a4e0cdef32f678145ac39c0f70caafae0751bfc2ec3f",
+          "0xa8c78ccfb89b6964954822e7ea28747782b0381e5d3f6d1f3c1b7abb81d2aa68"
+        ],
+        "reason": "No feasible payment distribution"
+      },
+      {
+        "intentHashes": [
+          "0x42134bc9b4e4e731a028a4e0cdef32f678145ac39c0f70caafae0751bfc2ec3f",
+          "0xa99170602334c3d77fc2192e616d25633f5a8e67d563089f230ddcab4682de1d"
+        ],
+        "reason": "No valid ticket assignment satisfying all predicates"
+      },
+      {
+        "intentHashes": [
+          "0xa8c78ccfb89b6964954822e7ea28747782b0381e5d3f6d1f3c1b7abb81d2aa68",
+          "0xa99170602334c3d77fc2192e616d25633f5a8e67d563089f230ddcab4682de1d"
+        ],
+        "reason": "No valid ticket assignment satisfying all predicates"
+      }
+    ],
+    "chosen": {
+      "intentHashes": [
+        "0x42134bc9b4e4e731a028a4e0cdef32f678145ac39c0f70caafae0751bfc2ec3f",
+        "0xa8c78ccfb89b6964954822e7ea28747782b0381e5d3f6d1f3c1b7abb81d2aa68",
+        "0xa99170602334c3d77fc2192e616d25633f5a8e67d563089f230ddcab4682de1d"
+      ],
+      "gross": "100000",
+      "reason": "Least cash moved among 1 candidate found within the search budget: 100000 gross, 3 participants"
+    },
+    "chainId": 5042002,
+    "registry": "0x479b4455f494679dcdd6f6f32e93e08682deda75",
+    "settlement": "0x75872168f2d6ae13c7d9258159e59025fd9b5eae",
+    "source": {
+      "kind": "rpc",
+      "subgraphEndpoint": null,
+      "blockNumber": "61378335",
+      "blockHash": "0x499730a59b206cf061d587befdaeedfe5cae053c93c68c1c4a905eeb1ae0dc04"
+    },
+    "requestedIntentHashes": [
+      "0x42134bc9b4e4e731a028a4e0cdef32f678145ac39c0f70caafae0751bfc2ec3f",
+      "0xa8c78ccfb89b6964954822e7ea28747782b0381e5d3f6d1f3c1b7abb81d2aa68",
+      "0xa99170602334c3d77fc2192e616d25633f5a8e67d563089f230ddcab4682de1d"
+    ],
+    "searchConfig": {
+      "maxParticipants": 4,
+      "maxCandidates": 100,
+      "timeoutMs": 2000
+    },
+    "runtimeMs": 12.88149999990128,
+    "simulationBlock": "61378345",
+    "simulationResult": {
+      "success": true
+    },
+    "proposal": {
+      "intents": [
+        {
+          "owner": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+          "eventId": 1,
+          "offered": [
+            "30",
+            "31"
+          ],
+          "sessionMask": "1",
+          "sectionMask": "2",
+          "exactCount": 2,
+          "mustShareSession": true,
+          "mustShareSection": true,
+          "mustBeAdjacent": true,
+          "maxNetPay": "0",
+          "deadline": "1791625362",
+          "nonce": "14"
+        },
+        {
+          "owner": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+          "eventId": 1,
+          "offered": [
+            "32",
+            "33"
+          ],
+          "sessionMask": "1",
+          "sectionMask": "1",
+          "exactCount": 2,
+          "mustShareSession": true,
+          "mustShareSection": true,
+          "mustBeAdjacent": true,
+          "maxNetPay": "-100000",
+          "deadline": "1791625362",
+          "nonce": "14"
+        },
+        {
+          "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+          "eventId": 1,
+          "offered": [
+            "28",
+            "29"
+          ],
+          "sessionMask": "2",
+          "sectionMask": "1",
+          "exactCount": 2,
+          "mustShareSession": true,
+          "mustShareSection": true,
+          "mustBeAdjacent": true,
+          "maxNetPay": "100000",
+          "deadline": "1791625362",
+          "nonce": "14"
+        }
+      ],
+      "legs": [
+        {
+          "intentHash": "0x42134bc9b4e4e731a028a4e0cdef32f678145ac39c0f70caafae0751bfc2ec3f",
+          "receives": [
+            "32",
+            "33"
+          ],
+          "netPayment": "0"
+        },
+        {
+          "intentHash": "0xa8c78ccfb89b6964954822e7ea28747782b0381e5d3f6d1f3c1b7abb81d2aa68",
+          "receives": [
+            "28",
+            "29"
+          ],
+          "netPayment": "-100000"
+        },
+        {
+          "intentHash": "0xa99170602334c3d77fc2192e616d25633f5a8e67d563089f230ddcab4682de1d",
+          "receives": [
+            "30",
+            "31"
+          ],
+          "netPayment": "100000"
+        }
+      ]
+    },
+    "transaction": {
+      "to": "0x75872168f2d6ae13c7d9258159e59025fd9b5eae",
+      "data": "0x719abecf0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000066000000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000024000000000000000000000000000000000000000000000000000000000000004200000000000000000000000008c3345e88cb68f16dc31f88ee21b2032a5250e90000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006aca0892000000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000001e000000000000000000000000000000000000000000000000000000000000001f000000000000000000000000c1d189f4fad5bbae8cf972cb59e669441d813fbb00000000000000000000000000000000000000000000000000000000000001800000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe7960000000000000000000000000000000000000000000000000000000006aca0892000000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000021000000000000000000000000a8dae73bde3a5c0e412884c9be2039a79dfb31fd0000000000000000000000000000000000000000000000000000000000000180000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000186a0000000000000000000000000000000000000000000000000000000006aca0892000000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000001c000000000000000000000000000000000000000000000000000000000000001d00000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000001e042134bc9b4e4e731a028a4e0cdef32f678145ac39c0f70caafae0751bfc2ec3f00000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000021a8c78ccfb89b6964954822e7ea28747782b0381e5d3f6d1f3c1b7abb81d2aa680000000000000000000000000000000000000000000000000000000000000060fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe79600000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000001c000000000000000000000000000000000000000000000000000000000000001da99170602334c3d77fc2192e616d25633f5a8e67d563089f230ddcab4682de1d000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000186a00000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000001e000000000000000000000000000000000000000000000000000000000000001f",
+      "gas": "8000000",
+      "chainId": 5042002
+    },
+    "message": "Candidate found within the search budget",
+    "id": "4a2f9d4b-6246-41f6-8a66-c06c509b2aae",
+    "transactionHash": "0xffd5f35dcac46cd52c6593d6c2a34a74b07ed4859c848b39ba09421e109d07c9",
+    "receipt": {
+      "status": "success",
+      "blockNumber": "61378348",
+      "blockHash": "0x03ee2dd60575e39883cb441567320ead81dd8183e6227c79683cb50cc1d687db",
+      "participantCount": "3",
+      "confirmed": true
+    }
+  },
+  "transactionHash": "0xffd5f35dcac46cd52c6593d6c2a34a74b07ed4859c848b39ba09421e109d07c9",
+  "submissionPreparedAt": "2026-09-10T09:43:54.976Z",
+  "title": "Sign once, close the page, settle with an independent solver",
+  "proof": {
+    "chainId": 5042002,
+    "transactionHash": "0xffd5f35dcac46cd52c6593d6c2a34a74b07ed4859c848b39ba09421e109d07c9",
+    "blockNumber": "61378348",
+    "blockHash": "0x03ee2dd60575e39883cb441567320ead81dd8183e6227c79683cb50cc1d687db",
+    "beforeBlock": "61378347",
+    "checkedAt": "2026-09-10T09:44:02.372Z",
+    "status": "verified",
+    "settlement": "0x75872168f2d6ae13c7d9258159e59025fd9b5eae",
+    "ticketNFT": "0xb2490568bb27c9c38588e3b5511ee3980892cce4",
+    "escrow": "0x07ab57380db7df630fab2d3d3a1019a5a890b018",
+    "participantCount": 3,
+    "ticketTransferCount": 6,
+    "settlementTransactionCount": 1,
+    "tickets": [
+      {
+        "tokenId": "32",
+        "previousParticipant": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "recipient": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "transferFrom": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+        "logIndex": 55,
+        "meta": {
+          "eventId": 1,
+          "sessionId": 0,
+          "sectionId": 1,
+          "row": 5,
+          "seat": 1,
+          "status": 0
+        }
+      },
+      {
+        "tokenId": "33",
+        "previousParticipant": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "recipient": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "transferFrom": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+        "logIndex": 56,
+        "meta": {
+          "eventId": 1,
+          "sessionId": 0,
+          "sectionId": 1,
+          "row": 5,
+          "seat": 2,
+          "status": 0
+        }
+      },
+      {
+        "tokenId": "28",
+        "previousParticipant": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+        "recipient": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "transferFrom": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+        "logIndex": 57,
+        "meta": {
+          "eventId": 1,
+          "sessionId": 0,
+          "sectionId": 0,
+          "row": 5,
+          "seat": 1,
+          "status": 0
+        }
+      },
+      {
+        "tokenId": "29",
+        "previousParticipant": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+        "recipient": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "transferFrom": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+        "logIndex": 58,
+        "meta": {
+          "eventId": 1,
+          "sessionId": 0,
+          "sectionId": 0,
+          "row": 5,
+          "seat": 2,
+          "status": 0
+        }
+      },
+      {
+        "tokenId": "30",
+        "previousParticipant": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "recipient": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+        "transferFrom": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+        "logIndex": 59,
+        "meta": {
+          "eventId": 1,
+          "sessionId": 1,
+          "sectionId": 0,
+          "row": 5,
+          "seat": 1,
+          "status": 0
+        }
+      },
+      {
+        "tokenId": "31",
+        "previousParticipant": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "recipient": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+        "transferFrom": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+        "logIndex": 60,
+        "meta": {
+          "eventId": 1,
+          "sessionId": 1,
+          "sectionId": 0,
+          "row": 5,
+          "seat": 2,
+          "status": 0
+        }
+      }
+    ],
+    "participants": [
+      {
+        "owner": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "offered": [
+          "30",
+          "31"
+        ],
+        "received": [
+          "32",
+          "33"
+        ],
+        "netPayment": "0",
+        "intentHash": "0x42134bc9b4e4e731a028a4e0cdef32f678145ac39c0f70caafae0751bfc2ec3f"
+      },
+      {
+        "owner": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "offered": [
+          "32",
+          "33"
+        ],
+        "received": [
+          "28",
+          "29"
+        ],
+        "netPayment": "-100000",
+        "intentHash": "0xa8c78ccfb89b6964954822e7ea28747782b0381e5d3f6d1f3c1b7abb81d2aa68"
+      },
+      {
+        "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+        "offered": [
+          "28",
+          "29"
+        ],
+        "received": [
+          "30",
+          "31"
+        ],
+        "netPayment": "100000",
+        "intentHash": "0xa99170602334c3d77fc2192e616d25633f5a8e67d563089f230ddcab4682de1d"
+      }
+    ],
+    "proposer": "0x0dcd390c1df4cd14de2eb9bbb53271ae9f48e034",
+    "authorizations": [
+      {
+        "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+        "intentHash": "0xa99170602334c3d77fc2192e616d25633f5a8e67d563089f230ddcab4682de1d",
+        "commitTransactionHash": "0x2f2c6c1324001fd339195b695d639b4837afc8ee083abd6217c55ed3772ef404",
+        "nonceAtClose": 127,
+        "commitBlock": "61378281",
+        "nonceAtSettlement": 127,
+        "signatureRecovered": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD"
+      },
+      {
+        "owner": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "intentHash": "0x42134bc9b4e4e731a028a4e0cdef32f678145ac39c0f70caafae0751bfc2ec3f",
+        "commitTransactionHash": "0x3867297b07d417dd4f685110afd5486d33cd20a59f7c68e28cccda419698c4c7",
+        "nonceAtClose": 27,
+        "commitBlock": "61378300",
+        "nonceAtSettlement": 27,
+        "signatureRecovered": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90"
+      },
+      {
+        "owner": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "intentHash": "0xa8c78ccfb89b6964954822e7ea28747782b0381e5d3f6d1f3c1b7abb81d2aa68",
+        "commitTransactionHash": "0x2705e03c3aff64fe8956523de348c3bb10cde5b404637ae15f17360fd6a3f72d",
+        "nonceAtClose": 26,
+        "commitBlock": "61378317",
+        "nonceAtSettlement": 26,
+        "signatureRecovered": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB"
+      }
+    ],
+    "settlementArguments": [
+      "intents",
+      "legs"
+    ],
+    "readyBlock": "61378323"
+  }
+}
