@@ -63,7 +63,7 @@ interface IntentDisplay {
 type DemoScene = 'overview' | 'cycle' | 'chain' | 'refusal';
 
 export default function ReshufflePage() {
-  const { account, chainId, connect } = useWallet();
+  const { account, chainId, connect, isConnecting, error: walletError } = useWallet();
   const [scene, setScene] = useState<DemoScene>('overview');
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [intents, setIntents] = useState<IntentDisplay[]>([]);
@@ -139,10 +139,13 @@ export default function ReshufflePage() {
         <button
           type="button"
           onClick={connect}
+          disabled={isConnecting}
           className="rounded bg-blue-600 px-6 py-3 text-white transition-colors hover:bg-blue-500"
         >
-          Connect Wallet
+          {isConnecting ? 'Connecting...' : 'Connect Wallet'}
         </button>
+        {isConnecting && <p role="status" className="mt-3 max-w-xl text-sm text-white/60">Open MetaMask from your browser toolbar and approve the connection. Waiting for the wallet to respond…</p>}
+        {walletError && <p role="alert" className="mt-4 max-w-xl text-sm text-red-300">{walletError}</p>}
       </div>
     );
   }
@@ -158,6 +161,8 @@ export default function ReshufflePage() {
           </span>
         </div>
       </header>
+
+      {walletError && <p role="alert" className="px-6 pt-4 text-sm text-red-300">{walletError}</p>}
 
       <div className="px-6 py-4">
         <ArcWalletBalance key={account} account={account} walletChainId={chainId} />

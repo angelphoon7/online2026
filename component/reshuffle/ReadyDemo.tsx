@@ -24,7 +24,7 @@ function acceptedNames(mask: string, name: (id: number) => string) {
 }
 
 export default function ReadyDemo() {
-  const { account, chainId, connect } = useWallet();
+  const { account, chainId, connect, isConnecting, error: walletError } = useWallet();
   const [intents, setIntents] = useState<DemoIntent[]>([]);
   const [selected, setSelected] = useState<Hex[]>([]);
   const [proposal, setProposal] = useState<SettlementProposal | null>(null);
@@ -141,10 +141,12 @@ export default function ReadyDemo() {
       <SettlementView legs={proposal.legs} gross={proposal.gross} candidateCount={proposal.candidatesFound}
         status={status} txHash={txHash} evidence={evidence}
         onSubmit={!busy && account && chainId === 5042002 && CHAIN.id === 5042002 ? () => void submit() : undefined} />
-      {status === 'simulated' && !account && <button onClick={() => void connect().catch(() => setError('Wallet connection was not completed.'))} className="self-start rounded bg-blue-600 px-4 py-2">Connect proposer wallet to settle</button>}
+      {status === 'simulated' && !account && <button onClick={() => void connect()} disabled={isConnecting} className="self-start rounded bg-blue-600 px-4 py-2 disabled:opacity-50">{isConnecting ? 'Connecting...' : 'Connect proposer wallet to settle'}</button>}
       {status === 'simulated' && account && chainId !== 5042002 && <p className="text-amber-200">Switch your wallet to Arc Testnet (5042002) to submit.</p>}
       {status === 'settled' && <p className="text-sm text-white/60">This round is complete. The operator can rerun demo:prepare for the next recording.</p>}
     </>}
+    {walletError && <p role="alert" className="text-sm text-red-300">{walletError}</p>}
+    {isConnecting && <p role="status" className="text-sm text-white/60">Open MetaMask from your browser toolbar and approve the connection. Waiting for the wallet to respond…</p>}
     <EvidencePanel evidence={evidence} />
   </main>;
 }
