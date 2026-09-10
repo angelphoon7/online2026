@@ -16,6 +16,8 @@
     "demo:act-one": "node scripts/act-one.mjs",
     "predemo:act-two": "npm --prefix solver run build",
     "demo:act-two": "node scripts/act-two.mjs",
+    "predemo:act-three": "npm --prefix solver run build",
+    "demo:act-three": "node scripts/act-three.mjs",
     "arc:deploy:simulate": "node scripts/deploy-arc.mjs",
     "arc:deploy": "node scripts/arc-live.mjs deploy",
     "arc:seed": "node scripts/arc-live.mjs seed",

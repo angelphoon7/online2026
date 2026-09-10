@@ -1,0 +1,390 @@
+{
+  "title": "Act three: an untrusted proposer is rejected by on-chain adjacency checks",
+  "proposer": "0x0dcd390c1df4cd14DE2EB9bbB53271ae9f48e034",
+  "transactionHash": "0x087f78f9bdc54b5f9bb8f6939f2a4633ee1f554e8fc198cc75739b1b722279fe",
+  "control": {
+    "timestamp": "2026-09-10T09:13:30.021Z",
+    "intentsConsidered": 3,
+    "candidatesFound": 2,
+    "candidatesExcluded": [
+      {
+        "intentHashes": [
+          "0x125054f2f4e4a7e939dd6442c45dfa9377642294bf41d52492cda35d507a967e",
+          "0x89841b6200d5df3506d16d670b5d495f9ef94188c737d9cc6745a41d6864ec7e"
+        ],
+        "reason": "V4: Offered and received ticket counts differ"
+      },
+      {
+        "intentHashes": [
+          "0x125054f2f4e4a7e939dd6442c45dfa9377642294bf41d52492cda35d507a967e",
+          "0x989a2d716c820647d580b7646f9f579c48a312194820e6657a78148b6b55f4b3"
+        ],
+        "reason": "V4: Offered and received ticket counts differ"
+      },
+      {
+        "intentHashes": [
+          "0x89841b6200d5df3506d16d670b5d495f9ef94188c737d9cc6745a41d6864ec7e",
+          "0x989a2d716c820647d580b7646f9f579c48a312194820e6657a78148b6b55f4b3"
+        ],
+        "reason": "V4: Offered and received ticket counts differ"
+      }
+    ],
+    "chosen": {
+      "intentHashes": [
+        "0x125054f2f4e4a7e939dd6442c45dfa9377642294bf41d52492cda35d507a967e",
+        "0x89841b6200d5df3506d16d670b5d495f9ef94188c737d9cc6745a41d6864ec7e",
+        "0x989a2d716c820647d580b7646f9f579c48a312194820e6657a78148b6b55f4b3"
+      ],
+      "gross": "200000",
+      "reason": "Least cash moved among 2 candidates found within the search budget: 200000 gross, 3 participants"
+    },
+    "chainId": 5042002,
+    "registry": "0x479b4455f494679dcdd6f6f32e93e08682deda75",
+    "settlement": "0x75872168f2d6ae13c7d9258159e59025fd9b5eae",
+    "source": {
+      "kind": "rpc",
+      "subgraphEndpoint": null,
+      "blockNumber": "61374875",
+      "blockHash": "0x0ff6476b33175fd225a94e96aef3755c4432ae4362bb53354c92c297af4ffd91"
+    },
+    "requestedIntentHashes": [
+      "0x125054f2f4e4a7e939dd6442c45dfa9377642294bf41d52492cda35d507a967e",
+      "0x89841b6200d5df3506d16d670b5d495f9ef94188c737d9cc6745a41d6864ec7e",
+      "0x989a2d716c820647d580b7646f9f579c48a312194820e6657a78148b6b55f4b3"
+    ],
+    "searchConfig": {
+      "maxParticipants": 4,
+      "maxCandidates": 100,
+      "timeoutMs": 2000
+    },
+    "runtimeMs": 5.4627000000327826,
+    "simulationBlock": "61374884",
+    "simulationResult": {
+      "success": true
+    },
+    "proposal": {
+      "intents": [
+        {
+          "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+          "eventId": 1,
+          "offered": [],
+          "sessionMask": "1",
+          "sectionMask": "1",
+          "exactCount": 2,
+          "mustShareSession": true,
+          "mustShareSection": true,
+          "mustBeAdjacent": true,
+          "maxNetPay": "100000",
+          "deadline": "1791623438",
+          "nonce": "13"
+        },
+        {
+          "owner": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+          "eventId": 1,
+          "offered": [],
+          "sessionMask": "1",
+          "sectionMask": "1",
+          "exactCount": 2,
+          "mustShareSession": true,
+          "mustShareSection": true,
+          "mustBeAdjacent": true,
+          "maxNetPay": "100000",
+          "deadline": "1791623438",
+          "nonce": "13"
+        },
+        {
+          "owner": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+          "eventId": 1,
+          "offered": [
+            "24",
+            "25",
+            "26",
+            "27"
+          ],
+          "sessionMask": "1",
+          "sectionMask": "1",
+          "exactCount": 0,
+          "mustShareSession": false,
+          "mustShareSection": false,
+          "mustBeAdjacent": false,
+          "maxNetPay": "-200000",
+          "deadline": "1791623438",
+          "nonce": "13"
+        }
+      ],
+      "legs": [
+        {
+          "intentHash": "0x125054f2f4e4a7e939dd6442c45dfa9377642294bf41d52492cda35d507a967e",
+          "receives": [
+            "24",
+            "25"
+          ],
+          "netPayment": "100000"
+        },
+        {
+          "intentHash": "0x89841b6200d5df3506d16d670b5d495f9ef94188c737d9cc6745a41d6864ec7e",
+          "receives": [
+            "26",
+            "27"
+          ],
+          "netPayment": "100000"
+        },
+        {
+          "intentHash": "0x989a2d716c820647d580b7646f9f579c48a312194820e6657a78148b6b55f4b3",
+          "receives": [],
+          "netPayment": "-200000"
+        }
+      ]
+    },
+    "transaction": {
+      "to": "0x75872168f2d6ae13c7d9258159e59025fd9b5eae",
+      "data": "0x719abecf0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000062000000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000003a0000000000000000000000000a8dae73bde3a5c0e412884c9be2039a79dfb31fd0000000000000000000000000000000000000000000000000000000000000180000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000186a0000000000000000000000000000000000000000000000000000000006aca010e000000000000000000000000000000000000000000000000000000000000000d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c1d189f4fad5bbae8cf972cb59e669441d813fbb0000000000000000000000000000000000000000000000000000000000000180000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000186a0000000000000000000000000000000000000000000000000000000006aca010e000000000000000000000000000000000000000000000000000000000000000d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000008c3345e88cb68f16dc31f88ee21b2032a5250e9000000000000000000000000000000000000000000000000000000000000001800000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcf2c0000000000000000000000000000000000000000000000000000000006aca010e000000000000000000000000000000000000000000000000000000000000000d000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000180000000000000000000000000000000000000000000000000000000000000019000000000000000000000000000000000000000000000000000000000000001a000000000000000000000000000000000000000000000000000000000000001b00000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000001e0125054f2f4e4a7e939dd6442c45dfa9377642294bf41d52492cda35d507a967e000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000186a000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000001989841b6200d5df3506d16d670b5d495f9ef94188c737d9cc6745a41d6864ec7e000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000186a00000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000001a000000000000000000000000000000000000000000000000000000000000001b989a2d716c820647d580b7646f9f579c48a312194820e6657a78148b6b55f4b30000000000000000000000000000000000000000000000000000000000000060fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcf2c00000000000000000000000000000000000000000000000000000000000000000",
+      "gas": "8000000",
+      "chainId": 5042002
+    },
+    "message": "Candidate found within the search budget",
+    "id": "c51fd5ec-b8dd-41dc-b428-5b343d453710"
+  },
+  "malicious": {
+    "intents": [
+      {
+        "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+        "eventId": 1,
+        "offered": [],
+        "sessionMask": "1",
+        "sectionMask": "1",
+        "exactCount": 2,
+        "mustShareSession": true,
+        "mustShareSection": true,
+        "mustBeAdjacent": true,
+        "maxNetPay": "100000",
+        "deadline": "1791623438",
+        "nonce": "13"
+      },
+      {
+        "owner": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "eventId": 1,
+        "offered": [],
+        "sessionMask": "1",
+        "sectionMask": "1",
+        "exactCount": 2,
+        "mustShareSession": true,
+        "mustShareSection": true,
+        "mustBeAdjacent": true,
+        "maxNetPay": "100000",
+        "deadline": "1791623438",
+        "nonce": "13"
+      },
+      {
+        "owner": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "eventId": 1,
+        "offered": [
+          "24",
+          "25",
+          "26",
+          "27"
+        ],
+        "sessionMask": "1",
+        "sectionMask": "1",
+        "exactCount": 0,
+        "mustShareSession": false,
+        "mustShareSection": false,
+        "mustBeAdjacent": false,
+        "maxNetPay": "-200000",
+        "deadline": "1791623438",
+        "nonce": "13"
+      }
+    ],
+    "legs": [
+      {
+        "intentHash": "0x125054f2f4e4a7e939dd6442c45dfa9377642294bf41d52492cda35d507a967e",
+        "receives": [
+          "24",
+          "26"
+        ],
+        "netPayment": "100000"
+      },
+      {
+        "intentHash": "0x89841b6200d5df3506d16d670b5d495f9ef94188c737d9cc6745a41d6864ec7e",
+        "receives": [
+          "25",
+          "27"
+        ],
+        "netPayment": "100000"
+      },
+      {
+        "intentHash": "0x989a2d716c820647d580b7646f9f579c48a312194820e6657a78148b6b55f4b3",
+        "receives": [],
+        "netPayment": "-200000"
+      }
+    ]
+  },
+  "preflight": {
+    "good": {
+      "success": true,
+      "blockNumber": "61374885",
+      "rejection": null
+    },
+    "bad": {
+      "success": false,
+      "blockNumber": "61374885",
+      "rejection": {
+        "errorName": "SeatsNotAdjacent",
+        "args": [
+          "0x125054f2f4e4a7e939dd6442c45dfa9377642294bf41d52492cda35d507a967e"
+        ],
+        "rawData": "0x5ce36642125054f2f4e4a7e939dd6442c45dfa9377642294bf41d52492cda35d507a967e",
+        "selector": "0x5ce36642"
+      }
+    }
+  },
+  "setupTransactions": [
+    {
+      "label": "mint:0",
+      "transactionHash": "0x8cb7aa3e00db0cfc8957bee2cf4d27cc5f1f65f84c84dc9aad604c569d675bf5",
+      "blockNumber": "61374559"
+    },
+    {
+      "label": "mint:1",
+      "transactionHash": "0x0eb73318bc177c525c9506c1d0c847732ee82326254371813d780486bf3925b9",
+      "blockNumber": "61374567"
+    },
+    {
+      "label": "mint:2",
+      "transactionHash": "0x5041e0dfeda6a300eeb24b1276540055cba50a25784ee75713b2647452888a5a",
+      "blockNumber": "61374579"
+    },
+    {
+      "label": "mint:3",
+      "transactionHash": "0x9ced54a5a0a707154ac242c3c2c75972b8a3d13765226ef2707e36d986fd1ee8",
+      "blockNumber": "61374585"
+    },
+    {
+      "label": "commit:0",
+      "transactionHash": "0x0bc5acfe3d6a8372d4053534b27f3172c010ea379d47c6dcd5ca01537a3353f2",
+      "blockNumber": "61374595"
+    },
+    {
+      "label": "deposit:1",
+      "transactionHash": "0xd8d29ae106ccd1819abbb89e03fceb89e10e8bf70ff7facfe9888c479490e24f",
+      "blockNumber": "61374603"
+    },
+    {
+      "label": "commit:1",
+      "transactionHash": "0x4eb9254cb641acd1c90d1b3959b7e064ba6520d6cd289221e7a5821908b1e916",
+      "blockNumber": "61374612"
+    },
+    {
+      "label": "commit:2",
+      "transactionHash": "0x1d1a86659d3dc421065ec701bb93ecb7928006503928b3d32c3b45acc7fd59f9",
+      "blockNumber": "61374622"
+    }
+  ],
+  "proof": {
+    "chainId": 5042002,
+    "transactionHash": "0x087f78f9bdc54b5f9bb8f6939f2a4633ee1f554e8fc198cc75739b1b722279fe",
+    "blockNumber": "61374887",
+    "blockHash": "0x17cd70d843d8634f6ccd24bef32580b8f61f4c14377004959ddcd23574802e9e",
+    "beforeBlock": "61374886",
+    "checkedAt": "2026-09-10T09:13:38.188Z",
+    "status": "reverted",
+    "proposer": "0x0dcd390c1df4cd14de2eb9bbb53271ae9f48e034",
+    "settlement": "0x75872168f2d6ae13c7d9258159e59025fd9b5eae",
+    "rejection": {
+      "errorName": "SeatsNotAdjacent",
+      "args": [
+        "0x125054f2f4e4a7e939dd6442c45dfa9377642294bf41d52492cda35d507a967e"
+      ],
+      "rawData": "0x5ce36642125054f2f4e4a7e939dd6442c45dfa9377642294bf41d52492cda35d507a967e",
+      "selector": "0x5ce36642"
+    },
+    "rejectionSource": "Historical eth_call of the exact transaction calldata at the preceding block; receipts contain status, not revert bytes.",
+    "control": {
+      "success": true,
+      "blockNumber": "61374886",
+      "rejection": null
+    },
+    "participants": [
+      {
+        "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+        "intentHash": "0x125054f2f4e4a7e939dd6442c45dfa9377642294bf41d52492cda35d507a967e",
+        "beforeState": 1,
+        "afterState": 1,
+        "usdcBefore": "15300365",
+        "usdcAfter": "15300365",
+        "allowanceBefore": "300000",
+        "allowanceAfter": "300000"
+      },
+      {
+        "owner": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "intentHash": "0x89841b6200d5df3506d16d670b5d495f9ef94188c737d9cc6745a41d6864ec7e",
+        "beforeState": 1,
+        "afterState": 1,
+        "usdcBefore": "1933088",
+        "usdcAfter": "1933088",
+        "allowanceBefore": "400000",
+        "allowanceAfter": "400000"
+      },
+      {
+        "owner": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "intentHash": "0x989a2d716c820647d580b7646f9f579c48a312194820e6657a78148b6b55f4b3",
+        "beforeState": 1,
+        "afterState": 1,
+        "usdcBefore": "829060",
+        "usdcAfter": "829060",
+        "allowanceBefore": "400000",
+        "allowanceAfter": "400000"
+      }
+    ],
+    "tickets": [
+      {
+        "tokenId": "24",
+        "depositor": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "ownerBefore": "0x07ab57380db7df630fab2d3d3a1019a5a890b018",
+        "ownerAfter": "0x07ab57380db7df630fab2d3d3a1019a5a890b018",
+        "eventId": 1,
+        "sessionId": 0,
+        "sectionId": 0,
+        "row": 4,
+        "seat": 1
+      },
+      {
+        "tokenId": "25",
+        "depositor": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "ownerBefore": "0x07ab57380db7df630fab2d3d3a1019a5a890b018",
+        "ownerAfter": "0x07ab57380db7df630fab2d3d3a1019a5a890b018",
+        "eventId": 1,
+        "sessionId": 0,
+        "sectionId": 0,
+        "row": 4,
+        "seat": 2
+      },
+      {
+        "tokenId": "26",
+        "depositor": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "ownerBefore": "0x07ab57380db7df630fab2d3d3a1019a5a890b018",
+        "ownerAfter": "0x07ab57380db7df630fab2d3d3a1019a5a890b018",
+        "eventId": 1,
+        "sessionId": 0,
+        "sectionId": 0,
+        "row": 4,
+        "seat": 3
+      },
+      {
+        "tokenId": "27",
+        "depositor": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "ownerBefore": "0x07ab57380db7df630fab2d3d3a1019a5a890b018",
+        "ownerAfter": "0x07ab57380db7df630fab2d3d3a1019a5a890b018",
+        "eventId": 1,
+        "sessionId": 0,
+        "sectionId": 0,
+        "row": 4,
+        "seat": 4
+      }
+    ],
+    "ticketTransfers": 0,
+    "settlementPayments": "0",
+    "settlementUsdcBefore": "0",
+    "settlementUsdcAfter": "0"
+  }
+}
