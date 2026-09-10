@@ -7,21 +7,19 @@ import {
   getTicketMeta,
   getTicketOwner,
   getDepositor,
-  getIntentState,
   approveNFTsForEscrow,
   depositTickets,
   withdrawTickets,
   signAndCommitIntent,
   hashIntent,
   revokeIntent,
-  approveUSDC,
   submitSettlement,
-  redeemTicket,
   getNextTokenId,
   getCommittedIntents,
   waitForTransaction,
 } from '@/lib/contracts';
-import { CONTRACTS, EVENT_ID, sessionName, sectionName } from '@/lib/config';
+import { CONTRACTS } from '@/lib/config';
+import ReadyDemo from '@/component/reshuffle/ReadyDemo';
 import TicketCard from '@/component/reshuffle/TicketCard';
 import IntentCard from '@/component/reshuffle/IntentCard';
 import IntentForm from '@/component/reshuffle/IntentForm';
@@ -63,7 +61,8 @@ interface IntentDisplay {
 type DemoScene = 'overview' | 'cycle' | 'chain' | 'refusal';
 
 export default function ReshufflePage() {
-  const { account, chainId, connect, isConnecting, error: walletError } = useWallet();
+  const wallet = useWallet();
+  const { account, chainId, runWithWallet, isConnecting, error: walletError } = wallet;
   const [scene, setScene] = useState<DemoScene>('overview');
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [intents, setIntents] = useState<IntentDisplay[]>([]);
@@ -71,7 +70,6 @@ export default function ReshufflePage() {
   const [log, setLog] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [showIntentForm, setShowIntentForm] = useState(false);
-  const [nonce, setNonce] = useState(0n);
   const [proposal, setProposal] = useState<SettlementProposal | null>(null);
   const [settlementStatus, setSettlementStatus] = useState<
     'pending' | 'simulating' | 'simulated' | 'submitting' | 'settled' | 'failed'
@@ -85,7 +83,7 @@ export default function ReshufflePage() {
   }, []);
 
   const loadData = useCallback(async () => {
-    if (!account || !CONTRACTS.ticketNFT) return;
+    if (!CONTRACTS.ticketNFT) return;
     try {
       const nextId = await getNextTokenId();
       const loadedTickets: Ticket[] = [];
@@ -118,55 +116,33 @@ export default function ReshufflePage() {
 
       const committed = await getCommittedIntents();
       setIntents(committed);
-      const ownerNonces = committed.filter(i => i.owner.toLowerCase() === account.toLowerCase()).map(i => i.nonce);
-      setNonce(ownerNonces.reduce((next, used) => used >= next ? used + 1n : next, 0n));
 
     } catch (err) {
       addLog(`Error loading: ${err instanceof Error ? err.message : String(err)}`);
     }
-  }, [account, addLog]);
+  }, [addLog]);
 
   useEffect(() => {
-    loadData();
+    void Promise.resolve().then(loadData);
   }, [loadData]);
-
-  if (!account) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-black p-6">
-        <h1 className="mb-6 text-3xl font-bold text-white">RESHUFFLE</h1>
-        <p className="mb-4 text-white/60">A market for outcomes, not listings.</p>
-        <div className="mb-6 w-full max-w-xl"><ArcGasNotice /></div>
-        <button
-          type="button"
-          onClick={connect}
-          disabled={isConnecting}
-          className="rounded bg-blue-600 px-6 py-3 text-white transition-colors hover:bg-blue-500"
-        >
-          {isConnecting ? 'Connecting...' : 'Connect Wallet'}
-        </button>
-        {isConnecting && <p role="status" className="mt-3 max-w-xl text-sm text-white/60">Open MetaMask from your browser toolbar and approve the connection. Waiting for the wallet to respond…</p>}
-        {walletError && <p role="alert" className="mt-4 max-w-xl text-sm text-red-300">{walletError}</p>}
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen flex-col bg-black text-white">
       {/* Header */}
       <header className="flex items-center justify-between border-b border-white/10 px-6 py-4">
         <h1 className="text-xl font-bold">RESHUFFLE</h1>
-        <div className="flex items-center gap-4">
+        {account && <div className="flex items-center gap-4">
           <span className="rounded-full border border-white/10 px-3 py-1 text-sm">
             {truncateAddress(account)}
           </span>
-        </div>
+          <ArcWalletBalance key={account} account={account} walletChainId={chainId} compact />
+        </div>}
       </header>
 
       {walletError && <p role="alert" className="px-6 pt-4 text-sm text-red-300">{walletError}</p>}
 
-      <div className="px-6 py-4">
-        <ArcWalletBalance key={account} account={account} walletChainId={chainId} />
-      </div>
+      {isConnecting && <p role="status" className="px-6 py-3 text-blue-300">Complete the connection or network switch in your wallet. Your action will continue automatically.</p>}
+      <div className="px-6 py-4"><ArcGasNotice /></div>
 
       {/* Scene tabs */}
       <nav className="flex gap-1 border-b border-white/10 px-6">
@@ -192,15 +168,13 @@ export default function ReshufflePage() {
       </nav>
 
       {/* Content */}
-      <main className="flex flex-1 gap-6 p-6">
+      <main className="flex flex-1 flex-col gap-6 p-6 xl:flex-row">
         <div className="flex flex-1 flex-col gap-6">
           {scene === 'overview' && (
             <OverviewScene
               tickets={tickets}
               intents={intents}
               account={account}
-              onRefresh={loadData}
-              addLog={addLog}
             />
           )}
           {scene === 'cycle' && (
@@ -239,6 +213,8 @@ export default function ReshufflePage() {
               ]}
             />
           )}
+
+          <ReadyDemo wallet={wallet} />
 
           {/* Tickets */}
           <section>
@@ -288,15 +264,17 @@ export default function ReshufflePage() {
             <section className="flex gap-2">
               <ActionButton
                 label={`Deposit ${selectedTickets.size} ticket${selectedTickets.size > 1 ? 's' : ''}`}
-                loading={loading}
+                loading={loading || isConnecting}
                 onClick={async () => {
                   setLoading(true);
                   try {
-                    const ids = [...selectedTickets];
-                    addLog(`Approving NFTs for escrow...`);
-                    await approveNFTsForEscrow(account);
-                    addLog(`Depositing tickets: ${ids.map((id) => `#${id}`).join(', ')}`);
-                    await depositTickets(account, ids);
+                    await runWithWallet(async address => {
+                      const ids = [...selectedTickets];
+                      for (const id of ids) if ((await getTicketOwner(id)).toLowerCase() !== address.toLowerCase()) throw new Error(`Ticket #${id} is not held by this wallet.`);
+                      addLog('Approving NFTs for escrow...');
+                      await waitForTransaction(await approveNFTsForEscrow(address));
+                      await waitForTransaction(await depositTickets(address, ids));
+                    });
                     addLog(`Deposited successfully`);
                     setSelectedTickets(new Set());
                     await loadData();
@@ -309,38 +287,20 @@ export default function ReshufflePage() {
               />
               <ActionButton
                 label={`Withdraw ${selectedTickets.size} ticket${selectedTickets.size > 1 ? 's' : ''}`}
-                loading={loading}
+                loading={loading || isConnecting}
                 onClick={async () => {
                   setLoading(true);
                   try {
-                    const ids = [...selectedTickets];
-                    addLog(`Withdrawing tickets: ${ids.map((id) => `#${id}`).join(', ')}`);
-                    await withdrawTickets(account, ids);
+                    await runWithWallet(async address => {
+                      const ids = [...selectedTickets];
+                      for (const id of ids) if ((await getDepositor(id)).toLowerCase() !== address.toLowerCase()) throw new Error(`Ticket #${id} is not deposited by this wallet.`);
+                      await waitForTransaction(await withdrawTickets(address, ids));
+                    });
                     addLog(`Withdrawn successfully`);
                     setSelectedTickets(new Set());
                     await loadData();
                   } catch (err) {
                     addLog(`Withdraw failed: ${err instanceof Error ? err.message : String(err)}`);
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-              />
-              <ActionButton
-                label={`Redeem ${selectedTickets.size} ticket${selectedTickets.size > 1 ? 's' : ''}`}
-                loading={loading}
-                onClick={async () => {
-                  setLoading(true);
-                  try {
-                    for (const id of selectedTickets) {
-                      addLog(`Redeeming ticket #${id}...`);
-                      await redeemTicket(account, id);
-                    }
-                    addLog(`Redeemed successfully`);
-                    setSelectedTickets(new Set());
-                    await loadData();
-                  } catch (err) {
-                    addLog(`Redeem failed: ${err instanceof Error ? err.message : String(err)}`);
                   } finally {
                     setLoading(false);
                   }
@@ -363,51 +323,53 @@ export default function ReshufflePage() {
               <>
                 <IntentForm
                   offeredTickets={[...selectedTickets]}
-                  loading={loading}
+                  loading={loading || isConnecting}
                   onSubmit={async (params) => {
                     setLoading(true);
                     try {
-                      const intentNonce = nonce;
-                      const intentParams = {
-                        owner: account,
-                        offered: params.offered,
-                        eventId: params.eventId,
-                        sessionMask: params.sessionMask,
-                        sectionMask: params.sectionMask,
-                        exactCount: params.exactCount,
-                        mustShareSession: params.mustShareSession,
-                        mustShareSection: params.mustShareSection,
-                        mustBeAdjacent: params.mustBeAdjacent,
-                        maxNetPay: params.maxNetPay,
-                        deadline: params.deadline,
-                        nonce: intentNonce,
-                      };
-                      addLog(`Signing intent (nonce ${intentNonce})...`);
-                      const commitTx = await signAndCommitIntent(account, intentParams);
-                      await waitForTransaction(commitTx);
-                      const intentHash = await hashIntent(intentParams);
-                      addLog(`Intent committed: ${intentHash.slice(0, 10)}...`);
-                      setIntents((prev) => [
-                        ...prev,
-                        {
-                          hash: intentHash,
-                          owner: account,
+                      await runWithWallet(async address => {
+                        const committed = await getCommittedIntents();
+                        const intentNonce = committed.filter(i => i.owner.toLowerCase() === address.toLowerCase()).reduce((next, i) => i.nonce >= next ? i.nonce + 1n : next, 0n);
+                        const intentParams = {
+                          owner: address,
                           offered: params.offered,
-                          exactCount: params.exactCount,
+                          eventId: params.eventId,
                           sessionMask: params.sessionMask,
                           sectionMask: params.sectionMask,
+                          exactCount: params.exactCount,
                           mustShareSession: params.mustShareSession,
                           mustShareSection: params.mustShareSection,
                           mustBeAdjacent: params.mustBeAdjacent,
                           maxNetPay: params.maxNetPay,
                           deadline: params.deadline,
                           nonce: intentNonce,
-                          state: 1,
-                        },
-                      ]);
-                      setNonce((n) => n + 1n);
-                      setShowIntentForm(false);
-                      setSelectedTickets(new Set());
+                        };
+                        addLog(`Signing intent (nonce ${intentNonce})...`);
+                        const commitTx = await signAndCommitIntent(address, intentParams);
+                        await waitForTransaction(commitTx);
+                        const intentHash = await hashIntent(intentParams);
+                        addLog(`Intent committed: ${intentHash.slice(0, 10)}...`);
+                        setIntents((prev) => [
+                          ...prev,
+                          {
+                            hash: intentHash,
+                            owner: address,
+                            offered: params.offered,
+                            exactCount: params.exactCount,
+                            sessionMask: params.sessionMask,
+                            sectionMask: params.sectionMask,
+                            mustShareSession: params.mustShareSession,
+                            mustShareSection: params.mustShareSection,
+                            mustBeAdjacent: params.mustBeAdjacent,
+                            maxNetPay: params.maxNetPay,
+                            deadline: params.deadline,
+                            nonce: intentNonce,
+                            state: 1,
+                          },
+                        ]);
+                        setShowIntentForm(false);
+                        setSelectedTickets(new Set());
+                      });
                       await loadData();
                     } catch (err) {
                       addLog(`Intent failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -486,11 +448,11 @@ export default function ReshufflePage() {
                     deadline={i.deadline}
                     state={i.state}
                     onRevoke={
-                      i.owner.toLowerCase() === account.toLowerCase() && i.state === 1
+                      i.owner.toLowerCase() === account?.toLowerCase() && i.state === 1
                         ? async () => {
                             try {
                               addLog(`Revoking intent ${i.hash.slice(0, 10)}...`);
-                              await revokeIntent(account, i.hash);
+                              await runWithWallet(async address => { await waitForTransaction(await revokeIntent(address, i.hash)); });
                               setIntents((prev) =>
                                 prev.map((pi) =>
                                   pi.hash === i.hash ? { ...pi, state: 2 } : pi
@@ -526,32 +488,36 @@ export default function ReshufflePage() {
                     ? async () => {
                         setSettlementStatus('submitting');
                         try {
-                          const intentParams = proposal.intents;
-                          const legs = proposal.legs.map((l) => ({
-                            intentHash: l.intentHash,
-                            receives: l.receives,
-                            netPayment: l.netPayment,
-                          }));
+                          await runWithWallet(async address => {
+                            const fresh = await findSettlement(proposal.intents.map((_, index) => ({ hash: proposal.legs[index].intentHash })));
+                            if (!fresh.proposal || !fresh.evidence.simulationResult?.success) throw new Error('State changed. Run the solver again.');
+                            const intentParams = fresh.proposal.intents;
+                            const legs = fresh.proposal.legs.map((l) => ({
+                              intentHash: l.intentHash,
+                              receives: l.receives,
+                              netPayment: l.netPayment,
+                            }));
 
-                          addLog('Submitting settlement...');
-                          const txHash = await submitSettlement(account, intentParams, legs);
-                          await waitForTransaction(txHash);
-                          const confirmed = await confirmSettlementEvidence(proposal.evidenceId, txHash);
-                          setEvidence(confirmed);
-                          const hash = typeof txHash === 'string' ? txHash : String(txHash);
-                          setSettlementTxHash(hash);
-                          setEvidence((prev) =>
-                            prev ? { ...prev, transactionHash: hash } : null
-                          );
-                          addLog(`Settled! tx: ${hash.slice(0, 10)}...`);
-                          setSettlementStatus('settled');
-                          setIntents((prev) =>
-                            prev.map((i) =>
-                              proposal.legs.some((l) => l.intentHash === i.hash)
-                                ? { ...i, state: 3 }
-                                : i
-                            )
-                          );
+                            addLog('Submitting settlement...');
+                            const txHash = await submitSettlement(address, intentParams, legs);
+                            await waitForTransaction(txHash);
+                            const confirmed = await confirmSettlementEvidence(fresh.evidence.id, txHash);
+                            setEvidence(confirmed);
+                            const hash = typeof txHash === 'string' ? txHash : String(txHash);
+                            setSettlementTxHash(hash);
+                            setEvidence((prev) =>
+                              prev ? { ...prev, transactionHash: hash } : null
+                            );
+                            addLog(`Settled! tx: ${hash.slice(0, 10)}...`);
+                            setSettlementStatus('settled');
+                            setIntents((prev) =>
+                              prev.map((i) =>
+                                proposal.legs.some((l) => l.intentHash === i.hash)
+                                  ? { ...i, state: 3 }
+                                  : i
+                              )
+                            );
+                          });
                           await loadData();
                         } catch (err) {
                           const msg = err instanceof Error ? err.message : String(err);
@@ -569,7 +535,7 @@ export default function ReshufflePage() {
         </div>
 
         {/* Sidebar — Activity log */}
-        <aside className="w-80 shrink-0">
+        <aside className="w-full shrink-0 xl:w-80">
           <h2 className="mb-3 text-sm font-medium text-white/60">Activity Log</h2>
           <div className="flex max-h-[600px] flex-col gap-1 overflow-y-auto rounded-lg border border-white/10 bg-white/[.02] p-3 font-mono text-xs">
             {log.length === 0 ? (
@@ -592,14 +558,10 @@ function OverviewScene({
   tickets,
   intents,
   account,
-  onRefresh,
-  addLog,
 }: {
   tickets: Ticket[];
   intents: IntentDisplay[];
-  account: Address;
-  onRefresh: () => void;
-  addLog: (msg: string) => void;
+  account: Address | null;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -608,13 +570,13 @@ function OverviewScene({
         <p className="text-sm leading-relaxed text-white/60">
           Sign the outcome you would accept. The market composes many such intents.
           Nothing moves until an entire outcome exists that satisfies every
-          participant's own signed conditions. No partial execution. No trust in the solver.
+          participant&apos;s own signed conditions. No partial execution. No trust in the solver.
         </p>
       </div>
       <div className="grid grid-cols-3 gap-4">
         <StatCard label="Total Tickets" value={tickets.length.toString()} />
         <StatCard label="Live Intents" value={intents.filter((i) => i.state === 1).length.toString()} />
-        <StatCard label="Your Tickets" value={tickets.filter((t) => t.owner?.toLowerCase() === account.toLowerCase()).length.toString()} />
+        <StatCard label="Your Tickets" value={tickets.filter((t) => t.owner?.toLowerCase() === account?.toLowerCase()).length.toString()} />
       </div>
     </div>
   );

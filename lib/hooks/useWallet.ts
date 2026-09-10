@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { isAddress, type Address } from 'viem';
 import { walletConnectionMessage } from '../wallet-errors';
+import { CHAIN } from '../config';
 import { walletRequest } from '../wallet-request';
 
 function firstAccount(value: unknown): Address | null {
@@ -101,5 +102,43 @@ export function useWallet() {
     }
   }, []);
 
-  return { account, chainId, connect, isConnecting, error };
+  const actionPending = useRef(false);
+  const runWithWallet = useCallback(async (action: (address: Address) => Promise<void>) => {
+    if (actionPending.current) throw new Error('Another wallet action is pending.');
+    actionPending.current = true;
+    let walletReady = false;
+    revision.current++;
+    setIsConnecting(true); setError(null);
+    try {
+      const eth = window.ethereum;
+      if (!eth) throw new Error('No wallet detected. Install or enable MetaMask, then retry this action.');
+      if (CHAIN.id !== 5042002) throw new Error('The app must be configured for Arc Testnet.');
+      let address = firstAccount(await walletRequest(eth, 'eth_accounts'));
+      if (!address) address = firstAccount(await walletRequest(eth, 'eth_requestAccounts', 30_000));
+      if (!address) throw new Error('No account was shared. Retry the action and select an account.');
+      if (parseChain(await walletRequest(eth, 'eth_chainId')) !== 5042002) {
+        try {
+          await walletRequest(eth, 'wallet_switchEthereumChain', 30_000, [{ chainId: '0x4cef52' }]);
+        } catch (reason) {
+          if ((reason as { code?: number }).code !== 4902) throw reason;
+          await walletRequest(eth, 'wallet_addEthereumChain', 30_000, [{ chainId: '0x4cef52', chainName: 'Arc Testnet', nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 }, rpcUrls: ['https://rpc.testnet.arc.io'], blockExplorerUrls: ['https://testnet.arcscan.app'] }]);
+          await walletRequest(eth, 'wallet_switchEthereumChain', 30_000, [{ chainId: '0x4cef52' }]);
+        }
+      }
+      if (parseChain(await walletRequest(eth, 'eth_chainId')) !== 5042002) throw new Error('Arc Testnet switch was not completed. Retry the action.');
+      const current = firstAccount(await walletRequest(eth, 'eth_accounts'));
+      if (!current || current.toLowerCase() !== address.toLowerCase()) throw new Error('Wallet account changed. Retry the action with the selected account.');
+      setAccount(current); setChainId(5042002);
+      walletReady = true;
+      await action(current);
+    } catch (reason) {
+      if (!walletReady) setError(reason instanceof Error ? reason.message : walletConnectionMessage(reason));
+      throw reason;
+    } finally {
+      actionPending.current = false;
+      setIsConnecting(false);
+    }
+  }, []);
+
+  return { account, chainId, connect, runWithWallet, isConnecting, error };
 }

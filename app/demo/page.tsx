@@ -1,5 +1,5 @@
-import ReadyDemo from '@/component/reshuffle/ReadyDemo';
+import ReshufflePage from '../reshuffle/page';
 
 export default function DemoPage() {
-  return <ReadyDemo />;
+  return <ReshufflePage />;
 }

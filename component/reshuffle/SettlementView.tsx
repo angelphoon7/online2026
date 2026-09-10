@@ -131,7 +131,7 @@ export default function SettlementView({
             onClick={onSubmit}
             className="rounded bg-blue-600 px-4 py-2 text-sm text-white transition-colors hover:bg-blue-500"
           >
-            Submit Settlement
+            Propose and settle
           </button>
         )}
         {status === 'submitting' && (

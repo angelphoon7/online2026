@@ -54,3 +54,16 @@ node --test scripts/test-backend.mjs
 These check malformed/duplicate/oversized requests, persisted evidence, unrelated receipt rejection, refusal to reuse already-settled intents and preservation of live signed budgets despite client overrides. All transaction broadcasts happen in the local runner or user's wallet, never through the public API.
 
 `node scripts/audit-arc-settlements.mjs` independently checks the ten receipts, including their NFT recipients and balanced USDC transfers. Results are recorded in `deployments/settlement-audit.json`.
+
+## Public demo and deferred wallet actions
+
+`/demo` and `/reshuffle` render tickets, intent data, the prepared round's current solver result and settlement history without wallet authorization. History reads `Settled` events over at most the most recent 100,000 blocks since deployment and displays the exact scanned range. Chain/RPC failures show read errors; they do not require a wallet connection.
+
+Sign and commit, Deposit/Withdraw, and Propose and settle connect only when clicked, switch to Arc Testnet when needed, and continue the original action. The intent nonce is read for the account returned by that connection. Settlement is re-simulated after connection before submission. Connection or network rejection does not submit a transaction. The header shows address and native USDC balance only when connected. Redemption is omitted from this swap flow.
+
+Browser regression check (isolated mock wallet and mocked public reads; no broadcasts):
+
+```powershell
+$env:WALLET_TEST_URL = 'http://localhost:3101'
+node scripts/test-deferred-wallet-browser.mjs
+```

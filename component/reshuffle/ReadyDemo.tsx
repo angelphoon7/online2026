@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Hex } from 'viem';
-import { useWallet } from '@/lib/hooks/useWallet';
+import type { useWallet } from '@/lib/hooks/useWallet';
 import { submitSettlement, waitForTransaction } from '@/lib/contracts';
 import { findSettlement, confirmSettlementEvidence, type SettlementProposal, type SolveEvidence } from '@/lib/solve-api';
 import { formatUSDC, truncateAddress } from '@/lib/format';
 import { CHAIN, sessionName, sectionName } from '@/lib/config';
 import ArcGasNotice from './ArcGasNotice';
 import SettlementView from './SettlementView';
+import PastSettlements from './PastSettlements';
 import EvidencePanel from './EvidencePanel';
 
 interface DemoIntent {
@@ -23,8 +24,8 @@ function acceptedNames(mask: string, name: (id: number) => string) {
   return Array.from({ length: 256 }, (_, id) => id).filter(id => (BigInt(mask) & (1n << BigInt(id))) !== 0n).map(name).join(', ') || 'None';
 }
 
-export default function ReadyDemo() {
-  const { account, chainId, connect, isConnecting, error: walletError } = useWallet();
+export default function ReadyDemo({ wallet }: { wallet: ReturnType<typeof useWallet> }) {
+  const { runWithWallet, isConnecting } = wallet;
   const [intents, setIntents] = useState<DemoIntent[]>([]);
   const [selected, setSelected] = useState<Hex[]>([]);
   const [proposal, setProposal] = useState<SettlementProposal | null>(null);
@@ -67,33 +68,31 @@ export default function ReadyDemo() {
   }, [refresh]);
 
   async function submit() {
-    if (!account || chainId !== 5042002 || !proposal || !evidence?.simulationResult?.success) return;
+    if (!proposal || !evidence?.simulationResult?.success) return;
     setBusy(true); setStatus('submitting'); setError('');
     try {
       // Re-read and simulate just before asking the proposer to submit. Execution
       // still revalidates every condition; this does not reserve chain state.
-      const fresh = await findSettlement(selected.map(hash => ({ hash })));
-      if (!fresh.proposal || !fresh.evidence.simulationResult?.success) throw new Error('Demo state changed. Refresh to inspect the latest result.');
-      setProposal(fresh.proposal); setEvidence(fresh.evidence);
-      const hash = await submitSettlement(account, fresh.proposal.intents, fresh.proposal.legs);
-      setTxHash(hash);
-      await waitForTransaction(hash);
-      const confirmed = await confirmSettlementEvidence(fresh.evidence.id, hash);
-      setEvidence(confirmed);
-      if (confirmed.receipt) setBlock(confirmed.receipt.blockNumber);
-      setStatus('settled');
-      const settled = new Set(fresh.proposal.legs.map(l => l.intentHash));
-      setIntents(prev => prev.map(i => settled.has(i.hash) ? { ...i, state: 3 } : i));
+      await runWithWallet(async address => {
+        const fresh = await findSettlement(selected.map(hash => ({ hash })));
+        if (!fresh.proposal || !fresh.evidence.simulationResult?.success) throw new Error('Demo state changed. Refresh to inspect the latest result.');
+        setProposal(fresh.proposal); setEvidence(fresh.evidence);
+        const hash = await submitSettlement(address, fresh.proposal.intents, fresh.proposal.legs);
+        setTxHash(hash);
+        await waitForTransaction(hash);
+        const confirmed = await confirmSettlementEvidence(fresh.evidence.id, hash);
+        setEvidence(confirmed);
+        if (confirmed.receipt) setBlock(confirmed.receipt.blockNumber);
+        setStatus('settled');
+        const settled = new Set(fresh.proposal.legs.map(l => l.intentHash));
+        setIntents(prev => prev.map(i => settled.has(i.hash) ? { ...i, state: 3 } : i));
+      });
     } catch (e) {
       setStatus('failed'); setError(e instanceof Error ? e.message : 'Settlement failed');
     } finally { setBusy(false); }
   }
 
-  return <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 p-6 text-white">
-    <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-5">
-      <Link href="/" className="font-bold">RESHUFFLE</Link>
-      <Link href="/reshuffle" className="text-sm text-blue-300">Create your own intent →</Link>
-    </header>
+  return <section className="flex flex-col gap-6 text-white">
     <div>
       <h1 className="text-3xl font-bold">Live settlement demo</h1>
       <Link href="/demo/act-one" className="mt-3 inline-block text-sm text-blue-300 underline">Act one: six tickets exchanged in one confirmed transaction →</Link>
@@ -140,13 +139,12 @@ export default function ReadyDemo() {
     {proposal && <>
       <SettlementView legs={proposal.legs} gross={proposal.gross} candidateCount={proposal.candidatesFound}
         status={status} txHash={txHash} evidence={evidence}
-        onSubmit={!busy && account && chainId === 5042002 && CHAIN.id === 5042002 ? () => void submit() : undefined} />
-      {status === 'simulated' && !account && <button onClick={() => void connect()} disabled={isConnecting} className="self-start rounded bg-blue-600 px-4 py-2 disabled:opacity-50">{isConnecting ? 'Connecting...' : 'Connect proposer wallet to settle'}</button>}
-      {status === 'simulated' && account && chainId !== 5042002 && <p className="text-amber-200">Switch your wallet to Arc Testnet (5042002) to submit.</p>}
+        onSubmit={!busy && !isConnecting && CHAIN.id === 5042002 ? () => void submit() : undefined} />
       {status === 'settled' && <p className="text-sm text-white/60">This round is complete. The operator can rerun demo:prepare for the next recording.</p>}
     </>}
-    {walletError && <p role="alert" className="text-sm text-red-300">{walletError}</p>}
+
     {isConnecting && <p role="status" className="text-sm text-white/60">Open MetaMask from your browser toolbar and approve the connection. Waiting for the wallet to respond…</p>}
     <EvidencePanel evidence={evidence} />
-  </main>;
+    <PastSettlements refreshKey={txHash} />
+  </section>;
 }

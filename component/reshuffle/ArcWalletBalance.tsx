@@ -6,7 +6,7 @@ import { getPublicClient } from '@/lib/contracts';
 import { CHAIN } from '@/lib/config';
 import ArcGasNotice from './ArcGasNotice';
 
-export default function ArcWalletBalance({ account, walletChainId }: { account: Address; walletChainId: number | null }) {
+export default function ArcWalletBalance({ account, walletChainId, compact = false }: { account: Address; walletChainId: number | null; compact?: boolean }) {
   const [snapshot, setSnapshot] = useState<{ account: Address; balance?: bigint; error?: boolean } | null>(null);
   const [refresh, setRefresh] = useState(0);
 
@@ -36,6 +36,7 @@ export default function ArcWalletBalance({ account, walletChainId }: { account: 
   const current = snapshot?.account === account ? snapshot : null;
   // Native balance uses 18 decimals; the settlement ERC-20 interface uses 6.
   const balance = current?.balance === undefined ? null : formatUnits(current.balance, 18);
+  if (compact) return <span className="text-sm text-emerald-300" aria-live="polite">{current?.error ? 'Balance unavailable' : balance === null ? 'Loading USDC balance?' : `${balance} USDC`}</span>;
   return (
     <ArcGasNotice>
       <div className="min-w-0 shrink-0 rounded-lg border border-emerald-400/15 bg-black/20 p-4 sm:max-w-xs">
