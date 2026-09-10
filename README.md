@@ -8,6 +8,8 @@ You never give up your tickets unless the whole replacement arrives.
 
 [Circle integration: products used, contract addresses, deployment transactions and design decisions](docs/CIRCLE_INTEGRATION.md).
 
+[Mainnet readiness: deployment tooling, network configuration, verification checklist and actual admin permissions](docs/MAINNET_READINESS.md). Local deployment rehearsal passed; official mainnet parameters and production release gates remain pending.
+
 <!-- Live demo: TBD · Video: TBD -->
 
 ---
@@ -833,7 +835,7 @@ sequenceDiagram
 
 ### Bounty category verification
 
-The two Arc targets stated above are the project's originally selected categories. Checked on 2026-09-09: the [current official ETHOnline 2026 prize page](https://ethglobal.com/events/ethonline2026/prizes#arc) does not list “Launch on Testnet & Push to Mainnet”. Confirm the current category names and availability with the organizer or submission form before submitting; this README does not establish eligibility or register either bounty.
+The two Arc targets stated above are the project's originally selected categories. Checked on 2026-09-10: the [current official ETHOnline 2026 prize page](https://ethglobal.com/events/ethonline2026/prizes#arc) does not list “Launch on Testnet & Push to Mainnet”. It makes $2,500 of the Best DeFi/Onchain Finance award conditional on the same project actually deploying to Arc Mainnet by September 30; it does not state that deployment readiness substitutes for deployment. See the [readiness package and pending release gates](docs/MAINNET_READINESS.md). Confirm current category names and availability before submitting; this README does not establish eligibility or register either bounty.
 
 | Sponsor | Track | Why |
 |---|---|---|

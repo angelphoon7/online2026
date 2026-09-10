@@ -1,0 +1,98 @@
+{
+  "title": "Local Anvil rehearsal; not an Arc Mainnet deployment",
+  "completedAt": "2026-09-10T10:22:03.076Z",
+  "chainId": 31337,
+  "checks": [
+    "four creates and three configuration receipts",
+    "compiled runtime bytecode",
+    "all admins and configured issuer",
+    "Escrow/Registry/Settlement wiring",
+    "EIP-712 domain",
+    "resume sends no duplicate transactions",
+    "local chain rejected by mainnet configuration",
+    "rehearsal rejects external RPC",
+    "wrong manifest address rejected",
+    "tampered runtime rejected",
+    "changed settlement permission rejected"
+  ],
+  "deployment": {
+    "configHash": "0xbb74da462f4b9cdd11542175a25aca7e50ba1acba9d06e2d001bf6e6c8deecd2",
+    "artifactHash": "0xf0e0f2c21e2a539b5548b916996a8872aaf580373f56bc8ce03698675edc5553",
+    "chainId": 31337,
+    "deployer": "0xB5DcD5223fCa3517D3DE46E8401CF4215C613b3d",
+    "issuer": "0x944Da4AD919Ef5953201De8b61642E0849f90018",
+    "usdc": "0x9a2dafcded7cefdba54083c1b42dcc78018d3223",
+    "startNonce": 1,
+    "contracts": {
+      "TicketNFT": "0x9079F2F89Cf76daA47B9b76BeDD493b24C92ea5d",
+      "Escrow": "0xFcE7f5B5B8f7b17d18189F8DE11cA8Fee2346F5b",
+      "IntentRegistry": "0x66A5c40A3749917cA07D664a4BFb734F0F2d9DDd",
+      "Settlement": "0x740C8D945c4170988E82cB72Ead1501A3D5a8B38"
+    },
+    "transactions": [
+      {
+        "label": "deploy:TicketNFT",
+        "hash": "0x9aed098103877140500e604d82af82a63b40f9c8cb0991d5938e08e109056ddf",
+        "blockNumber": "2",
+        "status": "success",
+        "gasUsed": "1077654"
+      },
+      {
+        "label": "deploy:Escrow",
+        "hash": "0x3bd7f3ce9bb1736e33162b1faeed3c5ae45cc133fa70b030e6dd75c7c3868569",
+        "blockNumber": "3",
+        "status": "success",
+        "gasUsed": "454239"
+      },
+      {
+        "label": "deploy:IntentRegistry",
+        "hash": "0x175a21a1a9362e0b5eba7f2096f7124b787ced15bccf273f59f7627eb2de0873",
+        "blockNumber": "4",
+        "status": "success",
+        "gasUsed": "678859"
+      },
+      {
+        "label": "deploy:Settlement",
+        "hash": "0x0f1b94cb5220b29cf7045b7c3f83e7d164cb2f4cf183ed059a5146ad1fd01752",
+        "blockNumber": "5",
+        "status": "success",
+        "gasUsed": "1600920"
+      },
+      {
+        "label": "configure:Escrow",
+        "hash": "0x3a6a79a4f71e6bb44819e6d9ef0c4ea0fe62ebd1407b25fc90bca6c784a45b13",
+        "blockNumber": "6",
+        "status": "success",
+        "gasUsed": "45937"
+      },
+      {
+        "label": "configure:IntentRegistry",
+        "hash": "0x811488f413cf6412044cf02ce2c810a6f82d41f66fdbb9c0788c15349c4a6819",
+        "blockNumber": "7",
+        "status": "success",
+        "gasUsed": "46142"
+      },
+      {
+        "label": "configure:TicketNFT",
+        "hash": "0x511c1159ab85c6e695ce1020a3004288a8772149c411a9ba27bcc6843bb9fbd2",
+        "blockNumber": "8",
+        "status": "success",
+        "gasUsed": "46218"
+      }
+    ],
+    "verification": {
+      "checkedAt": "2026-09-10T10:22:02.661Z",
+      "chainId": 31337,
+      "blockNumber": "10",
+      "genesisHash": "0xfad3165bdeef806f807d51ab9cb11022e38d71c70ce3da0a9e42056536ee2948",
+      "runtimeHashes": {
+        "TicketNFT": "0xe52afa4e833ac8737785f52ab967115bd1f46fc2814f6fa4dc3250b90018e341",
+        "Escrow": "0x39029be05d9547bcca11709d2efbab9d11ed289910ad405ecfbc002e79a323f8",
+        "IntentRegistry": "0x634d64a322cf2036c54e5ca26092df96a70e92bf0677fdfa8e5119edc6c33f69",
+        "Settlement": "0xf349fbbed8ec1a948abd3d538f8eb91e3fed872c712ba97b88a953c45acb9a16"
+      },
+      "status": "verified",
+      "scope": "deployment receipts, bytecode, wiring, issuer, admins and EIP-712 domain; not a security audit or app cutover"
+    }
+  }
+}

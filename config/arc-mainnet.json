@@ -1,0 +1,21 @@
+{
+  "name": "Arc Mainnet",
+  "officialParametersConfirmed": false,
+  "chainId": null,
+  "genesisHash": null,
+  "usdc": null,
+  "explorerUrl": null,
+  "deployer": null,
+  "issuer": null,
+  "adminModelAcknowledged": false,
+  "maxFeePerGasWei": null,
+  "deployGasLimit": "8000000",
+  "configureGasLimit": "500000",
+  "confirmations": 2,
+  "sources": [
+    "https://docs.arc.io/arc/references/rpc-endpoints",
+    "https://docs.arc.io/arc/references/contract-addresses",
+    "https://docs.arc.io/arc/concepts/deployment-model"
+  ],
+  "checkedOn": "2026-09-10"
+}
