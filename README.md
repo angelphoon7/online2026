@@ -526,7 +526,11 @@ flowchart TB
 
 **The signature is verified once, at commit.** `settle()` takes no signatures and performs no `ecrecover`; a `LIVE` entry in the registry is the proof of authorisation. What settlement must do is rebind — recompute the hash from the struct it was handed and require it to match the one presented (V0) — otherwise a solver could pair a live hash with a struct carrying looser bounds.
 
-`chainId` and `verifyingContract` are inside the domain. **Redeploying the contracts or moving to another network invalidates every committed intent** and requires reconfiguring the frontend domain. This is a correctness requirement, not a configuration detail — a chain migration is not a matter of changing an RPC URL.
+**An intent signature authorizes one chain and one IntentRegistry.** Its EIP-712 domain is `{ name: "RESHUFFLE", version: "1", chainId, verifyingContract: intentRegistryAddress }`. The verifier is **IntentRegistry**, which authenticates `commit()`, not Settlement. Changing the chain ID or deploying a new Registry changes the signing digest: **all previously signed intents must be signed and committed again for the new deployment**. This is a correctness requirement, not an RPC configuration detail.
+
+Frontend signing uses `NEXT_PUBLIC_CHAIN_ID` and `NEXT_PUBLIC_INTENT_REGISTRY` through [`lib/config.ts`](lib/config.ts) and [`signAndCommitIntent`](lib/contracts.ts). Reconfigure both with the target deployment, rebuild the frontend, verify the wallet/RPC chain and Registry `DOMAIN_SEPARATOR`, and discard cached signatures/proposals for the previous domain before accepting new signatures. [Domain mapping and migration acceptance checklist](docs/MAINNET_READINESS.md#eip-712-domain-and-signature-migration).
+
+**Invalid on the new deployment does not mean revoked on the old one.** Old LIVE intents remain actionable on their original chain/Registry while their conditions remain valid; explicitly revoke them there if retiring that authorization. Switching RPC providers on the same chain with the same Registry does not change the domain. Replacing only Settlement while retaining the Registry does not rotate the EIP-712 domain either; that is a separate privileged configuration change.
 
 ### V4 — conservation, in detail
 

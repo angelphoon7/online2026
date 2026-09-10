@@ -148,11 +148,49 @@ The current admin setters also use bare `require(msg.sender == admin)` rather th
 - [ ] Confirm four nonempty runtime code deployments and independently verify source with the official explorer/provider, preserving exact compiler settings and constructor arguments.
 - [ ] Confirm `TicketNFT.admin`, `Escrow.admin`, `IntentRegistry.admin`, the configured issuer, both settlement permissions, and all Settlement immutable getters.
 - [ ] Confirm `DOMAIN_SEPARATOR` equals EIP-712 `{name: RESHUFFLE, version: 1, chainId: mainnet chain ID, verifyingContract: new registry}`.
+- [ ] Complete the [signature migration acceptance checks](#eip-712-domain-and-signature-migration), including rejection of old-domain signatures and a successful fresh-domain commit.
 - [ ] Publish real mainnet addresses, deployment hashes, start block, source-verification links, governance disclosure and verification timestamp. The local rehearsal manifest must never be presented as the mainnet manifest.
 - [ ] Complete frontend/backend/indexer cutover below, then exercise controlled mint/deposit/commit, valid settlement, named rejection, revoke/withdraw and holder-only redemption with minimal controlled inventory; save actual receipts.
 - [ ] Test payment balances/allowances and RPC failure handling, monitor admin wiring and intent/ticket state, and document the incident contact and recovery procedure.
 
 Explorer verification is a separate step from the bytecode/getter checker. When the official explorer's verifier endpoint and supported verifier are known, use `forge verify-contract` with the actual chain ID, endpoint, compiler `0.8.36`, optimizer/via-IR/Paris settings and encoded constructor arguments. See `forge verify-contract --help` in the installed toolchain. Constructor arguments are: none for TicketNFT and IntentRegistry; TicketNFT address for Escrow; Registry, Escrow, TicketNFT and USDC addresses in that order for Settlement. No unconfirmed explorer API URL is baked into this package.
+
+## EIP-712 domain and signature migration
+
+**Changing networks or deploying a new IntentRegistry requires every participant to authorize the new domain again.** An old signature is not portable to that deployment. This protects the correctness of outcome authorization; changing an RPC URL or copying stored intents is not a migration.
+
+The current [`IntentRegistry` constructor and `commit()`](../src/IntentRegistry.sol) and [`frontend signer`](../lib/contracts.ts) use:
+
+| Domain field | Contract binding | Frontend value |
+|---|---|---|
+| `name` | `RESHUFFLE` | `RESHUFFLE` |
+| `version` | `1` | `1` |
+| `chainId` | `block.chainid` at Registry construction | `BigInt(CHAIN.id)`, sourced from `NEXT_PUBLIC_CHAIN_ID` |
+| `verifyingContract` | `address(this)`: the deployed **IntentRegistry** | `CONTRACTS.intentRegistry`, sourced from `NEXT_PUBLIC_INTENT_REGISTRY` |
+
+`verifyingContract` is not the Settlement address. Registry verifies the signature once in `commit()` and reserves the owner's nonce. Later, `settle(intents, legs)` checks the committed hash and LIVE state through its configured Registry; it does not request or verify another participant signature.
+
+```text
+domainSeparator = hash(EIP712Domain(name, version, chainId, verifyingContract))
+signingDigest   = keccak256(0x1901 || domainSeparator || hashIntent(intent))
+```
+
+`hashIntent(intent)` is the struct hash and does **not** include the domain. Identical intent fields can therefore have the same struct hash in different registries while their signing digests differ. Scope stored signatures, LIVE-state lookups, pending proposals and evidence by at least `(chainId, intentRegistryAddress, intentHash)`; a matching bare intent hash is not evidence that the new Registry accepted the old authorization.
+
+For Testnet → Mainnet, obtain the confirmed mainnet chain ID and **new Registry address** from the verified deployment, update the frontend domain and deployment/RPC configuration together, then rebuild and redeploy the frontend. Recreate the intended inventory/custody on the target chain, read `usedNonce(owner, nonce)` from the new Registry, have each participant sign the new domain, relay fresh commits, and only then expose those intents to the solver. Old ticket custody, commitments and nonce reservations do not migrate automatically.
+
+The existing `signAndCommitIntent()` reads `DOMAIN_SEPARATOR()` but currently does not compare it with the locally constructed domain before prompting the wallet. Do not describe that read as an implemented mismatch guard. [`mainnet:verify`](../scripts/lib/mainnet-deployment.mjs) does check the deployed Registry's domain against its deployment config; the frontend's exact built configuration and wallet network still need the acceptance checks below.
+
+### Signature migration acceptance checks
+
+- [ ] Update `NEXT_PUBLIC_CHAIN_ID` and `NEXT_PUBLIC_INTENT_REGISTRY` together with all other target deployment values. Rebuild/redeploy the frontend and retire stale browser bundles and cached signing requests.
+- [ ] Confirm wallet `eth_chainId`, backend RPC chain ID and configured chain ID agree. Calculate the domain separator from the frontend's four actual signing fields and compare it with the target Registry's `DOMAIN_SEPARATOR()` before enabling signing for the release. A mismatch must block signing; the current frontend comparison still needs implementation for this release gate.
+- [ ] Clear or segregate old signatures, queued commits, LIVE-state caches, solver proposals and evidence by chain/Registry. Fetch state and available nonces from the new Registry; do not label old records as LIVE there.
+- [ ] In a controlled test, sign an otherwise valid intent for the old domain using a nonce unused on the target. Replay it via `commit()` against the target domain and assert the named `InvalidSignature` error. Cover a different chain ID and a different Registry address separately; use a well-formed intent so an earlier shape/nonce rejection cannot masquerade as signature protection.
+- [ ] Sign for the exact target domain with the intended owner; confirm a successful `commit()` receipt and LIVE state in that Registry. Then verify solver simulation and settlement use those target commitments, with no second participant signature needed at settlement.
+- [ ] If retiring the old authorization, revoke the original LIVE intents on their original Registry and verify their state there; withdraw original escrowed tickets if appropriate. Changing the frontend network does not revoke old commitments or invalidate already accepted authorization on the old deployment.
+
+Replacing an RPC provider while keeping the same chain ID and Registry address leaves the domain unchanged. Redeploying only Settlement while retaining the existing Registry also does not change this domain or automatically revoke LIVE intents; it changes the privileged wiring described above. These distinctions prevent both replay mistakes and a false promise that a migration silently cancels the old market.
 
 ## Frontend, backend and indexer cutover
 
@@ -161,7 +199,7 @@ Deployment alone does not migrate the working app. The current hosted workflow a
 - [`server/chain.ts`](../server/chain.ts) currently requires chain ID 5042002 and fixes the Testnet USDC address. Replace that restriction with a validated mainnet configuration only in the reviewed release; changing `.env` alone will make it reject mainnet.
 - [`lib/config.ts`](../lib/config.ts) currently names the chain Arc Testnet. Update its network name, native currency settings and public RPC/chain/USDC/contract values together. Review wallet chain switching, explorer links and Testnet labels throughout the UI.
 - Set `NEXT_PUBLIC_DEPLOYMENT_BLOCK` to the first new mainnet deployment block and bind backend receipt verification to the new chain and contract addresses. Keep backend RPC credentials server-side and use a separately approved public browser endpoint.
-- All EIP-712 intents must be signed again for the new chain and Registry. Testnet commitments, nonces, signatures and ticket IDs do not migrate. Clear cached proposals and segregate evidence by chain/registry.
+- Follow the [EIP-712 domain and signature migration procedure](#eip-712-domain-and-signature-migration): collect new-domain signatures and commits, segregate old cached state, and explicitly retire any old authorization that should no longer execute.
 - Recorded `/demo/*` proofs and `deployments/arc-testnet.json` remain explicitly labeled historical Testnet evidence. Do not rewrite them as mainnet proofs. Retire Testnet write actions from a mainnet-facing release and keep any demo site separate.
 - If using The Graph, confirm **Arc Mainnet** support independently of Arc Testnet; deploy a separate subgraph with the new network, addresses and start block. Do not point mainnet discovery at the Testnet index. RPC discovery currently works without a subgraph but must use the correct mainnet chain/config.
 - Build and host the working frontend **and backend**, then verify end-to-end from a fresh wallet session. Solver evidence must identify the actual source, block, candidates, simulation and receipt.
