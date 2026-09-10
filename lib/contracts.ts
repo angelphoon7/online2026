@@ -30,7 +30,7 @@ function getProvider() {
 export function getPublicClient() {
   return createPublicClient({
     chain: NETWORK,
-    transport: http(CHAIN.rpcUrl),
+    transport: http('/api/rpc', { timeout: 20000, retryCount: 2 }),
   });
 }
 
@@ -195,7 +195,6 @@ export async function signAndCommitIntent(
   intent: IntentParams
 ) {
   const wallet = getWalletClient();
-  const domainSeparator = await getDomainSeparator();
 
   const types = {
     Intent: [

@@ -17,6 +17,7 @@ npm.cmd run start -- --port 3101
 
 | Endpoint | Behavior |
 | --- | --- |
+| `POST /api/rpc` | Same-origin, read-only Arc RPC transport for browser chain reads. Contract calls are restricted to the configured contracts and USDC; log ranges are bounded to 10,000 blocks. Signing and broadcasting remain in the wallet. |
 | `POST /api/solve` | Accepts `{ "intentHashes": ["0x…", "0x…"] }`, reconstructs signed conditions from registry events, reads current chain state, searches and simulates. |
 | `GET /api/evidence/{id}` | Returns the saved evidence, including source block, considered hashes, excluded candidates, chosen proposal, search caps and simulation result. |
 | `POST /api/evidence/{id}/receipt` | Accepts `{ "transactionHash": "0x…" }`. Checks chain ID, successful receipt, exact destination/calldata, `Settled` event and SETTLED registry states before attaching confirmation. |

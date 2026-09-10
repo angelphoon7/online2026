@@ -179,7 +179,7 @@ signingDigest   = keccak256(0x1901 || domainSeparator || hashIntent(intent))
 
 For Testnet → Mainnet, obtain the confirmed mainnet chain ID and **new Registry address** from the verified deployment, update the frontend domain and deployment/RPC configuration together, then rebuild and redeploy the frontend. Recreate the intended inventory/custody on the target chain, read `usedNonce(owner, nonce)` from the new Registry, have each participant sign the new domain, relay fresh commits, and only then expose those intents to the solver. Old ticket custody, commitments and nonce reservations do not migrate automatically.
 
-The existing `signAndCommitIntent()` reads `DOMAIN_SEPARATOR()` but currently does not compare it with the locally constructed domain before prompting the wallet. Do not describe that read as an implemented mismatch guard. [`mainnet:verify`](../scripts/lib/mainnet-deployment.mjs) does check the deployed Registry's domain against its deployment config; the frontend's exact built configuration and wallet network still need the acceptance checks below.
+The existing `signAndCommitIntent()` constructs the domain from frontend configuration; it does not compare that domain with `DOMAIN_SEPARATOR()` before prompting the wallet. An unused pre-signing RPC read was removed; it was not a mismatch guard. [`mainnet:verify`](../scripts/lib/mainnet-deployment.mjs) does check the deployed Registry's domain against its deployment config; the frontend's exact built configuration and wallet network still need the acceptance checks below. Browser chain reads use the same-origin, read-only `/api/rpc` route, whose upstream is the backend's configured `ARC_RPC`.
 
 ### Signature migration acceptance checks
 
