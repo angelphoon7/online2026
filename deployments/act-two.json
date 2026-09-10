@@ -1,0 +1,597 @@
+{
+  "title": "Act two: buyer, two swappers and seller, one open-chain settlement",
+  "proof": {
+    "chainId": 5042002,
+    "transactionHash": "0x6df107019a5bb2d47654a12cf594923adf5f3cfb6259ba3a49d870f79e9ce29e",
+    "blockNumber": "61369696",
+    "blockHash": "0x9f093401cdb6d74ce1dae3a050e0d5bc8588337b2ed78252b804343f6bd18ee6",
+    "beforeBlock": "61369695",
+    "checkedAt": "2026-09-10T08:29:24.558Z",
+    "status": "verified",
+    "settlement": "0x75872168f2d6ae13c7d9258159e59025fd9b5eae",
+    "ticketNFT": "0xb2490568bb27c9c38588e3b5511ee3980892cce4",
+    "escrow": "0x07ab57380db7df630fab2d3d3a1019a5a890b018",
+    "participantCount": 4,
+    "ticketTransferCount": 6,
+    "settlementTransactionCount": 1,
+    "tickets": [
+      {
+        "tokenId": "18",
+        "previousParticipant": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "recipient": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+        "transferFrom": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+        "logIndex": 63,
+        "meta": {
+          "eventId": 1,
+          "sessionId": 0,
+          "sectionId": 0,
+          "row": 3,
+          "seat": 1,
+          "status": 0
+        }
+      },
+      {
+        "tokenId": "19",
+        "previousParticipant": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "recipient": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+        "transferFrom": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+        "logIndex": 64,
+        "meta": {
+          "eventId": 1,
+          "sessionId": 0,
+          "sectionId": 0,
+          "row": 3,
+          "seat": 2,
+          "status": 0
+        }
+      },
+      {
+        "tokenId": "22",
+        "previousParticipant": "0x0dcd390c1df4cd14DE2EB9bbB53271ae9f48e034",
+        "recipient": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "transferFrom": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+        "logIndex": 65,
+        "meta": {
+          "eventId": 1,
+          "sessionId": 0,
+          "sectionId": 1,
+          "row": 3,
+          "seat": 1,
+          "status": 0
+        }
+      },
+      {
+        "tokenId": "23",
+        "previousParticipant": "0x0dcd390c1df4cd14DE2EB9bbB53271ae9f48e034",
+        "recipient": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "transferFrom": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+        "logIndex": 66,
+        "meta": {
+          "eventId": 1,
+          "sessionId": 0,
+          "sectionId": 1,
+          "row": 3,
+          "seat": 2,
+          "status": 0
+        }
+      },
+      {
+        "tokenId": "20",
+        "previousParticipant": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "recipient": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "transferFrom": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+        "logIndex": 67,
+        "meta": {
+          "eventId": 1,
+          "sessionId": 1,
+          "sectionId": 0,
+          "row": 3,
+          "seat": 1,
+          "status": 0
+        }
+      },
+      {
+        "tokenId": "21",
+        "previousParticipant": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "recipient": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "transferFrom": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+        "logIndex": 68,
+        "meta": {
+          "eventId": 1,
+          "sessionId": 1,
+          "sectionId": 0,
+          "row": 3,
+          "seat": 2,
+          "status": 0
+        }
+      }
+    ],
+    "participants": [
+      {
+        "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+        "offered": [],
+        "received": [
+          "18",
+          "19"
+        ],
+        "netPayment": "100000",
+        "intentHash": "0x27b6af829f25657507f38fa6b7b384e6ba9edb9f43b1abcaacb404ac4cee6c4e"
+      },
+      {
+        "owner": "0x0dcd390c1df4cd14DE2EB9bbB53271ae9f48e034",
+        "offered": [
+          "22",
+          "23"
+        ],
+        "received": [],
+        "netPayment": "-300000",
+        "intentHash": "0x3a15ec5ea79726cf15a3f12643ff9c941d5bed5e651b24afdc8185e37290403e"
+      },
+      {
+        "owner": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+        "offered": [
+          "20",
+          "21"
+        ],
+        "received": [
+          "22",
+          "23"
+        ],
+        "netPayment": "100000",
+        "intentHash": "0xb380bc01f713e70cf0f594f0a733e7775e060ca5bdeadca72dc9c008016dd8b4"
+      },
+      {
+        "owner": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+        "offered": [
+          "18",
+          "19"
+        ],
+        "received": [
+          "20",
+          "21"
+        ],
+        "netPayment": "100000",
+        "intentHash": "0xeeea95b0d68db2996078eb2ec5a5fa13cd25c72adf48d7adb667430a8458b450"
+      }
+    ]
+  },
+  "setupTransactions": [
+    {
+      "label": "gas:3",
+      "transactionHash": "0xcdedd081189d62fb7162b9376db25cd9501da6799ebb66f3b11e9e39a4e4e105",
+      "blockNumber": "61369159"
+    },
+    {
+      "label": "mint:0",
+      "transactionHash": "0x188e4efd706b1c9540ce15bcdc1ac1793a3063d53069bffba3e6f1e5efd64094",
+      "blockNumber": "61369167"
+    },
+    {
+      "label": "mint:1",
+      "transactionHash": "0x9d5acc9f0bab2fb9712009d0d2425e1fbd7abc32c2b7f1388975a8a975bc8c75",
+      "blockNumber": "61369176"
+    },
+    {
+      "label": "mint:2",
+      "transactionHash": "0xdcf70c03a73b568bbd7edd8efc210eedb69dc96a47070d4502eaa15b063b613a",
+      "blockNumber": "61369185"
+    },
+    {
+      "label": "mint:3",
+      "transactionHash": "0x8c7d12eaf3d232a86fdfbb5e6c328ac04eeb8e67eea216eff74aea3f7b1a4dee",
+      "blockNumber": "61369194"
+    },
+    {
+      "label": "mint:4",
+      "transactionHash": "0xc7860ffdf5f8f6454e97cb523f76da149dcfcd3511742bce3bf8c63b200fed67",
+      "blockNumber": "61369203"
+    },
+    {
+      "label": "mint:5",
+      "transactionHash": "0x108cbb5c4c0145a557df980c31705dd6a425aea9cd5e6c713fa8f7ef72f7691b",
+      "blockNumber": "61369212"
+    },
+    {
+      "label": "commit:0",
+      "transactionHash": "0x1fc59378aaf99b26acac951209cf88c9a9127fa0a93ed6a3a4ef67c2f03c743b",
+      "blockNumber": "61369222"
+    },
+    {
+      "label": "deposit:1",
+      "transactionHash": "0xbf064d62b7682ca280fd23414aab5d4a8bd8ad6fa1bebeebba19612886dde8e7",
+      "blockNumber": "61369231"
+    },
+    {
+      "label": "commit:1",
+      "transactionHash": "0xfe52c6ea5b0a88047f1ad25b93cd980ba5f10cb7026e240a2c44e082ec87e9e0",
+      "blockNumber": "61369240"
+    },
+    {
+      "label": "deposit:2",
+      "transactionHash": "0xc25eaf035e79ab6053493c702175ccf57bf5b56ecd259400c0d094aeacc5d0de",
+      "blockNumber": "61369249"
+    },
+    {
+      "label": "commit:2",
+      "transactionHash": "0xbcb0f63f70245d0f9d0ce60fcdd07cf8ddca2e6e048c81d2bb5e22c9571e5984",
+      "blockNumber": "61369259"
+    },
+    {
+      "label": "approval:3",
+      "transactionHash": "0xc56b059b9b6220cc6f3a211877b08006305d634c3683f18d20aed9b3f588a498",
+      "blockNumber": "61369266"
+    },
+    {
+      "label": "deposit:3",
+      "transactionHash": "0x176f10cb1a0d1401d394966aacb75206fbe6cb2adc3229ee31135fdf793a2cbc",
+      "blockNumber": "61369275"
+    },
+    {
+      "label": "commit:3",
+      "transactionHash": "0x3e1fec78465809385bdf8f352dc585e2ae997c9f6bf91c38fcc70ceaf0eda88a",
+      "blockNumber": "61369283"
+    }
+  ],
+  "broken": [
+    {
+      "label": "without-buyer",
+      "evidence": {
+        "timestamp": "2026-09-10T08:29:05.078Z",
+        "intentsConsidered": 3,
+        "candidatesFound": 0,
+        "candidatesExcluded": [
+          {
+            "intentHashes": [
+              "0x3a15ec5ea79726cf15a3f12643ff9c941d5bed5e651b24afdc8185e37290403e",
+              "0xb380bc01f713e70cf0f594f0a733e7775e060ca5bdeadca72dc9c008016dd8b4"
+            ],
+            "reason": "V4: Offered and received ticket counts differ"
+          },
+          {
+            "intentHashes": [
+              "0x3a15ec5ea79726cf15a3f12643ff9c941d5bed5e651b24afdc8185e37290403e",
+              "0xeeea95b0d68db2996078eb2ec5a5fa13cd25c72adf48d7adb667430a8458b450"
+            ],
+            "reason": "V4: Offered and received ticket counts differ"
+          },
+          {
+            "intentHashes": [
+              "0xb380bc01f713e70cf0f594f0a733e7775e060ca5bdeadca72dc9c008016dd8b4",
+              "0xeeea95b0d68db2996078eb2ec5a5fa13cd25c72adf48d7adb667430a8458b450"
+            ],
+            "reason": "No valid ticket assignment satisfying all predicates"
+          },
+          {
+            "intentHashes": [
+              "0x3a15ec5ea79726cf15a3f12643ff9c941d5bed5e651b24afdc8185e37290403e",
+              "0xb380bc01f713e70cf0f594f0a733e7775e060ca5bdeadca72dc9c008016dd8b4",
+              "0xeeea95b0d68db2996078eb2ec5a5fa13cd25c72adf48d7adb667430a8458b450"
+            ],
+            "reason": "V4: Offered and received ticket counts differ"
+          }
+        ],
+        "chosen": null,
+        "chainId": 5042002,
+        "registry": "0x479b4455f494679dcdd6f6f32e93e08682deda75",
+        "settlement": "0x75872168f2d6ae13c7d9258159e59025fd9b5eae",
+        "source": {
+          "kind": "rpc",
+          "subgraphEndpoint": null,
+          "blockNumber": "61369658",
+          "blockHash": "0x103f20e78b8973eb6e0eebc7ed4a63be0fe35b3302a665b72fa04e5ae079a06f"
+        },
+        "requestedIntentHashes": [
+          "0x3a15ec5ea79726cf15a3f12643ff9c941d5bed5e651b24afdc8185e37290403e",
+          "0xb380bc01f713e70cf0f594f0a733e7775e060ca5bdeadca72dc9c008016dd8b4",
+          "0xeeea95b0d68db2996078eb2ec5a5fa13cd25c72adf48d7adb667430a8458b450"
+        ],
+        "searchConfig": {
+          "maxParticipants": 4,
+          "maxCandidates": 100,
+          "timeoutMs": 2000
+        },
+        "runtimeMs": 5.979300000006333,
+        "simulationBlock": "61369670",
+        "proposal": null,
+        "message": "No solution found within the search bound",
+        "id": "c485fdd0-fffc-4c0a-bf0a-3cfd4a31c447"
+      }
+    },
+    {
+      "label": "without-seller",
+      "evidence": {
+        "timestamp": "2026-09-10T08:29:10.895Z",
+        "intentsConsidered": 3,
+        "candidatesFound": 0,
+        "candidatesExcluded": [
+          {
+            "intentHashes": [
+              "0x27b6af829f25657507f38fa6b7b384e6ba9edb9f43b1abcaacb404ac4cee6c4e",
+              "0xb380bc01f713e70cf0f594f0a733e7775e060ca5bdeadca72dc9c008016dd8b4"
+            ],
+            "reason": "V4: Offered and received ticket counts differ"
+          },
+          {
+            "intentHashes": [
+              "0x27b6af829f25657507f38fa6b7b384e6ba9edb9f43b1abcaacb404ac4cee6c4e",
+              "0xeeea95b0d68db2996078eb2ec5a5fa13cd25c72adf48d7adb667430a8458b450"
+            ],
+            "reason": "V4: Offered and received ticket counts differ"
+          },
+          {
+            "intentHashes": [
+              "0xb380bc01f713e70cf0f594f0a733e7775e060ca5bdeadca72dc9c008016dd8b4",
+              "0xeeea95b0d68db2996078eb2ec5a5fa13cd25c72adf48d7adb667430a8458b450"
+            ],
+            "reason": "No valid ticket assignment satisfying all predicates"
+          },
+          {
+            "intentHashes": [
+              "0x27b6af829f25657507f38fa6b7b384e6ba9edb9f43b1abcaacb404ac4cee6c4e",
+              "0xb380bc01f713e70cf0f594f0a733e7775e060ca5bdeadca72dc9c008016dd8b4",
+              "0xeeea95b0d68db2996078eb2ec5a5fa13cd25c72adf48d7adb667430a8458b450"
+            ],
+            "reason": "V4: Offered and received ticket counts differ"
+          }
+        ],
+        "chosen": null,
+        "chainId": 5042002,
+        "registry": "0x479b4455f494679dcdd6f6f32e93e08682deda75",
+        "settlement": "0x75872168f2d6ae13c7d9258159e59025fd9b5eae",
+        "source": {
+          "kind": "rpc",
+          "subgraphEndpoint": null,
+          "blockNumber": "61369671",
+          "blockHash": "0x5c56bf883776ec22fff8e32c56e2a3e56be5f215c9b1310d85b4536a308ac44a"
+        },
+        "requestedIntentHashes": [
+          "0x27b6af829f25657507f38fa6b7b384e6ba9edb9f43b1abcaacb404ac4cee6c4e",
+          "0xb380bc01f713e70cf0f594f0a733e7775e060ca5bdeadca72dc9c008016dd8b4",
+          "0xeeea95b0d68db2996078eb2ec5a5fa13cd25c72adf48d7adb667430a8458b450"
+        ],
+        "searchConfig": {
+          "maxParticipants": 4,
+          "maxCandidates": 100,
+          "timeoutMs": 2000
+        },
+        "runtimeMs": 4.803499999979977,
+        "simulationBlock": "61369682",
+        "proposal": null,
+        "message": "No solution found within the search bound",
+        "id": "7b8ed9ca-4595-41dc-9737-d39fc350f475"
+      }
+    }
+  ],
+  "evidence": {
+    "timestamp": "2026-09-10T08:29:16.481Z",
+    "intentsConsidered": 4,
+    "candidatesFound": 1,
+    "candidatesExcluded": [
+      {
+        "intentHashes": [
+          "0x27b6af829f25657507f38fa6b7b384e6ba9edb9f43b1abcaacb404ac4cee6c4e",
+          "0x3a15ec5ea79726cf15a3f12643ff9c941d5bed5e651b24afdc8185e37290403e"
+        ],
+        "reason": "No feasible payment distribution"
+      },
+      {
+        "intentHashes": [
+          "0x27b6af829f25657507f38fa6b7b384e6ba9edb9f43b1abcaacb404ac4cee6c4e",
+          "0xb380bc01f713e70cf0f594f0a733e7775e060ca5bdeadca72dc9c008016dd8b4"
+        ],
+        "reason": "V4: Offered and received ticket counts differ"
+      },
+      {
+        "intentHashes": [
+          "0x27b6af829f25657507f38fa6b7b384e6ba9edb9f43b1abcaacb404ac4cee6c4e",
+          "0xeeea95b0d68db2996078eb2ec5a5fa13cd25c72adf48d7adb667430a8458b450"
+        ],
+        "reason": "V4: Offered and received ticket counts differ"
+      },
+      {
+        "intentHashes": [
+          "0x3a15ec5ea79726cf15a3f12643ff9c941d5bed5e651b24afdc8185e37290403e",
+          "0xb380bc01f713e70cf0f594f0a733e7775e060ca5bdeadca72dc9c008016dd8b4"
+        ],
+        "reason": "V4: Offered and received ticket counts differ"
+      },
+      {
+        "intentHashes": [
+          "0x3a15ec5ea79726cf15a3f12643ff9c941d5bed5e651b24afdc8185e37290403e",
+          "0xeeea95b0d68db2996078eb2ec5a5fa13cd25c72adf48d7adb667430a8458b450"
+        ],
+        "reason": "V4: Offered and received ticket counts differ"
+      },
+      {
+        "intentHashes": [
+          "0xb380bc01f713e70cf0f594f0a733e7775e060ca5bdeadca72dc9c008016dd8b4",
+          "0xeeea95b0d68db2996078eb2ec5a5fa13cd25c72adf48d7adb667430a8458b450"
+        ],
+        "reason": "No valid ticket assignment satisfying all predicates"
+      },
+      {
+        "intentHashes": [
+          "0x27b6af829f25657507f38fa6b7b384e6ba9edb9f43b1abcaacb404ac4cee6c4e",
+          "0x3a15ec5ea79726cf15a3f12643ff9c941d5bed5e651b24afdc8185e37290403e",
+          "0xb380bc01f713e70cf0f594f0a733e7775e060ca5bdeadca72dc9c008016dd8b4"
+        ],
+        "reason": "No feasible payment distribution"
+      },
+      {
+        "intentHashes": [
+          "0x27b6af829f25657507f38fa6b7b384e6ba9edb9f43b1abcaacb404ac4cee6c4e",
+          "0x3a15ec5ea79726cf15a3f12643ff9c941d5bed5e651b24afdc8185e37290403e",
+          "0xeeea95b0d68db2996078eb2ec5a5fa13cd25c72adf48d7adb667430a8458b450"
+        ],
+        "reason": "No feasible payment distribution"
+      },
+      {
+        "intentHashes": [
+          "0x27b6af829f25657507f38fa6b7b384e6ba9edb9f43b1abcaacb404ac4cee6c4e",
+          "0xb380bc01f713e70cf0f594f0a733e7775e060ca5bdeadca72dc9c008016dd8b4",
+          "0xeeea95b0d68db2996078eb2ec5a5fa13cd25c72adf48d7adb667430a8458b450"
+        ],
+        "reason": "V4: Offered and received ticket counts differ"
+      },
+      {
+        "intentHashes": [
+          "0x3a15ec5ea79726cf15a3f12643ff9c941d5bed5e651b24afdc8185e37290403e",
+          "0xb380bc01f713e70cf0f594f0a733e7775e060ca5bdeadca72dc9c008016dd8b4",
+          "0xeeea95b0d68db2996078eb2ec5a5fa13cd25c72adf48d7adb667430a8458b450"
+        ],
+        "reason": "V4: Offered and received ticket counts differ"
+      }
+    ],
+    "chosen": {
+      "intentHashes": [
+        "0x27b6af829f25657507f38fa6b7b384e6ba9edb9f43b1abcaacb404ac4cee6c4e",
+        "0x3a15ec5ea79726cf15a3f12643ff9c941d5bed5e651b24afdc8185e37290403e",
+        "0xb380bc01f713e70cf0f594f0a733e7775e060ca5bdeadca72dc9c008016dd8b4",
+        "0xeeea95b0d68db2996078eb2ec5a5fa13cd25c72adf48d7adb667430a8458b450"
+      ],
+      "gross": "300000",
+      "reason": "Least cash moved among 1 candidate found within the search budget: 300000 gross, 4 participants"
+    },
+    "chainId": 5042002,
+    "registry": "0x479b4455f494679dcdd6f6f32e93e08682deda75",
+    "settlement": "0x75872168f2d6ae13c7d9258159e59025fd9b5eae",
+    "source": {
+      "kind": "rpc",
+      "subgraphEndpoint": null,
+      "blockNumber": "61369683",
+      "blockHash": "0xa394aebab25f548b074c3c6c2a5888562bfe49285dd55299cc8c39d2cbc66765"
+    },
+    "requestedIntentHashes": [
+      "0x27b6af829f25657507f38fa6b7b384e6ba9edb9f43b1abcaacb404ac4cee6c4e",
+      "0x3a15ec5ea79726cf15a3f12643ff9c941d5bed5e651b24afdc8185e37290403e",
+      "0xb380bc01f713e70cf0f594f0a733e7775e060ca5bdeadca72dc9c008016dd8b4",
+      "0xeeea95b0d68db2996078eb2ec5a5fa13cd25c72adf48d7adb667430a8458b450"
+    ],
+    "searchConfig": {
+      "maxParticipants": 4,
+      "maxCandidates": 100,
+      "timeoutMs": 2000
+    },
+    "runtimeMs": 13.695499999972526,
+    "simulationBlock": "61369693",
+    "simulationResult": {
+      "success": true
+    },
+    "proposal": {
+      "intents": [
+        {
+          "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+          "eventId": 1,
+          "offered": [],
+          "sessionMask": "1",
+          "sectionMask": "1",
+          "exactCount": 2,
+          "mustShareSession": true,
+          "mustShareSection": true,
+          "mustBeAdjacent": true,
+          "maxNetPay": "100000",
+          "deadline": "1791620676",
+          "nonce": "12"
+        },
+        {
+          "owner": "0x0dcd390c1df4cd14DE2EB9bbB53271ae9f48e034",
+          "eventId": 1,
+          "offered": [
+            "22",
+            "23"
+          ],
+          "sessionMask": "3",
+          "sectionMask": "3",
+          "exactCount": 0,
+          "mustShareSession": false,
+          "mustShareSection": false,
+          "mustBeAdjacent": false,
+          "maxNetPay": "-300000",
+          "deadline": "1791620676",
+          "nonce": "0"
+        },
+        {
+          "owner": "0xC1d189f4faD5BbaE8Cf972cB59e669441d813FBB",
+          "eventId": 1,
+          "offered": [
+            "20",
+            "21"
+          ],
+          "sessionMask": "1",
+          "sectionMask": "2",
+          "exactCount": 2,
+          "mustShareSession": true,
+          "mustShareSection": true,
+          "mustBeAdjacent": true,
+          "maxNetPay": "100000",
+          "deadline": "1791620676",
+          "nonce": "12"
+        },
+        {
+          "owner": "0x8C3345e88cB68f16dc31f88EE21b2032a5250e90",
+          "eventId": 1,
+          "offered": [
+            "18",
+            "19"
+          ],
+          "sessionMask": "2",
+          "sectionMask": "1",
+          "exactCount": 2,
+          "mustShareSession": true,
+          "mustShareSection": true,
+          "mustBeAdjacent": true,
+          "maxNetPay": "100000",
+          "deadline": "1791620676",
+          "nonce": "12"
+        }
+      ],
+      "legs": [
+        {
+          "intentHash": "0x27b6af829f25657507f38fa6b7b384e6ba9edb9f43b1abcaacb404ac4cee6c4e",
+          "receives": [
+            "18",
+            "19"
+          ],
+          "netPayment": "100000"
+        },
+        {
+          "intentHash": "0x3a15ec5ea79726cf15a3f12643ff9c941d5bed5e651b24afdc8185e37290403e",
+          "receives": [],
+          "netPayment": "-300000"
+        },
+        {
+          "intentHash": "0xb380bc01f713e70cf0f594f0a733e7775e060ca5bdeadca72dc9c008016dd8b4",
+          "receives": [
+            "22",
+            "23"
+          ],
+          "netPayment": "100000"
+        },
+        {
+          "intentHash": "0xeeea95b0d68db2996078eb2ec5a5fa13cd25c72adf48d7adb667430a8458b450",
+          "receives": [
+            "20",
+            "21"
+          ],
+          "netPayment": "100000"
+        }
+      ]
+    },
+    "transaction": {
+      "to": "0x75872168f2d6ae13c7d9258159e59025fd9b5eae",
+      "data": "0x719abecf00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000820000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000220000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000005e0000000000000000000000000a8dae73bde3a5c0e412884c9be2039a79dfb31fd0000000000000000000000000000000000000000000000000000000000000180000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000186a0000000000000000000000000000000000000000000000000000000006ac9f644000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000dcd390c1df4cd14de2eb9bbb53271ae9f48e03400000000000000000000000000000000000000000000000000000000000001800000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb6c20000000000000000000000000000000000000000000000000000000006ac9f6440000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000160000000000000000000000000000000000000000000000000000000000000017000000000000000000000000c1d189f4fad5bbae8cf972cb59e669441d813fbb0000000000000000000000000000000000000000000000000000000000000180000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000186a0000000000000000000000000000000000000000000000000000000006ac9f644000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000001400000000000000000000000000000000000000000000000000000000000000150000000000000000000000008c3345e88cb68f16dc31f88ee21b2032a5250e900000000000000000000000000000000000000000000000000000000000000180000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000186a0000000000000000000000000000000000000000000000000000000006ac9f644000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000001300000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001c0000000000000000000000000000000000000000000000000000000000000028027b6af829f25657507f38fa6b7b384e6ba9edb9f43b1abcaacb404ac4cee6c4e000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000186a00000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000133a15ec5ea79726cf15a3f12643ff9c941d5bed5e651b24afdc8185e37290403e0000000000000000000000000000000000000000000000000000000000000060fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb6c200000000000000000000000000000000000000000000000000000000000000000b380bc01f713e70cf0f594f0a733e7775e060ca5bdeadca72dc9c008016dd8b4000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000186a0000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000160000000000000000000000000000000000000000000000000000000000000017eeea95b0d68db2996078eb2ec5a5fa13cd25c72adf48d7adb667430a8458b450000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000186a0000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000140000000000000000000000000000000000000000000000000000000000000015",
+      "gas": "8000000",
+      "chainId": 5042002
+    },
+    "message": "Candidate found within the search budget",
+    "id": "2f3bd611-4041-4047-927a-bb74bb4d1c03",
+    "transactionHash": "0x6df107019a5bb2d47654a12cf594923adf5f3cfb6259ba3a49d870f79e9ce29e",
+    "receipt": {
+      "status": "success",
+      "blockNumber": "61369696",
+      "blockHash": "0x9f093401cdb6d74ce1dae3a050e0d5bc8588337b2ed78252b804343f6bd18ee6",
+      "participantCount": "4",
+      "confirmed": true
+    }
+  }
+}

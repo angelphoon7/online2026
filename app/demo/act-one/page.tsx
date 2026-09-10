@@ -1,5 +1,5 @@
-import ActOne from '@/component/reshuffle/ActOne';
+import RecordedSettlement from '@/component/reshuffle/RecordedSettlement';
 
 export default function ActOnePage() {
-  return <ActOne />;
+  return <RecordedSettlement />;
 }

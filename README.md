@@ -32,6 +32,8 @@ You never give up your tickets unless the whole replacement arrives.
 
 ## Ready-to-settle demo
 
+**Act two is confirmed: a pure buyer, two swappers and a pure seller settled an open chain in one transaction at block 61369696.** [Real transaction](https://testnet.arcscan.app/tx/0x6df107019a5bb2d47654a12cf594923adf5f3cfb6259ba3a49d870f79e9ce29e) · [Open-chain evidence, including both missing-endpoint searches](deployments/act-two.json) · [Scene instructions](docs/DEMO_ACT_TWO.md). Open `/demo/act-two` to compare the failed subset searches with the four-party settlement. It uses the same deployed contracts and solver as act one.
+
 **Act one is confirmed: three participants exchanged six tickets in one Arc Testnet settlement, at block 61301567.** [Real transaction](https://testnet.arcscan.app/tx/0xdc54e3971c04dc533b1ad3604cd29368cb67556d265fb093b60e146e5e6f3143) · [Six-transfer evidence](deployments/act-one.json) · [Scene and verification instructions](docs/DEMO_ACT_ONE.md). Open `/demo/act-one` in the running app to verify and display the completed exchange. The separate twelve-ticket `/demo` remains the interactive pending round.
 
 With the existing Arc deployment and local operator credentials configured:

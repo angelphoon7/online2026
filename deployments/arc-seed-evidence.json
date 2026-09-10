@@ -1,15 +1,15 @@
 {
   "source": "Arc RPC state; subgraph not configured",
-  "blockNumber": "61302218",
-  "blockHash": "0xf4eba8aaf0646b43a29a701a915c10e41bde572adb6cefb0d122279eb7f2f0fa",
-  "checkedAt": "2026-09-09T22:52:17.851Z",
+  "blockNumber": "61369957",
+  "blockHash": "0xd93be634de962adaf26804b88376181322ce1a2782c68e6aca7b59f33a8526b5",
+  "checkedAt": "2026-09-10T08:31:36.377Z",
   "searchConfig": {
     "maxParticipants": 3,
     "maxCandidates": 100,
     "timeoutMs": 5000
   },
-  "runtimeMs": 27.677400000000034,
-  "timestamp": "2026-09-09T22:52:17.847Z",
+  "runtimeMs": 14.028400000000147,
+  "timestamp": "2026-09-10T08:31:36.375Z",
   "intentsConsidered": 3,
   "candidatesFound": 1,
   "candidatesExcluded": [
