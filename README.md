@@ -993,7 +993,22 @@ forge script script/Deploy.s.sol --rpc-url $ARC_RPC --broadcast
 | IntentRegistry | *TBD* | Arc Testnet |
 | Settlement | *TBD* | Arc Testnet |
 
-Gas figures come from `forge test --gas-report`. They are populated after the validation suite is green, never estimated.
+### Measured settlement gas
+
+Measured on **2026-09-10** with `forge test --gas-report`: **32 tests passed, 0 failed**. Each row below comes from a separate successful test's **`Settlement.settle` function row**, with exactly one call (min = average = median = max). The test body's total gas, which includes preparing the tickets and intents, is not used.
+
+| Successful scenario | Participants / intents | Tickets transferred | Optional constraints enabled¹ | Measured `settle` gas | Raw report |
+|---|---:|---:|---:|---:|---|
+| Two-party exchange; participants absent after commit | 2 / 2 | 2 | 0 | **208,016** | [Report](docs/gas/test_settles_without_participant_online.txt) |
+| Buyer → swapper → seller | 3 / 3 | 4 | 4 | **291,716** | [Report](docs/gas/test_buyer_seller_chain_completes.txt) |
+| Three-party adjacent-pair reshuffle | 3 / 3 | 6 | 6 | **378,779** | [Report](docs/gas/test_three_way_reshuffle_succeeds.txt) |
+| Seeded three-party reshuffle, four tickets each | 3 / 3 | 12 | 9 | **561,664** | [Report](docs/gas/test_seed_is_live_then_settles_without_participants.txt) |
+
+¹ Count of enabled `mustShareSession`, `mustShareSection` and `mustBeAdjacent` predicates, summed across intents. The rows enable respectively `(0, 0, 0)`, `(0, 2, 2)`, `(0, 3, 3)` and `(3, 3, 3)` in that order. Mandatory checks such as validity, event/masks, exact count, budget, conservation and payment capacity still run; they are not included in this optional-constraint count. These are different workloads, not an isolated measurement of each additional predicate's cost.
+
+Environment: **Forge 1.8.1, Solidity 0.8.36, Paris EVM, via IR, optimizer enabled with 200 runs**. These are local Foundry measurements using `MockUSDC`; separate mint/approval/deposit/commit calls are excluded from the `settle` row. They are not Arc receipt `gasUsed` or a USDC fee quote. Arc's native USDC implementation and actual transaction state can produce different costs.
+
+[Full passing suite report](docs/gas/full-suite.txt) · [Exact commands, fixtures and measurement scope](docs/gas/README.md). The full suite's aggregate `settle` statistics include expected reverts, so they are not presented as successful-settlement costs.
 
 ---
 
