@@ -1,5 +1,9 @@
 # RESHUFFLE
 
+Swap tickets without selling first.
+
+*Every condition you sign is checked on-chain.*
+
 **Target Arc bounties: Best DeFi / Onchain Finance · Launch on Testnet & Push to Mainnet — [category confirmation pending](#bounty-category-verification).**
 
 **A market for outcomes, not listings.**
