@@ -16,6 +16,7 @@
     "subgraph:abis": "node scripts/gen-subgraph-abis.mjs",
     "subgraph:config": "node scripts/gen-subgraph-config.mjs",
     "subgraph:codegen": "npm run subgraph:abis && npm run subgraph:config && npm --prefix subgraph run codegen",
+    "subgraph:check": "node scripts/check-subgraph-manifest.mjs",
     "mainnet:check": "node scripts/mainnet.mjs check",
     "mainnet:plan": "node scripts/mainnet.mjs plan",
     "mainnet:deploy": "node scripts/mainnet.mjs deploy",
