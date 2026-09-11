@@ -10,6 +10,16 @@ npm run demo:inventory -- --broadcast  # create or resume this batch
 npm run demo:inventory -- --verify     # current custody, metadata and live offers
 ```
 
+To add another batch while preserving the original inventory and its evidence, give it a new name:
+
+```bash
+npm run demo:inventory -- --check batch-2
+npm run demo:inventory -- --broadcast batch-2
+npm run demo:inventory -- --verify batch-2
+```
+
+Each named batch adds another 64 tickets and 32 offers. The same name always resumes that batch. `batch-2` uses the ignored `.data/section-inventory-batch-2.json` journal and the public [second-batch manifest](../deployments/section-inventory-batch-2.json); omitting the name continues to use the original files. Batch names accept only lowercase letters, digits and hyphens. All batches share the issuer lock and keep separate fee ceilings. Reuse the same name after an interrupted run; use a new name only when intentionally adding more inventory.
+
 Each issuer intent offers two adjacent tickets and accepts exactly two adjacent tickets from either configured session and any of the four sections. Its `maxNetPay` is zero: the issuer will not pay a top-up and does not require a credit. These are deliberately permissive demo inventory constraints, not a platform valuation. A participant's own signed constraints still govern their side of the exchange. The issuer's replacement tickets must share a session, section and row and have consecutive seat numbers.
 
 All inventory offers expire at the earlier session's eight-hour cutoff, because they can receive tickets from either night. With the labelled demo schedule, this is **19 September 2026, 12:00 Malaysia time (04:00 UTC)**. The committed deadline stays fixed if configuration changes later.
@@ -25,3 +35,5 @@ In the app, open Event 1 and refresh public state. **Which section** counts thes
 The public market reader spaces historical log queries to avoid Arc RPC rate limits during a cold scan. Initial loading includes the full deployment history; subsequent reads reuse discovered events after checking the previous block hash and still refresh current custody and intent state.
 
 The app backend public scan also passed at block **61619336**: 100 total issued tickets and at least eight live offered tickets in every configured section/session. [Public section counts](../deployments/section-inventory-public-state.json). Session 1 / Section 0 also includes two pre-existing offers, for ten tickets offered at that block.
+
+Second batch verified at Arc block **61622739**: token IDs **100 through 163**, **32 additional live offers**, and **104 successful transactions**. Its receipt gas fees total **0.254122616 test USDC**. The two batches minted **128 distinct tickets** in total; the original batch manifest and journal were preserved.

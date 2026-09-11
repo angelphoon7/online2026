@@ -1,6 +1,8 @@
 {
+  "network": "arc-testnet",
   "chainId": 5042002,
   "rpc": "https://rpc.testnet.arc.io",
+  "subgraphUrl": "",
   "deployer": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
   "usdc": "0x3600000000000000000000000000000000000000",
   "contracts": {

@@ -6,18 +6,20 @@ import { privateKeyToAccount } from 'viem/accounts';
 import abis from '../server/abis.json' with { type: 'json' };
 
 const mode = process.argv[2] ?? '--check';
+const batch = process.argv[3] ?? 'default';
 const json = value => JSON.stringify(value, (_, v) => typeof v === 'bigint' ? String(v) : v, 2) + '\n';
 const same = (a, b) => a?.toLowerCase() === b?.toLowerCase();
 const fail = message => { throw new Error(`Inventory: ${message}`); };
 const writeJson = (path, value) => { fs.writeFileSync(`${path}.tmp`, json(value), { mode: 0o600 }); fs.renameSync(`${path}.tmp`, path); };
-const journalPath = '.data/section-inventory.json';
-const manifestPath = 'deployments/section-inventory.json';
+const suffix = batch === 'default' ? '' : `-${batch}`;
+const journalPath = `.data/section-inventory${suffix}.json`;
+const manifestPath = `deployments/section-inventory${suffix}.json`;
 const lockPath = '.data/demo-tickets/issuer.lock';
 const types = { Intent: abis.IntentRegistry.find(entry => entry.name === 'commit').inputs[0].components.map(({ name, type }) => ({ name, type })) };
 const restore = intent => ({ ...intent, offered: intent.offered.map(BigInt), ...Object.fromEntries(['sessionMask', 'sectionMask', 'maxNetPay', 'deadline', 'nonce'].map(key => [key, BigInt(intent[key])])) });
 
 async function main() {
-  if (!['--check', '--broadcast', '--verify'].includes(mode) || process.argv.length > 3) fail('Use --check, --broadcast or --verify.');
+  if (!['--check', '--broadcast', '--verify'].includes(mode) || process.argv.length > 4 || !/^[a-z0-9][a-z0-9-]{0,31}$/.test(batch)) fail('Use --check, --broadcast or --verify, optionally followed by a batch name (lowercase letters, digits and hyphens).');
   loadEnvFile('.env');
   const deployment = JSON.parse(fs.readFileSync('deployments/arc-testnet.json', 'utf8'));
   const addresses = deployment.contracts;
@@ -59,8 +61,8 @@ async function main() {
   const deadline = BigInt(Math.min(...cutoffSeconds));
   const [block, nextId, balance] = await Promise.all([client.getBlock(), read('TicketNFT', 'nextTokenId'), client.getBalance({ address: account.address })]);
   let journal = fs.existsSync(journalPath) ? JSON.parse(fs.readFileSync(journalPath, 'utf8')) : null;
-  if (journal && (journal.chainId !== chain.id || !same(journal.issuer, account.address) || json(journal.contracts) !== json(addresses))) fail('Saved inventory belongs to another issuer/deployment.');
-  console.log(`Arc ${chain.id}: ${nextId} existing tickets; issuer ${account.address}; ${formatEther(balance)} native USDC.`);
+  if (journal && ((journal.batch ?? 'default') !== batch || journal.chainId !== chain.id || !same(journal.issuer, account.address) || json(journal.contracts) !== json(addresses))) fail('Saved inventory belongs to another batch/issuer/deployment.');
+  console.log(`Batch ${batch}, Arc ${chain.id}: ${nextId} existing tickets; issuer ${account.address}; ${formatEther(balance)} native USDC.`);
   if (mode === '--check') {
     console.log(journal ? 'Saved inventory exists; --broadcast resumes it without creating a second batch.' : 'Plan: 64 tickets, 8 per section/session, 32 adjacent-pair offers. Sessions 0/1; sections 0/1/2/3.');
     console.log(`Issuer accepts 2 adjacent replacement tickets in either session/any section, maxNetPay=0. Deadline ${new Date(Number(deadline) * 1000).toISOString()}. Total transaction fee ceiling: 5 test USDC.`);
@@ -79,7 +81,7 @@ async function main() {
       if (deadline <= block.timestamp + 3600n) fail('Session cutoff is too close or has passed.');
       if (!journal) {
         if (nextId + 64n > 1000n || balance < parseEther('5')) fail('Need inventory capacity and 5 test USDC for the fee ceiling.');
-        journal = { chainId: chain.id, issuer: account.address, contracts: addresses, deadline: String(deadline), rowBase: 20000 + Number(nextId), steps: {}, tickets: [], intents: [] };
+        journal = { batch, chainId: chain.id, issuer: account.address, contracts: addresses, deadline: String(deadline), rowBase: 20000 + Number(nextId), steps: {}, tickets: [], intents: [] };
         writeJson(journalPath, journal);
       }
       if (BigInt(journal.deadline) <= block.timestamp + 3600n) fail('Saved offers have expired; inspect their state before creating a new batch.');
@@ -173,7 +175,7 @@ async function main() {
     }
     const transactions = Object.entries(journal.steps).map(([label, step]) => ({ label, hash: step.hash, status: step.status, blockNumber: step.blockNumber, gasUsed: step.gasUsed, feePaid: step.feePaid }));
     const feePaid = transactions.reduce((total, tx) => total + BigInt(tx.feePaid ?? '0'), 0n);
-    writeJson(manifestPath, { chainId: chain.id, issuer: account.address, contracts: addresses, checkedBlock: String(checkedBlock.number), checkedAt: new Date().toISOString(), deadline: journal.deadline, cells, tickets: ticketStates, intents, transactions, totalFeeUSDC: formatEther(feePaid) });
+    writeJson(manifestPath, { batch, chainId: chain.id, issuer: account.address, contracts: addresses, checkedBlock: String(checkedBlock.number), checkedAt: new Date().toISOString(), deadline: journal.deadline, cells, tickets: ticketStates, intents, transactions, totalFeeUSDC: formatEther(feePaid) });
     console.log(json({ checkedBlock: String(checkedBlock.number), cells, liveOffers: intents.filter(i => i.available).length, transactions: transactions.length, totalFeeUSDC: formatEther(feePaid), manifest: manifestPath }));
     if (ticketStates.length !== 64 || intents.length !== 32 || cells.some(cell => cell.offered !== 8)) fail('Inventory is incomplete or some offers are no longer available; see the verified manifest.');
   } finally {
