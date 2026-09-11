@@ -52,3 +52,8 @@ next-env.d.ts
 /solver/dist/
 /.data/
 /.arc-settlements.json*
+
+# subgraph (The Graph)
+/subgraph/node_modules
+/subgraph/generated
+/subgraph/build

@@ -1,0 +1,78 @@
+specVersion: 1.2.0
+description: RESHUFFLE — the live intent pool and ticket custody on Arc Testnet.
+  IntentRegistry stores only hash -> state, so every matching condition exists
+  on-chain solely inside the IntentCommitted event. This implementation relies
+  on The Graph to reconstruct the pool.
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum/contract
+    name: TicketNFT
+    network: arc-testnet
+    source:
+      abi: TicketNFT
+      address: "0xb2490568bb27c9c38588e3b5511ee3980892cce4"
+      startBlock: 61264501
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Ticket
+      abis:
+        - name: TicketNFT
+          file: ./abis/TicketNFT.json
+      eventHandlers:
+        - event: TicketMinted(indexed uint256,indexed address,indexed
+            uint32,uint16,uint16,uint16,uint16)
+          handler: handleTicketMinted
+        - event: Transfer(indexed address,indexed address,indexed uint256)
+          handler: handleTransfer
+        - event: TicketRedeemedEvt(indexed uint256,indexed address)
+          handler: handleTicketRedeemed
+      file: ./src/ticket.ts
+  - kind: ethereum/contract
+    name: IntentRegistry
+    network: arc-testnet
+    source:
+      abi: IntentRegistry
+      address: "0x479b4455f494679dcdd6f6f32e93e08682deda75"
+      startBlock: 61264518
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Intent
+        - Ticket
+      abis:
+        - name: IntentRegistry
+          file: ./abis/IntentRegistry.json
+      eventHandlers:
+        - event: IntentCommitted(indexed bytes32,indexed address,indexed
+            uint32,uint256[],uint256,uint256,uint8,bool,bool,bool,int256,uint64,uint256)
+          handler: handleIntentCommitted
+        - event: IntentRevoked(indexed bytes32,indexed address)
+          handler: handleIntentRevoked
+      file: ./src/registry.ts
+  - kind: ethereum/contract
+    name: Settlement
+    network: arc-testnet
+    source:
+      abi: Settlement
+      address: "0x75872168f2d6ae13c7d9258159e59025fd9b5eae"
+      startBlock: 61264529
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Settlement
+        - Intent
+      abis:
+        - name: Settlement
+          file: ./abis/Settlement.json
+      eventHandlers:
+        - event: Settled(indexed address,bytes32[],uint256)
+          handler: handleSettled
+      file: ./src/settlement.ts
