@@ -140,5 +140,26 @@ export function useWallet() {
     }
   }, []);
 
-  return { account, chainId, connect, runWithWallet, isConnecting, error };
+  const disconnect = useCallback(async () => {
+    if (connecting.current || actionPending.current) throw new Error('Finish the pending wallet action before starting over.');
+    connecting.current = true;
+    revision.current++;
+    setIsConnecting(true); setError(null);
+    try {
+      const eth = window.ethereum;
+      if (eth) {
+        await walletRequest(eth, 'wallet_revokePermissions', 30_000, [{ eth_accounts: {} }]);
+      }
+      setAccount(null); setChainId(null);
+    } catch (reason) {
+      const message = `${walletActionMessage(reason)} To start over manually, disconnect this site in MetaMask and reload the page.`;
+      setError(message);
+      throw new Error(message);
+    } finally {
+      connecting.current = false;
+      setIsConnecting(false);
+    }
+  }, []);
+
+  return { account, chainId, connect, disconnect, runWithWallet, isConnecting, error };
 }
