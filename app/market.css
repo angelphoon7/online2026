@@ -18,3 +18,8 @@
 .poster-photo{position:relative;display:block;flex-shrink:0;width:100%;aspect-ratio:2/3;margin:24px 0 6px;background:var(--ink)}.poster-photo img{object-fit:contain}
 
 .price-comparison{border-top:1px solid var(--line);padding-top:20px;margin-top:24px}.price-comparison h3{font-size:16px}.quote-lines>div{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding:12px 0;font-size:12px}.quote-lines dd{text-align:right}.wallet-nft-import{border:1px solid var(--line);padding:20px;margin:20px 0;background:var(--paper)}.wallet-nft-import .hash{display:block;margin:10px 0}.wallet-nft-import ul{margin:12px 0}.wallet-nft-import li{margin:8px 0}
+
+.chips .single-choice{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);font-size:10px;cursor:pointer}.chips .single-choice[data-selected=true]{background:var(--ink);color:var(--paper);border-color:var(--ink)}.single-choice input{accent-color:var(--ink);flex-shrink:0}.single-choice[data-selected=true] input{accent-color:var(--paper)}.single-choice:focus-within{outline:2px solid var(--ink);outline-offset:3px}.choice-detail{display:block;margin-top:4px;font-size:9px}.single-choice:has(input:disabled){cursor:default;opacity:.4}
+
+.intent-step-actions{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:24px}.intent-step-actions .step-continue{margin-top:0;margin-left:auto}
+@media(max-width:540px){.intent-step-actions{flex-direction:column;align-items:stretch}.intent-step-actions .step-continue{margin-left:0}}

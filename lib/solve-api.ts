@@ -12,6 +12,9 @@ export interface SolveEvidence {
   simulationResult?: { success: boolean; error?: string };
   transactionHash?: string;
   receipt?: { status: string; blockNumber: string; confirmed: boolean };
+  requestedIntentHashes?: Hex[];
+  pool?: { liveIntents: number; searchableIntents: number; excludedIntents: number };
+  search?: { termination: 'complete' | 'timeout' | 'candidate-limit' };
 }
 export interface SettlementProposal {
   evidenceId: string;
@@ -23,6 +26,12 @@ export interface SettlementProposal {
 }
 export async function findSettlement(intents: { hash: Hex }[]): Promise<{ proposal: SettlementProposal | null; evidence: SolveEvidence }> {
   const response = await fetch('/api/solve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ intentHashes: intents.map(i => i.hash) }) });
+  return parseSolveResponse(response);
+}
+export async function findPoolSettlement(): Promise<{ proposal: SettlementProposal | null; evidence: SolveEvidence }> {
+  return parseSolveResponse(await fetch('/api/solve/pool', { method: 'POST' }));
+}
+async function parseSolveResponse(response: Response): Promise<{ proposal: SettlementProposal | null; evidence: SolveEvidence }> {
   const data = await response.json();
   if (!response.ok) throw new Error(data.error ?? 'Backend solve failed');
   if (!data.proposal) return { proposal: null, evidence: data };

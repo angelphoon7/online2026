@@ -3,7 +3,7 @@
 import { spawn } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { encodeFunctionResult, toFunctionSelector } from 'viem';
+import { decodeFunctionData, encodeFunctionResult, toFunctionSelector } from 'viem';
 const folder = path.resolve('.tools/wallet-browser');
 const base = process.env.WALLET_TEST_URL ?? 'http://localhost:3101';
 await mkdir(folder, { recursive: true });
@@ -35,11 +35,11 @@ try {
     } else if (message.method === 'Runtime.exceptionThrown') errors.push(message.params.exceptionDetails.exception?.description ?? message.params.exceptionDetails.text);
     else if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') errors.push(message.params.args.map(a => a.value ?? a.description ?? '').join(' '));
   };
-  const call = (method, params = {}) => new Promise((resolve, reject) => { const next = ++id; pending.set(next, { resolve, reject }); socket.send(JSON.stringify({ id: next, method, params })); });
+  const call = (method, params = {}) => new Promise((resolve, reject) => { const next = ++id; const timeout = setTimeout(() => { pending.delete(next); reject(Error(`Browser command timed out: ${method} ${params.expression ?? ''}`)); }, 20000); pending.set(next, { resolve: value => { clearTimeout(timeout); resolve(value); }, reject: error => { clearTimeout(timeout); reject(error); } }); socket.send(JSON.stringify({ id: next, method, params })); });
   const evaluate = async expression => { const r = await call('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (r.exceptionDetails) throw Error(r.exceptionDetails.exception?.description ?? r.exceptionDetails.text); return r.result.value; };
   const waitFor = async expression => {
     for (let i = 0; i < 100; i++) { if (await evaluate(`Boolean(${expression})`)) return; await delay(500); }
-    throw new Error(`Timed out: ${await evaluate('document.body.innerText')}`);
+    throw new Error(`Timed out waiting for ${expression}: ${await evaluate('document.body.innerText')}`);
   };
   await call('Page.enable'); await call('Runtime.enable');
   const abis=JSON.parse(await readFile('server/abis.json','utf8'));
@@ -62,7 +62,16 @@ try {
   const receipt={hash:record.proof.transactionHash,blockNumber:record.proof.blockNumber,status:'success',proposer:evidence.proposal.intents[0].owner,independent:false,ticketTransfers:6,usdcTransfers:2,netSum:'0',rejection:null,participants:evidence.proposal.intents.map((i,n)=>({owner:i.owner,offered:i.offered,receives:evidence.proposal.legs[n].receives,netPayment:evidence.proposal.legs[n].netPayment}))};
   await call('Page.addScriptToEvaluateOnNewDocument',{source:`
     const market=${JSON.stringify(market)},evidence=${JSON.stringify(evidence)},outputs=${JSON.stringify(outputs)},receipt=${JSON.stringify(receipt)};
-    window.testWallet={calls:[],connected:location.search.includes('connected'),account:location.search.includes('emptyWallet')?'0x1111111111111111111111111111111111111111':'${owner}',chain:'0x1',cancel:false,failSolver:false,marketReads:0};
+    window.testWallet={calls:[],solveCalls:[],connected:location.search.includes('connected'),account:location.search.includes('emptyWallet')?'0x1111111111111111111111111111111111111111':'${owner}',chain:'0x1',cancel:false,failSolver:false,marketReads:0};
+    if(location.search.includes('largePool'))for(let n=0;n<3;n++)market.intents.push({...market.intents[0],owner:'0x'+'1'.repeat(40),hash:'0x'+String(n+7).repeat(64),nonce:String(n+20)});
+    if(location.search.includes('batch'))for(const t of market.tickets.filter(t=>['101','103'].includes(t.tokenId))){t.owner=window.testWallet.account;t.depositor='0x'+'0'.repeat(40);}
+    window.testWallet.depositFixture=id=>{const t=market.tickets.find(t=>t.tokenId===id);t.owner='${escrow}';t.depositor=window.testWallet.account;};
+    window.testWallet.setRequestState=(state,expired=false)=>{const i=market.intents.find(i=>i.owner.toLowerCase()===window.testWallet.account.toLowerCase());i.state=state;i.expired=expired;};
+    const originalInterval=window.setInterval.bind(window);
+    const originalClearInterval=window.clearInterval.bind(window),pollers=new Map();
+    window.setInterval=(fn,ms,...args)=>{const id=originalInterval(fn,ms,...args);if(ms===30000)pollers.set(id,()=>fn(...args));return id;};
+    window.clearInterval=id=>{pollers.delete(id);originalClearInterval(id);};
+    window.testWallet.poll=()=>pollers.forEach(fn=>fn());
     const original=window.fetch.bind(window);
     window.fetch=async(url,init)=>{
       const reply=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json'}});
@@ -81,13 +90,24 @@ try {
         return reply({message:'RESHUFFLE demo ticket claim'});
       }
       if(url==='/api/demo/reset') return reply({enabled:false});
-      if(url==='/api/solve') return window.testWallet.failSolver?reply({error:'Offline'},503):reply(evidence);
+      if(url==='/api/solve' || url==='/api/solve/pool') {
+        if(url==='/api/solve/pool'){window.testWallet.poolCalls=(window.testWallet.poolCalls??0)+1;window.testWallet.solveCalls.push(market.intents.filter(i=>i.eventId===1&&i.state===1&&!i.expired).map(i=>i.hash).sort());}
+        else window.testWallet.solveCalls.push(JSON.parse(init.body).intentHashes);
+        if(window.testWallet.failSolver)return reply({error:'Offline'},503);
+        if(window.testWallet.noMatch)return reply({...evidence,proposal:null,chosen:null,candidatesFound:0,simulationResult:undefined});
+        if(window.testWallet.badSimulation)return reply({...evidence,simulationResult:{success:false,error:'InsufficientPaymentCapacity'}});
+        if(window.testWallet.unrelated){const result=structuredClone(evidence);const keep=result.proposal.intents.map((i,n)=>i.owner.toLowerCase()!==window.testWallet.account.toLowerCase()?n:-1).filter(n=>n>=0);result.proposal.intents=keep.map(n=>evidence.proposal.intents[n]);result.proposal.legs=keep.map(n=>evidence.proposal.legs[n]);return reply(result);}
+        return reply(url==='/api/solve/pool'?{...evidence,pool:{liveIntents:window.testWallet.solveCalls.at(-1).length,searchableIntents:window.testWallet.solveCalls.at(-1).length,excludedIntents:0},search:{termination:window.testWallet.budgetReached?'candidate-limit':'complete'}}:evidence);
+      }
       if(url==='/api/rpc') {
         const body=JSON.parse(init.body);let result;
-        if(body.method==='eth_call' && body.params[0].data.startsWith('${toFunctionSelector("ownerOf(uint256)")}')) result='0x'+window.testWallet.account.slice(2).padStart(64,'0');
-        else if(body.method==='eth_call') result=location.search.includes('connected') && body.params[0].data.startsWith('${toFunctionSelector("isApprovedForAll(address,address)")}')?'0x'+'0'.repeat(64):outputs[body.params[0].data.slice(0,10)]??'0x';
+        if(body.method==='eth_call' && body.params[0].data.startsWith('${toFunctionSelector("ownerOf(uint256)")}')) result='0x'+(window.testWallet.staleOwner?'0x'+'3'.repeat(40):window.testWallet.account).slice(2).padStart(64,'0');
+        else if(body.method==='eth_call' && location.search.includes('batch') && body.params[0].data.startsWith('${toFunctionSelector("depositor(uint256)")}'))result='0x'+market.tickets.find(t=>t.tokenId===BigInt('0x'+body.params[0].data.slice(10)).toString()).depositor.slice(2).padStart(64,'0');
+        else if(body.method==='eth_call') result=location.search.includes('connected') && !window.testWallet.nftApproved && body.params[0].data.startsWith('${toFunctionSelector("isApprovedForAll(address,address)")}')?'0x'+'0'.repeat(64):outputs[body.params[0].data.slice(0,10)]??'0x';
         else if(body.method==='eth_chainId') result='0x4cef52';
         else if(body.method==='eth_getBalance') result='0xde0b6b3a7640000';
+        else if(body.method==='eth_getBlockByNumber') result={number:'0x3a7653f',timestamp:'0x'+BigInt(window.testWallet.expiredRead?'1790050000':market.timestamp).toString(16),transactions:[]};
+        else if(body.method==='eth_getTransactionReceipt')result={transactionHash:body.params[0],transactionIndex:'0x0',blockHash:'0x'+'aa'.repeat(32),blockNumber:'0x3a7653f',from:window.testWallet.account,to:'${escrow}',cumulativeGasUsed:'0x10000',gasUsed:'0x10000',effectiveGasPrice:'0x1',contractAddress:null,logs:[],logsBloom:'0x'+'00'.repeat(256),status:'0x1',type:'0x2'};
         else throw Error('Unexpected RPC '+body.method);
         return reply({jsonrpc:'2.0',id:body.id,result});
       }
@@ -101,8 +121,15 @@ try {
       if(method==='wallet_switchEthereumChain'){s.chain=params[0].chainId;return null;}
       if(method==='wallet_watchAsset'){s.watches??=[];s.watches.push(params);if(s.watchUnsupported)throw {code:-32601,message:'NFT import unavailable'};return !s.watchDeclined;}
       if(method==='personal_sign'){if(s.cancel)throw {code:4001};return '0x'+'11'.repeat(65);}
-      if(method==='eth_signTypedData_v4'){s.signed=JSON.parse(params[1]);throw Object.assign(Error('Test signature cancelled'),{code:4001});}
-      if(method==='eth_sendTransaction')throw Object.assign(Error('Test transaction cancelled'),{code:4001});
+      if(method==='eth_signTypedData_v4'){s.signed=JSON.parse(params[1]);if(s.completeCommit)return '0x'+'11'.repeat(65);throw Object.assign(Error('Test signature cancelled'),{code:4001});}
+      if(method==='eth_sendTransaction'){
+        if(location.search.includes('batch')){
+          s.transactions??=[];s.transactions.push(params[0]);
+          if(params[0].data.startsWith('${toFunctionSelector("setApprovalForAll(address,bool)")}')){if(s.cancelApproval)throw {code:4001};s.nftApproved=true;return '0x'+'dd'.repeat(32);}
+          if(params[0].data.startsWith('${toFunctionSelector("deposit(uint256[])")}')){if(s.cancelDeposit)throw {code:4001};for(const word of params[0].data.slice(138).match(/.{64}/g))s.depositFixture(BigInt('0x'+word).toString());return '0x'+'ee'.repeat(32);}
+          throw Error('Unexpected batch transaction');
+        }
+        if(s.completeCommit&&s.signed){const hash='0x'+'cc'.repeat(32);market.intents.push({...s.signed.message,eventId:Number(s.signed.message.eventId),exactCount:Number(s.signed.message.exactCount),hash,commitTx:'0x'+'bb'.repeat(32),state:1,expired:false});s.committedHash=hash;return '0x'+'bb'.repeat(32);}throw Object.assign(Error('Test transaction cancelled'),{code:4001});}
       throw Error('Unexpected wallet method '+method);
     }};
   `});
@@ -134,17 +161,50 @@ try {
   const offer = async () => { await advance(); await evaluate("document.querySelector('.position input').click()"); };
   await navigate();
   await assert("document.querySelectorAll('.step-content').length===1 && document.querySelector('.intent-step[data-step=\"1\"]').dataset.expanded==='true' && !document.querySelector('.position')", 'Wish must come first');
-  await assert("document.querySelectorAll('[aria-labelledby=sections-label] button').length===2", 'Duplicate sections or phantom class');
+  await assert("document.querySelectorAll('[name=wanted-section]').length===4 && document.querySelectorAll('[name=wanted-section]:checked').length===1 && document.querySelectorAll('[name=wanted-session]:checked').length===1", 'Single selections or expanded sections missing');
+  await assert("document.getElementById('valid-until').textContent==='2026-09-19 12:00 Malaysia (UTC+8)' && !document.querySelector('input[type=datetime-local]')", 'Fixed eight-hour cutoff missing');
+  await evaluate("document.querySelector('[name=wanted-session][value=\"1\"]').click(); document.querySelector('[name=wanted-session][value=\"1\"]').click()");
+  await assert("document.querySelectorAll('[name=wanted-session]:checked').length===1 && document.getElementById('valid-until').textContent.includes('2026-09-20 12:00')", 'Night change failed to update cutoff or deselected itself');
+  await evaluate("document.querySelector('[name=wanted-session][value=\"0\"]').click(); document.querySelector('[name=wanted-section][value=\"3\"]').click(); document.querySelector('[name=wanted-section][value=\"3\"]').click()");
+  await assert("document.querySelectorAll('[name=wanted-section]:checked').length===1 && document.querySelector('[name=wanted-section][value=\"3\"]').closest('label').textContent.includes('No tickets issued yet')", 'New section invents inventory or allows deselection');
+  const wishClip=await evaluate("(()=>{const r=document.querySelector('.intent-flow').getBoundingClientRect();return {x:r.x,y:r.y+scrollY,width:r.width,height:r.height,scale:1};})()");
+  const wishShot=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:true,clip:wishClip});
+  await writeFile('.tools/intent-wishlist-desktop.png',Buffer.from(wishShot.data,'base64'));
   await assert("!document.querySelector('.seat-map').open && !document.querySelector('.seat-map-content button,.seat-map-content input')", 'Map is not read-only');
   await assert("document.querySelectorAll('.illustration-seat').length===12", 'Missing adjacency illustration');
+  const changeCount = async direction => evaluate(`document.querySelector('[aria-label="${direction} ticket count"]').click()`);
+  await changeCount('Decrease');
+  await assert("document.querySelector('.stepper output').textContent==='1' && !document.getElementById('adjacent-seats').checked && !document.querySelector('.adjacency-illustration')", 'One ticket must disable adjacency');
+  for (const count of [2, 3, 4]) {
+    await changeCount('Increase');
+    await assert(`document.querySelector('.stepper output').textContent==='${count}' && document.getElementById('adjacent-seats').checked && !!document.querySelector('.adjacency-illustration')`, 'Increasing from one ticket must restore adjacency');
+  }
+  await evaluate("document.getElementById('adjacent-seats').click()");
+  await changeCount('Decrease');
+  await assert("!document.getElementById('adjacent-seats').checked && !document.querySelector('.adjacency-illustration')", 'Multi-ticket count change overwrites a manual opt-out');
+  await changeCount('Decrease');await changeCount('Decrease');await changeCount('Increase');
+  await assert("document.getElementById('adjacent-seats').checked && !!document.querySelector('.adjacency-illustration')", 'Repeated one-to-two transition fails to restore adjacency');
+  console.log('PASS adjacency restores at two tickets and stays visible at three/four; manual opt-out remains available.');
   await evaluate("document.getElementById('adjacent-seats').click()");
   await assert("!document.querySelector('.adjacency-illustration')", 'Unchecked adjacency illustration visible');
-  await evaluate("document.getElementById('adjacent-seats').click(); document.querySelector('[aria-labelledby=sections-label] button').click(); document.querySelector('.seat-map summary').click()");
+  await evaluate("document.getElementById('adjacent-seats').click(); document.querySelector('[name=wanted-section][value=\"1\"]').click(); document.querySelector('.seat-map summary').click()");
   await assert("Array.from(document.querySelectorAll('.seat-map-content h3')).every(e=>e.textContent.endsWith('SECTION 1'))", 'Map ignores wishlist');
   await advance();
   await assert("document.querySelector('.step-continue').disabled && document.querySelectorAll('.position-list .position').length===8 && document.querySelector('.more-tickets summary').textContent==='+2 more'", 'Offering gate or ticket disclosure missing');
   await evaluate("document.querySelectorAll('.position input')[0].click(); document.querySelectorAll('.position input')[1].click()");
   await assert("document.querySelector('.budget-label').textContent==='I pay up to 1 USDC' && document.querySelector('.quote-lines').textContent.includes('3 USDC')", 'Two-ticket upgrade should suggest 1 USDC');
+  const budgetKey = async key => {
+    await evaluate("document.getElementById('net-budget').focus()");
+    for (const type of ['keyDown', 'keyUp']) await call('Input.dispatchKeyEvent',{type,key,code:key,windowsVirtualKeyCode:key==='Home'?36:35});
+  };
+  await assert("document.getElementById('net-budget').min==='-40' && document.getElementById('net-budget').max==='40'", 'Slider must span -40 to +40 USDC');
+  await budgetKey('End');
+  await assert("document.querySelector('.budget-label').textContent==='I pay up to 40 USDC'", 'Slider upper bound incorrect');
+  await click('Use suggested limit');
+  await assert("document.getElementById('net-budget').value==='1' && document.querySelector('.suggested-limit').textContent==='Suggested limit applied' && document.querySelector('.suggested-limit').disabled", 'Suggested limit must stay visible after restoring the quote');
+  await budgetKey('End');
+  await assert("document.querySelector('.suggested-limit').textContent==='Use suggested limit' && !document.querySelector('.suggested-limit').disabled", 'Adjusting the slider must re-enable the suggested-limit button');
+  await assert("(()=>{const a=document.querySelector('.suggested-limit').getBoundingClientRect(),b=document.querySelector('.intent-step-actions .step-continue').getBoundingClientRect();return b.left-a.right>=16 || b.top-a.bottom>=16;})()", 'Footer buttons lack spacing');
   const flowClip=await evaluate("(()=>{const r=document.querySelector('.intent-flow').getBoundingClientRect();return {x:r.x,y:r.y+scrollY,width:r.width,height:r.height,scale:1};})()");
   const desktopFlow=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:true,clip:flowClip});
   await writeFile('.tools/intent-stepper-desktop.png',Buffer.from(desktopFlow.data,'base64'));
@@ -155,13 +215,18 @@ try {
   await advance();
   await assert("document.querySelector('.signed-sentence').textContent.includes('sections 1;')", 'Review differs from wishlist');
   await evaluate("document.querySelector('.intent-step[data-step=\"2\"] button').click()");
-  await assert("document.getElementById('net-budget').value==='-1000' && document.querySelectorAll('.position input:checked').length===2", 'Change lost the draft');
+  await assert("document.getElementById('net-budget').value==='-40' && document.querySelectorAll('.position input:checked').length===2", 'Change lost the draft');
   await advance(); await click('View signed struct'); await click('Sign and commit');
   await waitFor(`window.testWallet.calls.includes('eth_signTypedData_v4')`);
   const signed=await evaluate('window.testWallet.signed');
-  if(Number(signed.domain.chainId)!==5042002||signed.message.owner.toLowerCase()!==owner.toLowerCase()||BigInt(signed.message.maxNetPay)!==-1000000000n)throw Error('Wrong signed payload');
+  if(BigInt(signed.message.deadline)!==BigInt(Date.parse('2026-09-19T04:00:00Z')/1000)||BigInt(signed.message.sessionMask)!==1n||BigInt(signed.message.sectionMask)!==2n)throw Error('Signed selections or eight-hour cutoff differ from UI');
+  if(Number(signed.domain.chainId)!==5042002||signed.message.owner.toLowerCase()!==owner.toLowerCase()||BigInt(signed.message.maxNetPay)!==-40000000n)throw Error('Wrong signed payload');
   await assert("JSON.stringify(JSON.parse(document.querySelector('.raw-struct').textContent).message).toLowerCase()===JSON.stringify(window.testWallet.signed.message).toLowerCase()", 'Review differs from wallet payload');
   console.log('PASS wish-first flow, section pricing, quote, manual budget, review equality and deferred signing.');
+  await navigate();await offer();await advance();await evaluate('window.testWallet.expiredRead=true');await click('Sign and commit');
+  await waitFor(`document.querySelector('.activity')?.textContent.includes('closes eight hours')`);
+  await assert("!window.testWallet.calls.includes('eth_signTypedData_v4') && !window.testWallet.calls.includes('eth_sendTransaction')", 'Expired draft reached signing or spending');
+  console.log('PASS single night/section, four sections, signed cutoff and fresh-chain expiry protection.');
   for(const action of ['Deposit','Withdraw','Propose and settle']){
     await navigate(); if(action!=='Propose and settle')await advance();
     await click(action); await waitFor(`window.testWallet.calls.includes('eth_sendTransaction')`);
@@ -171,13 +236,18 @@ try {
   await waitFor(`document.querySelector('.activity')?.textContent.includes('cancelled')`);
   await assert("!window.testWallet.calls.includes('eth_signTypedData_v4')", 'Signed after rejected connection');
   await evaluate('window.testWallet.cancel=false');await click('Sign and commit');await waitFor(`window.testWallet.calls.includes('eth_signTypedData_v4')`);
-  await navigate();await evaluate('window.testWallet.failSolver=true');await click('Run solver');
+  await navigate();await evaluate('window.testWallet.failSolver=true');await click('Check all intents');
   await waitFor(`document.body.innerText.includes('Solver unreachable')`);
   await assert("!document.querySelector('.candidate') && !!document.querySelector('.seat-grid .seat')", 'Solver failure hides public reads or leaves stale candidate');
   await evaluate("document.querySelector('.history-list button').click()");await waitFor(`!!document.querySelector('.receipt-section')`);
   await assert("document.querySelector('.receipt-section').innerText.includes('Submitted by a participant wallet')", 'False independent solver claim');
   await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await assert("document.documentElement.scrollWidth<=window.innerWidth && document.querySelectorAll('[name=wanted-section]').length===4", 'Mobile wishlist overflows');
+  const wishMobileClip=await evaluate("(()=>{const r=document.querySelector('.intent-flow').getBoundingClientRect();return {x:0,y:r.y+scrollY,width:390,height:r.height,scale:1};})()");
+  const wishMobile=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:true,clip:wishMobileClip});await writeFile('.tools/intent-wishlist-mobile.png',Buffer.from(wishMobile.data,'base64'));
   await advance(); await evaluate("document.querySelector('.position input').click()");
+  await budgetKey('Home');
+  await assert("document.querySelector('.intent-step-actions .step-continue').getBoundingClientRect().top-document.querySelector('.suggested-limit').getBoundingClientRect().bottom>=16", 'Mobile footer buttons must stack with spacing');
   await assert("document.documentElement.scrollWidth<=window.innerWidth && !Array.from(document.querySelectorAll('.reshuffle-ui *')).some(e=>['auto','scroll'].includes(getComputedStyle(e).overflowY)&&e.scrollHeight>e.clientHeight)", 'Mobile overflow or nested scroll');
   const mobileClip=await evaluate("(()=>{const r=document.querySelector('.intent-flow').getBoundingClientRect();return {x:0,y:r.y+scrollY,width:390,height:r.height,scale:1};})()");
   const mobile=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:true,clip:mobileClip});await writeFile('.tools/intent-stepper-mobile.png',Buffer.from(mobile.data,'base64'));
@@ -213,6 +283,82 @@ try {
     await waitFor(`document.querySelector('.activity')?.textContent.includes(${JSON.stringify(expected)})`);
     await assert("!Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='Approve tickets').disabled", 'Failure left approval stuck');
   }
+  await call('Page.navigate',{url:base+'/?connected'});
+  await waitFor(`document.querySelector('.poster-live')?.innerText.includes('3 live intents')`);await click('AFTER');
+  await waitFor(`document.querySelector('.matching-status h2')?.textContent==='Match found - awaiting settlement'`);
+  console.log('PASS personal candidate status after connecting.');
+  await assert("!document.querySelector('.receipt-section') && !window.testWallet.calls.includes('eth_sendTransaction')", 'Candidate falsely marked settled or automatically broadcast');
+  await evaluate('window.testWallet.noMatch=true;window.testWallet.poll()');
+  await waitFor(`document.querySelector('.matching-status h2')?.textContent==='Waiting for a match'`);
+  await assert("!document.querySelector('.candidate') && !document.querySelector('.receipt-section')", 'No-match response retained success UI');
+  console.log('PASS automatic no-match retry displays waiting.');
+  await evaluate('window.testWallet.noMatch=false;window.testWallet.unrelated=true;window.testWallet.poll()');
+  await waitFor(`!!document.querySelector('.candidate') && document.querySelector('.matching-status h2')?.textContent==='Waiting for a match'`);
+  await evaluate('window.testWallet.unrelated=false;window.testWallet.badSimulation=true;window.testWallet.poll()');
+  await waitFor(`document.querySelector('.candidate')?.textContent.includes('Candidate needs rechecking')`);
+  await assert("document.querySelector('.matching-status h2').textContent==='Waiting for a match' && Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('Propose and settle')).disabled", 'Failed simulation offered settlement');
+  await evaluate('window.testWallet.badSimulation=false;window.testWallet.failSolver=true;window.testWallet.poll()');
+  await waitFor(`document.querySelector('.matching-status h2')?.textContent==='Matching temporarily unavailable'`);
+  await evaluate('window.testWallet.failSolver=false;window.testWallet.poll()');
+  await waitFor(`document.querySelector('.matching-status h2')?.textContent==='Match found - awaiting settlement'`);
+  await evaluate("document.querySelector('.pool-row input').click()");
+  console.log('CHECK manual matching controls.');
+  await assert("document.querySelector('.matching-status').textContent.includes('Automatic retries are paused')", 'Manual selection did not pause auto matching');
+  await click('Resume automatic matching');
+  await waitFor(`document.querySelector('.matching-status h2')?.textContent==='Match found - awaiting settlement'`);
+  for(const [state,expired,title] of [[2,false,'Request revoked'],[1,true,'Request expired'],[3,false,'Swap confirmed']]){
+    await evaluate(`window.testWallet.setRequestState(${state},${expired});window.testWallet.poll()`);
+    await waitFor(`document.querySelector('.matching-status h2')?.textContent===${JSON.stringify(title)}`);
+  }
+  console.log('PASS automatic retries, personal match inclusion, no-match waiting, simulation failure, outage recovery and on-chain terminal states.');
+  await call('Page.navigate',{url:base+'/?connected'});
+  await waitFor(`document.querySelector('.poster-live')?.innerText.includes('3 live intents')`);await click('AFTER');
+  await offer();await advance();
+  await evaluate('window.testWallet.completeCommit=true;window.testWallet.noMatch=true');
+  await click('Sign and commit');
+  await waitFor(`window.testWallet.committedHash && window.testWallet.solveCalls.some(hashes=>hashes.includes(window.testWallet.committedHash)) && document.querySelector('.matching-status h2')?.textContent==='Waiting for a match'`);
+  await assert("window.testWallet.solveCalls.at(-1).includes(window.testWallet.committedHash) && window.testWallet.poolCalls>0 && !document.querySelector('.receipt-section')", 'New committed request was not included in the automatic pool search');
+  console.log('PASS confirmed intent submission automatically searches the new request without pool selection or another click.');
+  const openBatch = async () => {
+    await call('Page.navigate',{url:base+'/?connected&batch'});
+    await waitFor(`document.querySelector('.poster-live')?.innerText.includes('3 live intents')`);await click('AFTER');await advance();
+    await assert("document.querySelector('.batch-deposit button').disabled", 'Empty selection allows a deposit');
+    await evaluate("document.querySelector('[aria-label=\"Offer ticket 101\"]').click();document.querySelector('[aria-label=\"Offer ticket 103\"]').click()");
+    await assert("document.querySelector('.batch-deposit button').textContent==='Deposit 2 selected tickets'", 'Batch count ignores selected tickets');
+  };
+  await openBatch();
+  await evaluate('window.testWallet.cancelApproval=true');await click('Deposit 2 selected tickets');
+  await waitFor(`document.querySelector('.activity')?.textContent.includes('cancelled') && !document.querySelector('.batch-deposit button').disabled`);
+  await assert(`!window.testWallet.transactions.some(t=>t.data.startsWith('${toFunctionSelector('deposit(uint256[])')}'))`, 'Cancelled approval continued to deposit');
+  await evaluate('window.testWallet.cancelApproval=false');await click('Deposit 2 selected tickets');
+  await waitFor(`document.querySelector('.activity')?.textContent.includes('Deposited 2 tickets together') && document.querySelector('.batch-deposit button').disabled`);
+  const transactions=await evaluate('window.testWallet.transactions');
+  const deposits=transactions.filter(t=>t.data.startsWith(toFunctionSelector('deposit(uint256[])')));
+  if(deposits.length!==1||decodeFunctionData({abi:abis.Escrow,data:deposits[0].data}).args[0].join(',')!=='101,103')throw Error('Batch did not send both selected IDs in one deposit');
+  await assert("document.querySelectorAll('.position input:checked').length===2 && document.querySelector('.batch-deposit button').textContent==='Selected tickets deposited'", 'Deposit lost selection or did not refresh custody');
+  await openBatch();
+  await evaluate("window.testWallet.nftApproved=true;window.testWallet.depositFixture('103');window.testWallet.poll()");
+  await waitFor(`document.querySelector('.batch-deposit button').textContent==='Deposit 1 selected ticket'`);
+  await click('Deposit 1 selected ticket');
+  await waitFor(`document.querySelector('.activity')?.textContent.includes('Deposited 1 ticket together') && document.querySelector('.batch-deposit button').disabled`);
+  const mixed=await evaluate('window.testWallet.transactions');
+  if(mixed.length!==1||decodeFunctionData({abi:abis.Escrow,data:mixed[0].data}).args[0].join(',')!=='101')throw Error('Mixed selection re-deposited escrowed tickets or repeated approval');
+  await openBatch();await evaluate('window.testWallet.staleOwner=true');await click('Deposit 2 selected tickets');
+  await waitFor(`document.querySelector('.activity')?.textContent.includes('no longer held by this wallet')`);
+  await assert("!window.testWallet.calls.includes('eth_sendTransaction')", 'Changed owner still requested spending');
+  console.log('PASS selected batch deposit: one transaction for two IDs, approval cancellation/retry, mixed custody, selection retention and fresh ownership checks.');
+  await call('Page.navigate',{url:base+'/?largePool'});
+  await waitFor(`document.querySelector('.poster-live')?.innerText.includes('6 live intents')`);await click('AFTER');
+  await waitFor(`window.testWallet.poolCalls>0 && !!document.querySelector('.candidate')`);
+  await assert("window.testWallet.solveCalls[0].length===6 && document.querySelectorAll('.pool-row input:checked').length===6 && Array.from(document.querySelectorAll('button')).some(b=>b.textContent.includes('Check all intents')&&!b.disabled)", 'Automatic matching still truncates or blocks pools larger than four');
+  await evaluate('window.testWallet.budgetReached=true;window.testWallet.poll()');
+  await waitFor(`document.body.innerText.includes('Search budget reached')`);
+  await click('Propose and settle');
+  await waitFor(`window.testWallet.calls.includes('eth_sendTransaction')`);
+  await assert("window.testWallet.solveCalls.some(hashes=>hashes.length===3)", 'Settlement did not revalidate only the chosen candidate');
+  await evaluate('window.testWallet.setRequestState(3);window.testWallet.poll()');
+  await waitFor(`document.querySelector('.matching-status h2')?.textContent==='Swap confirmed' && window.testWallet.solveCalls.at(-1).length===5`);
+  console.log('PASS six-intent pool automatically searched, budget reported, chosen three-intent settlement revalidated, and remaining pool continues after personal settlement.');
   if(errors.some(e=>/hydration|uncaught|TypeError/i.test(e)))throw Error(errors.join('\n'));
   console.log('PASS wallet errors and no hydration/runtime errors. Fixtures only; no real transactions sent.');
 }finally{socket?.close();browser.kill();}
