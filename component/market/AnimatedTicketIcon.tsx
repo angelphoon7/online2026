@@ -25,11 +25,11 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
     let animId: number;
     let isCancelled = false;
 
-    // Load base dark-blue ticket and exact silhouette mask
+    // Load base ticket asset and mask
     const img = new window.Image();
-    img.src = '/ticket-darkblue.png?v=5';
+    img.src = '/ticket-darkblue.png?v=8';
     const mask = new window.Image();
-    mask.src = '/ticket-mask.png';
+    mask.src = '/ticket-mask.png?v=8';
 
     let loadedCount = 0;
     const onAssetLoad = () => {
@@ -46,44 +46,38 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
       if (!canvas || !ctx) return;
       setIsReady(true);
 
-      // Pre-render base canvas strictly masked to the ticket ribbon silhouette
-      // (the source PNG has a soft glow baked into its alpha that bleeds past
-      // the ribbon edge, which otherwise washes out the dot grid behind it)
+      // Pre-render base canvas strictly using transparent ticket ribbon
       const baseCanvas = document.createElement('canvas');
       baseCanvas.width = 610;
       baseCanvas.height = 380;
       const baseCtx = baseCanvas.getContext('2d');
       if (baseCtx) {
         baseCtx.drawImage(img, 0, 0);
-        baseCtx.globalCompositeOperation = 'destination-in';
-        baseCtx.drawImage(mask, 0, 0);
       }
 
-      // Pre-render bright canvas strictly masked to the ticket ribbon silhouette
+      // Pre-render bright canvas strictly using transparent ticket ribbon
       const brightCanvas = document.createElement('canvas');
       brightCanvas.width = 610;
       brightCanvas.height = 380;
       const bCtx = brightCanvas.getContext('2d');
       if (bCtx) {
-        bCtx.filter = 'brightness(1.35) contrast(1.1) saturate(1.5)';
+        bCtx.filter = 'brightness(1.22) contrast(1.08) saturate(1.1)';
         bCtx.drawImage(img, 0, 0);
         bCtx.filter = 'none';
-        bCtx.globalCompositeOperation = 'destination-in';
-        bCtx.drawImage(mask, 0, 0);
       }
 
-      // Pre-render luminous gradient tint canvas strictly masked to the ticket ribbon
+      // Pre-render luminous warm sheen canvas strictly masked to the ticket ribbon
       const tintCanvas = document.createElement('canvas');
       tintCanvas.width = 610;
       tintCanvas.height = 380;
       const tCtx = tintCanvas.getContext('2d');
       if (tCtx) {
-        tCtx.drawImage(mask, 0, 0);
+        tCtx.drawImage(img, 0, 0);
         tCtx.globalCompositeOperation = 'source-in';
         const grad = tCtx.createLinearGradient(120, 0, 480, 0);
-        grad.addColorStop(0, 'rgba(239, 68, 68, 0.7)');    // luminous ruby red
-        grad.addColorStop(0.5, 'rgba(249, 115, 22, 0.75)'); // vibrant warm orange
-        grad.addColorStop(1, 'rgba(250, 204, 21, 0.7)');   // radiant golden yellow
+        grad.addColorStop(0, 'rgba(251, 191, 36, 0.35)');    // warm golden sheen
+        grad.addColorStop(0.5, 'rgba(255, 240, 180, 0.45)'); // specular golden highlight
+        grad.addColorStop(1, 'rgba(245, 158, 11, 0.35)');   // warm amber sheen
         tCtx.fillStyle = grad;
         tCtx.fillRect(0, 0, 610, 380);
       }
@@ -215,7 +209,6 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
           object-fit: contain;
           user-select: none;
           pointer-events: none;
-          filter: saturate(1.35) contrast(1.12);
           mask-image: url('/ticket-mask.png');
           mask-size: 100% 100%;
           -webkit-mask-image: url('/ticket-mask.png');
