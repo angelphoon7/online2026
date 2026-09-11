@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import ticketImg from '@/lib/ticket-darkblue.png';
 
@@ -9,41 +9,165 @@ interface AnimatedTicketIconProps {
 }
 
 export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIconProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    // Check user preference for reduced motion
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animId: number;
+    let isCancelled = false;
+
+    // Load base dark-blue ticket and exact silhouette mask
+    const img = new window.Image();
+    img.src = '/ticket-darkblue.png';
+    const mask = new window.Image();
+    mask.src = '/ticket-mask.png';
+
+    let loadedCount = 0;
+    const onAssetLoad = () => {
+      loadedCount++;
+      if (loadedCount === 2 && !isCancelled) {
+        startAnimation();
+      }
+    };
+
+    img.onload = onAssetLoad;
+    mask.onload = onAssetLoad;
+
+    function startAnimation() {
+      if (!canvas || !ctx) return;
+      setIsReady(true);
+
+      // Pre-render bright canvas strictly masked to the ticket ribbon silhouette
+      const brightCanvas = document.createElement('canvas');
+      brightCanvas.width = 610;
+      brightCanvas.height = 380;
+      const bCtx = brightCanvas.getContext('2d');
+      if (bCtx) {
+        bCtx.filter = 'brightness(1.35) contrast(1.1) saturate(1.5)';
+        bCtx.drawImage(img, 0, 0);
+        bCtx.filter = 'none';
+        bCtx.globalCompositeOperation = 'destination-in';
+        bCtx.drawImage(mask, 0, 0);
+      }
+
+      // Pre-render luminous gradient tint canvas strictly masked to the ticket ribbon
+      const tintCanvas = document.createElement('canvas');
+      tintCanvas.width = 610;
+      tintCanvas.height = 380;
+      const tCtx = tintCanvas.getContext('2d');
+      if (tCtx) {
+        tCtx.drawImage(mask, 0, 0);
+        tCtx.globalCompositeOperation = 'source-in';
+        const grad = tCtx.createLinearGradient(120, 0, 480, 0);
+        grad.addColorStop(0, 'rgba(217, 70, 239, 0.65)');
+        grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
+        grad.addColorStop(1, 'rgba(56, 189, 248, 0.65)');
+        tCtx.fillStyle = grad;
+        tCtx.fillRect(0, 0, 610, 380);
+      }
+
+      const SLICE_W = 1; // 1px vertical slices for fluid, artifact-free wave deformation
+      const totalSlices = Math.ceil(canvas.width / SLICE_W);
+      const startTime = performance.now();
+
+      function render(now: number) {
+        if (isCancelled || !canvas || !ctx) return;
+        const time = (now - startTime) * 0.001;
+
+        // Ping-pong cycle: 4.8s (synchronized with the glow sweep)
+        const cycle = (time / 4.8) % 1.0;
+        const pingpong = 0.5 - 0.5 * Math.cos(cycle * 2.0 * Math.PI);
+        const glowX = 0.18 + 0.64 * pingpong;
+
+        // Clear canvas with exact theme dark-blue background (#060e22)
+        ctx.fillStyle = '#060e22';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Render ticket slice-by-slice: each section undulates like a wave
+        for (let i = 0; i < totalSlices; i++) {
+          const sx = i * SLICE_W;
+          const normX = sx / canvas.width;
+
+          // Edge damping ensures the outer padding remains completely still
+          const edgeDamp = Math.max(0, Math.min(1, (normX - 0.03) / 0.15)) *
+                           Math.max(0, Math.min(1, (0.97 - normX) / 0.15));
+
+          // 1. Traveling wave pulse directly connected to the glowing light sweep
+          const dist = normX - glowX;
+          const glowPulse = Math.sin(dist * 12.0) * Math.exp(-dist * dist * 18.0) * 14;
+
+          // 2. Harmonic liquid wave traveling across the ribbon
+          // Different horizontal points move at different times (wave propagation)
+          const harmonic = Math.sin(normX * Math.PI * 3.0 - time * 2.6) * 7.5;
+
+          // Combined wave displacement
+          const dy = (glowPulse + harmonic) * edgeDamp;
+
+          // Draw base ribbon slice
+          ctx.drawImage(img, sx, 0, SLICE_W, canvas.height, sx, dy, SLICE_W, canvas.height);
+
+          // If glow is near this slice, composite the glowing wave highlights
+          const absDist = Math.abs(dist);
+          if (absDist < 0.18) {
+            const glowIntensity = Math.pow(1 - absDist / 0.18, 1.8);
+
+            // Draw bright pass on the wave crest
+            ctx.globalAlpha = glowIntensity * 0.75;
+            ctx.globalCompositeOperation = 'screen';
+            ctx.drawImage(brightCanvas, sx, 0, SLICE_W, canvas.height, sx, dy, SLICE_W, canvas.height);
+
+            // Draw luminous tint pass on the wave crest
+            ctx.globalAlpha = glowIntensity * 0.45;
+            ctx.drawImage(tintCanvas, sx, 0, SLICE_W, canvas.height, sx, dy, SLICE_W, canvas.height);
+
+            ctx.globalAlpha = 1.0;
+            ctx.globalCompositeOperation = 'source-over';
+          }
+        }
+
+        animId = requestAnimationFrame(render);
+      }
+
+      animId = requestAnimationFrame(render);
+    }
+
+    return () => {
+      isCancelled = true;
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, []);
+
   return (
     <div className={`ticket-icon-container ${className}`}>
-      {/* Motion wrapper that moves subtly in sync with the glowing light wave */}
-      <div className="ticket-motion-wrapper">
-        {/* Base Exact Ticket Image */}
-        <div className="ticket-base">
-          <Image
-            src={ticketImg}
-            alt="Reshuffle Ticket Icon"
-            width={610}
-            height={380}
-            priority
-            className="ticket-img"
-          />
-        </div>
-
-        {/* Glow Layer: Strictly Masked to the Ticket Shape */}
-        <div className="ticket-glow-mask">
-          {/* Luminous light wave that glides along the ticket from left to right, then right to left */}
-          <div className="ticket-light-wave" />
-
-          {/* High-brightness ticket overlay that lights up as the wave passes over */}
-          <div className="ticket-bright-pass">
-            <Image
-              src={ticketImg}
-              alt=""
-              width={610}
-              height={380}
-              priority
-              aria-hidden="true"
-              className="ticket-bright-img"
-            />
-          </div>
-        </div>
+      {/* Fallback image for SSR / initial paint / reduced motion */}
+      <div className={`ticket-fallback ${isReady ? 'hidden' : ''}`}>
+        <Image
+          src={ticketImg}
+          alt="Reshuffle Ticket Icon"
+          width={610}
+          height={380}
+          priority
+          className="ticket-img"
+        />
       </div>
+
+      {/* Dynamic 2D Wave Canvas */}
+      <canvas
+        ref={canvasRef}
+        width={610}
+        height={380}
+        className={`ticket-wave-canvas ${isReady ? 'visible' : ''}`}
+        aria-label="Reshuffle Ticket Icon"
+      />
 
       <style jsx>{`
         .ticket-icon-container {
@@ -56,25 +180,21 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
           overflow: visible;
         }
 
-        /* Ticket moves slightly in sync with the ping-pong light glow */
-        .ticket-motion-wrapper {
-          position: relative;
-          width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transform-origin: center center;
-          will-change: transform;
-          animation: ticketSwayPingPong 4.8s ease-in-out infinite;
-        }
-
-        .ticket-base {
+        .ticket-fallback {
           position: relative;
           width: 100%;
           line-height: 0;
           display: flex;
           align-items: center;
           justify-content: center;
+          transition: opacity 0.3s ease;
+        }
+
+        .ticket-fallback.hidden {
+          opacity: 0;
+          pointer-events: none;
+          position: absolute;
+          inset: 0;
         }
 
         .ticket-img {
@@ -84,160 +204,31 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
           object-fit: contain;
           user-select: none;
           pointer-events: none;
-          /* Rich, saturated color grading */
           filter: saturate(1.35) contrast(1.12);
         }
 
-        /* The Mask: strictly confines all glowing effects to the ticket silhouette */
-        .ticket-glow-mask {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          -webkit-mask-image: url(/ticket-mask.png);
-          mask-image: url(/ticket-mask.png);
-          -webkit-mask-size: 100% 100%;
-          mask-size: 100% 100%;
-          -webkit-mask-repeat: no-repeat;
-          mask-repeat: no-repeat;
-          overflow: hidden;
-        }
-
-        /* Soft, gentle light wave moving across the ticket from left to right, then right to left */
-        .ticket-light-wave {
-          position: absolute;
-          top: 0;
-          bottom: 0;
-          width: 38%;
-          pointer-events: none;
-          mix-blend-mode: screen;
-          background: linear-gradient(
-            90deg,
-            rgba(255, 255, 255, 0) 0%,
-            rgba(217, 70, 239, 0.22) 28%,
-            rgba(255, 255, 255, 0.45) 50%,
-            rgba(56, 189, 248, 0.3) 72%,
-            rgba(255, 255, 255, 0) 100%
-          );
-          filter: blur(10px);
-          animation: lightWavePingPong 4.8s ease-in-out infinite;
-        }
-
-        /* Subtle brightness boost that preserves deep color richness */
-        .ticket-bright-pass {
-          position: absolute;
-          inset: 0;
+        .ticket-wave-canvas {
           width: 100%;
-          height: 100%;
-          mix-blend-mode: screen;
-          -webkit-mask-image: linear-gradient(
-            90deg,
-            transparent 0%,
-            rgba(0, 0, 0, 0.8) 50%,
-            transparent 100%
-          );
-          mask-image: linear-gradient(
-            90deg,
-            transparent 0%,
-            rgba(0, 0, 0, 0.8) 50%,
-            transparent 100%
-          );
-          -webkit-mask-size: 40% 100%;
-          mask-size: 40% 100%;
-          -webkit-mask-repeat: no-repeat;
-          mask-repeat: no-repeat;
-          animation: brightMaskPingPong 4.8s ease-in-out infinite;
+          height: auto;
+          max-width: 610px;
+          display: block;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+          user-select: none;
+          pointer-events: none;
         }
 
-        .ticket-bright-img {
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
-          /* Gentle brightness lift without washing out colors */
-          filter: brightness(1.28) contrast(1.1) saturate(1.5);
-        }
-
-        /* Ping-pong animation: left to right, then right to left (gentle, elegant glow) */
-        @keyframes lightWavePingPong {
-          0% {
-            left: -35%;
-            opacity: 0.08;
-          }
-          12% {
-            opacity: 0.55;
-          }
-          45% {
-            opacity: 0.55;
-          }
-          50% {
-            left: 95%;
-            opacity: 0.08;
-          }
-          58% {
-            opacity: 0.55;
-          }
-          90% {
-            opacity: 0.55;
-          }
-          100% {
-            left: -35%;
-            opacity: 0.08;
-          }
-        }
-
-        @keyframes brightMaskPingPong {
-          0% {
-            -webkit-mask-position: -35% 0;
-            mask-position: -35% 0;
-            opacity: 0.08;
-          }
-          12% {
-            opacity: 0.55;
-          }
-          45% {
-            opacity: 0.55;
-          }
-          50% {
-            -webkit-mask-position: 130% 0;
-            mask-position: 130% 0;
-            opacity: 0.08;
-          }
-          58% {
-            opacity: 0.55;
-          }
-          90% {
-            opacity: 0.55;
-          }
-          100% {
-            -webkit-mask-position: -35% 0;
-            mask-position: -35% 0;
-            opacity: 0.08;
-          }
-        }
-
-        /* Subtle 2D swaying and floating in exact rhythm with the ping-pong glow */
-        @keyframes ticketSwayPingPong {
-          0% {
-            transform: translate3d(-4px, 0px, 0) rotate(-0.8deg);
-          }
-          25% {
-            transform: translate3d(0px, -6px, 0) rotate(0deg);
-          }
-          50% {
-            transform: translate3d(4px, 0px, 0) rotate(0.8deg);
-          }
-          75% {
-            transform: translate3d(0px, -6px, 0) rotate(0deg);
-          }
-          100% {
-            transform: translate3d(-4px, 0px, 0) rotate(-0.8deg);
-          }
+        .ticket-wave-canvas.visible {
+          opacity: 1;
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .ticket-motion-wrapper,
-          .ticket-light-wave,
-          .ticket-bright-pass {
-            animation: none !important;
+          .ticket-fallback {
+            opacity: 1 !important;
+            position: relative !important;
+          }
+          .ticket-wave-canvas {
+            display: none !important;
           }
         }
       `}</style>
