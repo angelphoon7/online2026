@@ -92,40 +92,40 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
         ctx.fillStyle = '#060e22';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Render ticket slice-by-slice: gentle, slow, non-vibrating wave motion
+        // Render ticket slice-by-slice: smooth, synchronized wave motion with slightly larger amplitude
         for (let i = 0; i < totalSlices; i++) {
           const sx = i * SLICE_W;
           const normX = sx / canvas.width;
 
-          // Edge damping ensures the outer padding remains completely still
+          // Edge damping ensures the outer ticket tips remain anchored
           const edgeDamp = Math.max(0, Math.min(1, (normX - 0.04) / 0.14)) *
                            Math.max(0, Math.min(1, (0.96 - normX) / 0.14));
 
-          // 1. Broad, gentle wave crest that glides slowly with the glow (zero high-frequency vibration)
+          // 1. Primary wave crest aligned directly with the gliding glow (~8.5px crest)
           const dist = normX - glowX;
-          const glowPulse = -Math.cos(dist * Math.PI * 2.2) * Math.exp(-dist * dist * 18.0) * 4.8;
+          const crest = -Math.cos(dist * 5.8) * Math.exp(-dist * dist * 22.0) * 8.5;
 
-          // 2. Slow, broad harmonic ocean-like undulation across the ticket (single gentle curve, slow 7s period)
-          const harmonic = Math.sin(normX * Math.PI * 1.3 - time * 0.9) * 3.2;
+          // 2. Coordinated ribbon sway in sync with the glow travel (~3.5px sway)
+          const sway = -Math.sin((normX - 0.5) * Math.PI * 1.2) * (pingpong - 0.5) * 3.5;
 
-          // Combined gentle wave displacement
-          const dy = (glowPulse + harmonic) * edgeDamp;
+          // Combined wave displacement (peak amplitude ~9.5 - 10.5px)
+          const dy = (crest + sway) * edgeDamp;
 
           // Draw base ribbon slice
           ctx.drawImage(img, sx, 0, SLICE_W, canvas.height, sx, dy, SLICE_W, canvas.height);
 
           // If glow is near this slice, composite the glowing wave highlights
           const absDist = Math.abs(dist);
-          if (absDist < 0.18) {
-            const glowIntensity = Math.pow(1 - absDist / 0.18, 1.8);
+          if (absDist < 0.20) {
+            const glowIntensity = Math.pow(1 - absDist / 0.20, 1.8);
 
             // Draw bright pass on the wave crest
-            ctx.globalAlpha = glowIntensity * 0.75;
+            ctx.globalAlpha = glowIntensity * 0.8;
             ctx.globalCompositeOperation = 'screen';
             ctx.drawImage(brightCanvas, sx, 0, SLICE_W, canvas.height, sx, dy, SLICE_W, canvas.height);
 
             // Draw luminous tint pass on the wave crest
-            ctx.globalAlpha = glowIntensity * 0.45;
+            ctx.globalAlpha = glowIntensity * 0.5;
             ctx.drawImage(tintCanvas, sx, 0, SLICE_W, canvas.height, sx, dy, SLICE_W, canvas.height);
 
             ctx.globalAlpha = 1.0;
@@ -209,7 +209,7 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
         .ticket-wave-canvas {
           width: 100%;
           height: auto;
-          max-width: 610px;
+          max-width: 100%;
           display: block;
           opacity: 0;
           transition: opacity 0.3s ease;
@@ -219,6 +219,13 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
 
         .ticket-wave-canvas.visible {
           opacity: 1;
+        }
+
+        @media (min-width: 769px) {
+          .ticket-icon-container {
+            transform: scale(1.18);
+            transform-origin: center center;
+          }
         }
 
         @media (prefers-reduced-motion: reduce) {
