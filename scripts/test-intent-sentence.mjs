@@ -15,18 +15,18 @@ const draft = initialIntent({ timestamp: '1789160000', intents: [], tickets: [
   { eventId: 2, sessionId: 2, sectionId: 2 },
 ] }, owner);
 draft.offered = [1n, 2n];
-assert.equal(draft.sessionMask, 3n);
-assert.equal(draft.sectionMask, 3n);
-assert.deepEqual(maskClasses(draft.sectionMask), [0, 1]);
+assert.equal(draft.sessionMask, 1n);
+assert.equal(draft.sectionMask, 1n);
+assert.deepEqual(maskClasses(draft.sectionMask), [0]);
 const baseline = intentSentence(draft);
-assert.match(baseline, /sections 0, 1;/);
+assert.match(baseline, /sections 0;/);
 assert.doesNotMatch(baseline, /sections 0, 1, 2/);
 const mutations = {
   owner: ['0x2222222222222222222222222222222222222222', /owner 0x2222/],
   offered: [[4n, 5n], /my tickets #4, #5/],
   eventId: [2, /Event 2/],
   sessionMask: [2n, /sessions 1;/],
-  sectionMask: [1n, /sections 0;/],
+  sectionMask: [2n, /sections 1;/],
   exactCount: [3, /exactly 3 tickets/],
   mustShareSession: [false, /mixed sessions permitted/],
   mustShareSection: [false, /mixed sections permitted/],
@@ -54,6 +54,25 @@ assert.equal(demoPriceQuote({ ...draft, sectionMask: 1n }, pricedTickets).sugges
 assert.equal(demoPriceQuote({ ...draft, sectionMask: 1n }, pricedTickets.map(t => ({ ...t, sectionId: 1 }))).suggestedLimit, -1000000n);
 assert.equal(demoPriceQuote({ ...draft, sectionMask: 2n, exactCount: 1 }, pricedTickets).suggestedLimit, -500000n);
 assert.equal(demoPriceQuote({ ...draft, sectionMask: 3n }, pricedTickets).wantedMin, 2000000n);
-assert.equal(demoPriceQuote({ ...draft, sectionMask: 4n }, pricedTickets), null);
+assert.equal(demoPriceQuote({ ...draft, sectionMask: 4n }, pricedTickets).wantedMin, 4000000n);
+assert.equal(demoPriceQuote({ ...draft, sectionMask: 8n }, pricedTickets).wantedMin, 5000000n);
+assert.equal(demoPriceQuote({ ...draft, sectionMask: 16n }, pricedTickets), null);
 assert.equal(demoPriceQuote({ ...draft, offered: [99n] }, pricedTickets), null);
 console.log('PASS demo quote: upgrade, even swap, downgrade, changed count, mixed sections and unknown-price fallbacks.');
+
+const { selectedClass, sessionDeadline, validateNewIntentTiming, formatEventTime } = await import('../lib/event-schedule.ts');
+const cutoff = BigInt(Date.parse('2026-09-19T04:00:00Z') / 1000);
+assert.equal(sessionDeadline(1n), cutoff);
+assert.equal(sessionDeadline(2n), cutoff + 86400n);
+assert.equal(draft.deadline, cutoff);
+assert.equal(initialIntent({ timestamp: '1789165000', intents: [], tickets: [] }, owner).deadline, cutoff);
+assert.equal(formatEventTime(cutoff), '2026-09-19 12:00 Malaysia (UTC+8)');
+for (const mask of [0n, 3n, 4n]) assert.equal(sessionDeadline(mask), null);
+assert.equal(selectedClass(1n << 255n), 255);
+assert.equal(selectedClass(1n << 256n), null);
+assert.doesNotThrow(() => validateNewIntentTiming(1n, cutoff, cutoff - 1n));
+assert.throws(() => validateNewIntentTiming(1n, cutoff, cutoff), /closes eight hours/);
+assert.throws(() => validateNewIntentTiming(1n, cutoff, cutoff + 1n), /closes eight hours/);
+assert.throws(() => validateNewIntentTiming(1n, cutoff + 1n, cutoff - 1n), /schedule changed/);
+assert.throws(() => validateNewIntentTiming(3n, cutoff, cutoff - 1n), /Choose one night/);
+console.log('PASS fixed Malaysia demo dates, eight-hour signed deadlines, single-night masks and expiry boundaries.');

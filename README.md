@@ -57,7 +57,7 @@ npm run dev
 
 Open **[localhost:3000/demo](http://localhost:3000/demo)**. The first command prepares three signed, LIVE intents and twelve escrowed tickets, then verifies a three-participant candidate with the real solver and `eth_call`. It reuses an already-ready round without sending transactions. After settlement, run it again to prepare the next round using the same tickets and fresh nonces.
 
-The demo opens without a wallet and automatically searches current chain state. Exclude a participant and search again to inspect how the result changes. Submission requires a proposer wallet with Arc test USDC for gas; the three participants need not return or sign again. The seed command does **not** execute the settlement.
+The demo opens without a wallet and automatically searches all live event intents through `/api/solve/pool`, retrying after public-state refreshes while the page is open. Each candidate contains two to four participants; the full pool is searched within a 100-candidate / two-second budget. Results show when that budget is reached. Pool sizes above the 256-intent service guard return an explicit error rather than being silently truncated. Checkboxes optionally switch to manual selection for testing. Submission requires a proposer wallet with Arc test USDC for gas; participants need not return or sign again. The seed command does **not** execute the settlement.
 
 For asynchronous judging, host the Next.js frontend **and backend** and share its `/demo` URL. Seed before publishing the public manifest. A shared on-chain round can be consumed once; reseed and redeploy the updated manifest for the next round on hosts with immutable files. See [setup, recovery and hosting details](docs/DEMO_SETUP.md).
 

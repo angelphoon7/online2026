@@ -16,15 +16,20 @@ export function parseSolveRequest(body: unknown): Hex[] {
   return normalized.sort();
 }
 
-export async function solveOnChain(hashes: Hex[]) {
+export async function solveOnChain(hashes: Hex[], committed?: ReadonlyMap<Hex, Intent>, pool?: { liveIntents: number; excluded: { intentHashes: Hex[]; reason: string }[] }) {
   const { client, addresses, usdc, startBlock } = chainConfig();
   if (await client.getChainId() !== 5042002) throw new Error('RPC returned the wrong chain');
   const block = await client.getBlock();
   const event = parseAbiItem('event IntentCommitted(bytes32 indexed intentHash,address indexed owner,uint32 indexed eventId,uint256[] offered,uint256 sessionMask,uint256 sectionMask,uint8 exactCount,bool mustShareSession,bool mustShareSection,bool mustBeAdjacent,int256 maxNetPay,uint64 deadline,uint256 nonce)');
   const discovered = new Map<Hex, Intent>();
+  if (committed) for (const hash of hashes) {
+    const intent = committed.get(hash);
+    if (!intent || hashIntent(intent) !== hash) throw new Error('Committed intent hash mismatch');
+    discovered.set(hash, intent);
+  }
   // Fixed deployment scope, selected hashes, and bounded log range per call.
   let pages = 0;
-  for (let from = startBlock; from <= block.number; from += 10000n) {
+  for (let from = startBlock; !committed && from <= block.number; from += 10000n) {
     if (++pages > 100) throw new Error('Discovery range exceeds demo cap; configure an indexed discovery adapter');
     const toBlock = from + 9999n < block.number ? from + 9999n : block.number;
     const logs = await client.getLogs({ address: addresses.IntentRegistry, event, args: { intentHash: hashes }, fromBlock: from, toBlock, strict: true });
@@ -45,13 +50,16 @@ export async function solveOnChain(hashes: Hex[]) {
     const hash = hashIntent(intent);
     state.intentState.set(hash, await read<number>('IntentRegistry', 'state', [hash]));
     const owner = intent.owner.toLowerCase() as Address;
-    const [balance, allowance] = await Promise.all([
-      client.readContract({ address: usdc, abi: erc20Abi, functionName: 'balanceOf', args: [owner], blockNumber: block.number }),
-      client.readContract({ address: usdc, abi: erc20Abi, functionName: 'allowance', args: [owner, addresses.Settlement], blockNumber: block.number }),
-    ]);
-    state.usdcBalance.set(owner, balance);
-    state.usdcAllowance.set(owner, allowance);
+    if (!state.usdcBalance.has(owner)) {
+      const [balance, allowance] = await Promise.all([
+        client.readContract({ address: usdc, abi: erc20Abi, functionName: 'balanceOf', args: [owner], blockNumber: block.number }),
+        client.readContract({ address: usdc, abi: erc20Abi, functionName: 'allowance', args: [owner, addresses.Settlement], blockNumber: block.number }),
+      ]);
+      state.usdcBalance.set(owner, balance);
+      state.usdcAllowance.set(owner, allowance);
+    }
     for (const tokenId of intent.offered) {
+      if (state.ticketMeta.has(tokenId)) continue;
       const [meta, depositor] = await Promise.all([
         read<[number, number, number, number, number, number]>('TicketNFT', 'meta', [tokenId]),
         read<Address>('Escrow', 'depositor', [tokenId]),
@@ -92,7 +100,8 @@ export async function solveOnChain(hashes: Hex[]) {
     chainId: 5042002, registry: addresses.IntentRegistry, settlement: addresses.Settlement,
     source: { kind: 'rpc', subgraphEndpoint: null, blockNumber: block.number.toString(), blockHash: block.hash },
     requestedIntentHashes: hashes, intentsConsidered: intents.length,
-    candidatesExcluded: [...inputExclusions, ...result.evidence.candidatesExcluded],
+    candidatesExcluded: [...(pool?.excluded ?? []), ...inputExclusions, ...result.evidence.candidatesExcluded],
+    ...(pool ? { pool: { liveIntents: pool.liveIntents, searchableIntents: intents.length, excludedIntents: pool.excluded.length } } : {}),
     searchConfig: SEARCH_CONFIG, runtimeMs, simulationBlock: simulationBlock.toString(), simulationResult,
     proposal: result.chosen, transaction,
     message: result.chosen ? 'Candidate found within the search budget' : 'No solution found within the search bound',

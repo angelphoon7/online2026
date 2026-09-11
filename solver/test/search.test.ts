@@ -123,6 +123,14 @@ describe('computeMinGrossPayment', () => {
 });
 
 describe('search', () => {
+  it('reports candidate and time limits separately from a completed bounded search', () => {
+    const intents = [makeIntent(alice, [1n], 1, 0n, 1n), makeIntent(bob, [2n], 1, 0n, 2n)];
+    const state = buildState(intents);
+    addTicket(state, 1n); addTicket(state, 2n);
+    expect(search(intents, state, { ...config, maxCandidates: 0 }).termination).toBe('candidate-limit');
+    expect(search(intents, state, { ...config, timeoutMs: -1 }).termination).toBe('timeout');
+    expect(search(intents, state, config).termination).toBe('complete');
+  });
   it('finds a valid two-way swap', () => {
     const intentA = makeIntent(alice, [1n], 1, 0n, 1n);
     const intentB = makeIntent(bob, [2n], 1, 0n, 2n);

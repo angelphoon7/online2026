@@ -30,7 +30,7 @@ export function solve(
     return true;
   });
 
-  const { candidates, excluded } = search(liveIntents, state, config);
+  const { candidates, excluded, termination } = search(liveIntents, state, config);
   const ranked = rankCandidates(candidates);
   const chosen: Candidate | null = ranked.length > 0 ? ranked[0] : null;
 
@@ -40,6 +40,7 @@ export function solve(
     excluded,
     chosen
   );
+  evidence.search = { termination };
 
   return {
     chosen: chosen
