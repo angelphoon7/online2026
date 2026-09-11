@@ -15,6 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { loadEnvFile } from 'node:process';
 import { loadDeployment, deploymentName, ENV_BY_CONTRACT, sameAddress } from './lib/deployment.mjs';
+import { publicRecord, serialise, publicPath } from './gen-public-deployment.mjs';
 
 if (fs.existsSync('.env')) loadEnvFile('.env');
 
@@ -39,35 +40,48 @@ for (const name of Object.keys(ENV_BY_CONTRACT)) {
   console.log(`  ${name.padEnd(15)} ${address}  block ${startBlock}  ${deployTx ?? '(no deploy tx)'}`);
 }
 
-// ── 1. env matches the record ────────────────────────────────────────────────
-for (const [name, key] of Object.entries(ENV_BY_CONTRACT)) {
+// ── 1. no stale address environment variables ────────────────────────────────
+// Since step 1-B, lib/deployment.ts reads the record directly and nothing reads these. A
+// leftover value is worse than a missing one: it looks authoritative and is ignored. Failing
+// only on disagreement would let a contradictory .env sit there looking meaningful.
+const RETIRED = {
+  NEXT_PUBLIC_TICKET_NFT: deployment.contracts.TicketNFT.address,
+  NEXT_PUBLIC_ESCROW: deployment.contracts.Escrow.address,
+  NEXT_PUBLIC_INTENT_REGISTRY: deployment.contracts.IntentRegistry.address,
+  NEXT_PUBLIC_SETTLEMENT: deployment.contracts.Settlement.address,
+  NEXT_PUBLIC_USDC: deployment.usdc,
+  NEXT_PUBLIC_CHAIN_ID: String(deployment.chainId),
+  NEXT_PUBLIC_DEPLOYMENT_BLOCK: String(deployment.startBlock),
+};
+for (const [key, recorded] of Object.entries(RETIRED)) {
   const actual = process.env[key];
-  const expected = deployment.contracts[name].address;
-  if (!actual) {
-    check(false, `${key} is unset; expected ${expected}`);
+  if (actual === undefined || actual === '') {
+    pass++;
     continue;
   }
-  check(sameAddress(actual, expected), `${key}=${actual} but ${deployment.file} has ${expected}`);
+  const agrees = key.includes('USDC') || key.startsWith('NEXT_PUBLIC_TICKET')
+    || key.includes('ESCROW') || key.includes('REGISTRY') || key.includes('SETTLEMENT')
+    ? sameAddress(actual, recorded)
+    : actual.trim() === recorded;
+  check(
+    false,
+    `${key} is set but no longer read (lib/deployment.ts reads ${deployment.file}). ` +
+      `Remove it from .env. ${agrees ? 'It currently agrees with the record.' : `It DISAGREES: env=${actual}, record=${recorded}.`}`
+  );
 }
 
-const scalars = [
-  ['NEXT_PUBLIC_CHAIN_ID', String(deployment.chainId)],
-  ['NEXT_PUBLIC_USDC', deployment.usdc],
-  ['NEXT_PUBLIC_DEPLOYMENT_BLOCK', String(deployment.startBlock)],
-  ['ARC_CHAIN_ID', String(deployment.chainId)],
-  ['USDC_ADDRESS', deployment.usdc],
-];
-for (const [key, expected] of scalars) {
-  const actual = process.env[key];
-  if (expected === null || expected === undefined) continue;
-  if (!actual) {
-    check(false, `${key} is unset; expected ${expected}`);
-    continue;
-  }
-  const ok = key.endsWith('USDC') || key === 'USDC_ADDRESS'
-    ? sameAddress(actual, expected)
-    : actual.trim() === expected;
-  check(ok, `${key}=${actual}, expected ${expected}`);
+// ARC_CHAIN_ID is still honoured by server/chain.ts as a guard, so it must agree if present.
+if (process.env.ARC_CHAIN_ID) {
+  check(
+    process.env.ARC_CHAIN_ID.trim() === String(deployment.chainId),
+    `ARC_CHAIN_ID=${process.env.ARC_CHAIN_ID} contradicts ${deployment.network} (chainId ${deployment.chainId})`
+  );
+}
+if (process.env.USDC_ADDRESS) {
+  check(
+    sameAddress(process.env.USDC_ADDRESS, deployment.usdc),
+    `USDC_ADDRESS=${process.env.USDC_ADDRESS} contradicts record ${deployment.usdc}`
+  );
 }
 
 // ── 2. no hand-copied addresses in source ────────────────────────────────────
@@ -75,18 +89,26 @@ for (const [key, expected] of scalars) {
 const SEARCH_DIRS = ['app', 'lib', 'server', 'component', 'solver/src', 'scripts', 'config', 'src'];
 const SEARCH_EXT = new Set(['.ts', '.tsx', '.mjs', '.js', '.sol', '.json']);
 const ALLOWED_FILES = new Set([path.normalize('scripts/check-deployment-config.mjs')]);
+const SKIP_DIRS = new Set(['node_modules', 'dist', '.next', 'forge-std', 'openzeppelin-contracts']);
 
 const known = new Map();
 for (const name of Object.keys(ENV_BY_CONTRACT)) {
   known.set(deployment.contracts[name].address.toLowerCase(), name);
 }
+// USDC is tracked separately. It is a canonical Arc address, not something we redeploy, so a
+// copy of it is not the bug this scan exists to catch — several scripts assert against it
+// deliberately. Reported, not failed.
+const usdcAddress = deployment.usdc?.toLowerCase();
 
 function* walk(dir) {
   if (!fs.existsSync(dir)) return;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.next') continue;
+      // lib/ holds both the Next.js modules and Foundry's vendored dependencies. forge-std
+      // ships fixtures containing the deterministic Anvil addresses, which collide with the
+      // local deployment record; vendored code is not ours to police either way.
+      if (SKIP_DIRS.has(entry.name)) continue;
       yield* walk(full);
     } else if (SEARCH_EXT.has(path.extname(entry.name))) {
       yield full;
@@ -95,20 +117,42 @@ function* walk(dir) {
 }
 
 const copied = [];
+const usdcCopies = [];
 for (const dir of SEARCH_DIRS) {
   for (const file of walk(dir)) {
     if (ALLOWED_FILES.has(path.normalize(file))) continue;
     const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
     lines.forEach((line, index) => {
+      const lower = line.toLowerCase();
       for (const [address, name] of known) {
-        if (line.toLowerCase().includes(address)) {
-          copied.push(`${file}:${index + 1} hard-codes ${name} (${address})`);
-        }
+        if (lower.includes(address)) copied.push(`${file}:${index + 1} hard-codes ${name} (${address})`);
       }
+      if (usdcAddress && lower.includes(usdcAddress)) usdcCopies.push(`${file}:${index + 1}`);
     });
   }
 }
 check(copied.length === 0, `hand-copied addresses found:\n    ${copied.join('\n    ')}`);
+if (usdcCopies.length > 0) {
+  console.log(`\n  note: ${usdcCopies.length} literal copies of the Arc USDC address (canonical, not redeployed):`);
+  for (const where of usdcCopies) console.log(`        ${where}`);
+}
+
+// ── 2b. the generated public slice is in sync ────────────────────────────────
+// lib/deployment.ts imports deployments/public/<network>.json, so a stale copy silently
+// points the frontend at old addresses — exactly the drift this whole file exists to prevent.
+{
+  const expected = serialise(publicRecord(deployment));
+  const file = publicPath(deployment.network);
+  if (!fs.existsSync(file)) {
+    check(false, `${file} is missing — run: npm run deployment:public`);
+  } else {
+    const actual = fs.readFileSync(file, 'utf8');
+    check(
+      actual.replace(/\r\n/g, '\n') === expected,
+      `${file} is stale or hand-edited — run: npm run deployment:public`
+    );
+  }
+}
 
 // ── 3. the subgraph endpoint, once step 3-G has produced one ─────────────────
 if (deployment.subgraphUrl) {

@@ -1,0 +1,45 @@
+{
+  "network": "local",
+  "chainId": 31337,
+  "rpc": "http://127.0.0.1:8545",
+  "subgraphUrl": "",
+  "note": "Deterministic Anvil addresses from script/DeployLocal.s.sol. Subgraph Studio cannot index this chain; use NEXT_PUBLIC_READ_SOURCE=rpc locally.",
+  "usdc": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+  "contracts": {
+    "TicketNFT": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+    "Escrow": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+    "IntentRegistry": "0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9",
+    "Settlement": "0xdc64a140aa3e981100a9beca4e685f962f0cf6c9"
+  },
+  "startBlock": "2",
+  "transactions": [
+    {
+      "label": "deploy:TicketNFT",
+      "hash": "0x922ff98c76bc5167bff71e7d631e50e36c2a2a96cd6c6e7ce37a685440aa2878",
+      "status": "success",
+      "blockNumber": "2",
+      "contractAddress": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512"
+    },
+    {
+      "label": "deploy:Escrow",
+      "hash": "0x8ffcf42844e3ee598e889200a53b0c5af2c9a269b661c06e31bc4f1d696abee8",
+      "status": "success",
+      "blockNumber": "2",
+      "contractAddress": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0"
+    },
+    {
+      "label": "deploy:IntentRegistry",
+      "hash": "0x483f31896476d0954e4fdfc62807edfb5435bc73888def9905fc946fce2416a0",
+      "status": "success",
+      "blockNumber": "2",
+      "contractAddress": "0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9"
+    },
+    {
+      "label": "deploy:Settlement",
+      "hash": "0x3dd4c5509940c12b56014800681e616e1f72a637011c1eae417341fa99590372",
+      "status": "success",
+      "blockNumber": "2",
+      "contractAddress": "0xdc64a140aa3e981100a9beca4e685f962f0cf6c9"
+    }
+  ]
+}

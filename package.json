@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "predev": "npm --prefix solver run build",
-    "prebuild": "npm --prefix solver run build",
+    "prebuild": "node scripts/gen-public-deployment.mjs && npm --prefix solver run build",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -12,6 +12,7 @@
     "arc:check": "node scripts/check-arc.mjs",
     "deployment:check": "node scripts/check-deployment-config.mjs",
     "deployment:check:chain": "node scripts/check-deployment-config.mjs --chain",
+    "deployment:public": "node scripts/gen-public-deployment.mjs",
     "mainnet:check": "node scripts/mainnet.mjs check",
     "mainnet:plan": "node scripts/mainnet.mjs plan",
     "mainnet:deploy": "node scripts/mainnet.mjs deploy",

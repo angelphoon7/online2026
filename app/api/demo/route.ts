@@ -15,10 +15,10 @@ export async function GET() {
     let demo = bundledDemo;
     try { demo = JSON.parse(await readFile(join(process.cwd(), 'deployments/demo-ready.json'), 'utf8')); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
-    const { client, addresses } = chainConfig();
-    if (demo.chainId !== 5042002 || demo.settlement.toLowerCase() !== addresses.Settlement.toLowerCase()
+    const { client, addresses, chainId } = chainConfig();
+    if (demo.chainId !== chainId || demo.settlement.toLowerCase() !== addresses.Settlement.toLowerCase()
       || demo.intents.length !== 3 || new Set(demo.intents.map(i => i.hash)).size !== 3
-      || await client.getChainId() !== 5042002) throw new Error('Demo configuration mismatch');
+      || await client.getChainId() !== chainId) throw new Error('Demo configuration mismatch');
     const block = await client.getBlock();
     const intents = await Promise.all(demo.intents.map(async record => {
       const intent = { ...record, owner: record.owner as Address, offered: record.offered.map(BigInt),
@@ -29,7 +29,7 @@ export async function GET() {
         functionName: 'state', args: [record.hash as Hex], blockNumber: block.number }) as number;
       return { ...record, state, expired: intent.deadline < block.timestamp };
     }));
-    return Response.json({ chainId: 5042002, blockNumber: block.number.toString(), intents }, { headers: { 'Cache-Control': 'no-store' } });
+    return Response.json({ chainId, blockNumber: block.number.toString(), intents }, { headers: { 'Cache-Control': 'no-store' } });
   } catch {
     return Response.json({ error: 'Demo state is unavailable. Retry after the operator checks Arc configuration and runs demo:prepare.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
   }

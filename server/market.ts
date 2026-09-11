@@ -14,14 +14,14 @@ let cached: { key: string; until: number; blockHash: Hex; value: MarketSnapshot 
 let pending: Promise<MarketSnapshot> | undefined;
 
 export async function marketSnapshot(fresh = false): Promise<MarketSnapshot> {
-  const { addresses, startBlock } = chainConfig();
+  const { addresses, startBlock, chainId } = chainConfig();
   const client = createPublicClient({ transport: http(process.env.ARC_RPC!, { batch: { batchSize: 8, wait: 25 }, retryCount: 4, retryDelay: 1500 }) });
   const pause = () => new Promise(resolve => setTimeout(resolve, 750));
   const key = `${addresses.IntentRegistry}:${startBlock}`;
   if (!fresh && cached?.key === key && cached.until > Date.now()) return cached.value;
   if (pending) return pending;
   pending = (async () => {
-    if (await client.getChainId() !== 5042002) throw new Error('Wrong RPC chain');
+    if (await client.getChainId() !== chainId) throw new Error('Wrong RPC chain');
     const block = await client.getBlock();
     const read = (name: keyof typeof addresses, functionName: string, args: unknown[] = []) => client.readContract({ address: addresses[name], abi: abi(name), functionName, args, blockNumber: block.number }).catch(error => { throw new Error(`${name}.${functionName}: ${error.shortMessage ?? error.name}`); });
     const count = await read('TicketNFT', 'nextTokenId') as bigint;

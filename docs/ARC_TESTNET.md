@@ -23,7 +23,7 @@
 
 ## 部署与 seed
 
-四个合约已部署到 Arc Testnet。完整地址、部署起始区块和每笔交易哈希保存在 `deployments/arc-testnet.json`，前端地址及 `NEXT_PUBLIC_DEPLOYMENT_BLOCK` 已写入本地 `.env`。
+四个合约已部署到 Arc Testnet。完整地址、部署起始区块和每笔交易哈希保存在 `deployments/arc-testnet.json`，前端通过 `lib/deployment.ts` 直接读取该记录（由 `NEXT_PUBLIC_DEPLOYMENT` 选择网络），地址不再写入 `.env`。
 
 本机 Foundry 位于 `.tools/foundry/forge.exe`，版本为 1.8.1；Solidity 固定为 0.8.36、目标为 Paris。OpenZeppelin 固定到 5.0.2，因为原先 5.7.0 的 `MCOPY` 无法编译为 Paris。这里采用 Paris 是项目的兼容性选择；不据此声称当前 Arc 不支持 PUSH0，当前网络差异应参考 [Arc EVM 文档](https://docs.arc.io/arc/references/evm-differences)。
 

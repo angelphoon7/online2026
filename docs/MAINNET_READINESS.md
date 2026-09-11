@@ -165,8 +165,8 @@ The current [`IntentRegistry` constructor and `commit()`](../src/IntentRegistry.
 |---|---|---|
 | `name` | `RESHUFFLE` | `RESHUFFLE` |
 | `version` | `1` | `1` |
-| `chainId` | `block.chainid` at Registry construction | `BigInt(CHAIN.id)`, sourced from `NEXT_PUBLIC_CHAIN_ID` |
-| `verifyingContract` | `address(this)`: the deployed **IntentRegistry** | `CONTRACTS.intentRegistry`, sourced from `NEXT_PUBLIC_INTENT_REGISTRY` |
+| `chainId` | `block.chainid` at Registry construction | `BigInt(CHAIN.id)`, sourced from `deployments/<network>.json` |
+| `verifyingContract` | `address(this)`: the deployed **IntentRegistry** | `CONTRACTS.intentRegistry`, sourced from `deployments/<network>.json` |
 
 `verifyingContract` is not the Settlement address. Registry verifies the signature once in `commit()` and reserves the owner's nonce. Later, `settle(intents, legs)` checks the committed hash and LIVE state through its configured Registry; it does not request or verify another participant signature.
 
@@ -183,7 +183,7 @@ The existing `signAndCommitIntent()` constructs the domain from frontend configu
 
 ### Signature migration acceptance checks
 
-- [ ] Update `NEXT_PUBLIC_CHAIN_ID` and `NEXT_PUBLIC_INTENT_REGISTRY` together with all other target deployment values. Rebuild/redeploy the frontend and retire stale browser bundles and cached signing requests.
+- [ ] Add the target deployment record under `deployments/`, register it in [`lib/deployment.ts`](../lib/deployment.ts), regenerate the public slice (`npm run deployment:public`) and point `NEXT_PUBLIC_DEPLOYMENT` at it. Rebuild/redeploy the frontend and retire stale browser bundles and cached signing requests.
 - [ ] Confirm wallet `eth_chainId`, backend RPC chain ID and configured chain ID agree. Calculate the domain separator from the frontend's four actual signing fields and compare it with the target Registry's `DOMAIN_SEPARATOR()` before enabling signing for the release. A mismatch must block signing; the current frontend comparison still needs implementation for this release gate.
 - [ ] Clear or segregate old signatures, queued commits, LIVE-state caches, solver proposals and evidence by chain/Registry. Fetch state and available nonces from the new Registry; do not label old records as LIVE there.
 - [ ] In a controlled test, sign an otherwise valid intent for the old domain using a nonce unused on the target. Replay it via `commit()` against the target domain and assert the named `InvalidSignature` error. Cover a different chain ID and a different Registry address separately; use a well-formed intent so an earlier shape/nonce rejection cannot masquerade as signature protection.
@@ -198,7 +198,7 @@ Deployment alone does not migrate the working app. The current hosted workflow a
 
 - [`server/chain.ts`](../server/chain.ts) currently requires chain ID 5042002 and fixes the Testnet USDC address. Replace that restriction with a validated mainnet configuration only in the reviewed release; changing `.env` alone will make it reject mainnet.
 - [`lib/config.ts`](../lib/config.ts) currently names the chain Arc Testnet. Update its network name, native currency settings and public RPC/chain/USDC/contract values together. Review wallet chain switching, explorer links and Testnet labels throughout the UI.
-- Set `NEXT_PUBLIC_DEPLOYMENT_BLOCK` to the first new mainnet deployment block and bind backend receipt verification to the new chain and contract addresses. Keep backend RPC credentials server-side and use a separately approved public browser endpoint.
+- Set `startBlock` in the new deployment record to the first mainnet deployment block and bind backend receipt verification to the new chain and contract addresses. Keep backend RPC credentials server-side and use a separately approved public browser endpoint.
 - Follow the [EIP-712 domain and signature migration procedure](#eip-712-domain-and-signature-migration): collect new-domain signatures and commits, segregate old cached state, and explicitly retire any old authorization that should no longer execute.
 - Recorded `/demo/*` proofs and `deployments/arc-testnet.json` remain explicitly labeled historical Testnet evidence. Do not rewrite them as mainnet proofs. Retire Testnet write actions from a mainnet-facing release and keep any demo site separate.
 - If using The Graph, confirm **Arc Mainnet** support independently of Arc Testnet; deploy a separate subgraph with the new network, addresses and start block. Do not point mainnet discovery at the Testnet index. RPC discovery currently works without a subgraph but must use the correct mainnet chain/config.

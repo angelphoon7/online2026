@@ -13,6 +13,7 @@ import {
 } from 'viem';
 import { intentTypedData } from './intent-typed-data';
 import { CHAIN, CONTRACTS, NETWORK } from './config';
+import { DEPLOYMENT_BLOCK } from './deployment';
 import {
   ticketNFTAbi,
   escrowAbi,
@@ -39,11 +40,10 @@ export function getPublicClient() {
 export async function getCommittedIntents() {
   const client = getPublicClient();
   const latest = await client.getBlockNumber();
-  const start = process.env.NEXT_PUBLIC_DEPLOYMENT_BLOCK;
-  if (!start) throw new Error('Missing deployment start block');
+  const start = DEPLOYMENT_BLOCK;
   const event = parseAbiItem('event IntentCommitted(bytes32 indexed intentHash,address indexed owner,uint32 indexed eventId,uint256[] offered,uint256 sessionMask,uint256 sectionMask,uint8 exactCount,bool mustShareSession,bool mustShareSection,bool mustBeAdjacent,int256 maxNetPay,uint64 deadline,uint256 nonce)');
   const intents = [];
-  for (let from = BigInt(start); from <= latest; from += 10000n) {
+  for (let from = start; from <= latest; from += 10000n) {
     const to = from + 9999n < latest ? from + 9999n : latest;
     const logs = await client.getLogs({ address: CONTRACTS.intentRegistry, event, fromBlock: from, toBlock: to, strict: true });
     for (const { args } of logs) {
