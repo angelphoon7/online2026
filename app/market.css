@@ -16,3 +16,5 @@
 @media(max-width:540px){.condition-row{grid-template-columns:110px minmax(0,1fr);gap:14px}.step-heading{gap:10px}.step-heading h2{font-size:18px}.step-summary{flex-basis:65%}.step-marker{font-size:9px}.seat-cells{gap:2px}.row-label{width:22px}.workspace-panel{padding:16px}.condition-control{gap:8px}.seat{font-size:8px}}
 
 .poster-photo{position:relative;display:block;flex-shrink:0;width:100%;aspect-ratio:2/3;margin:24px 0 6px;background:var(--ink)}.poster-photo img{object-fit:contain}
+
+.price-comparison{border-top:1px solid var(--line);padding-top:20px;margin-top:24px}.price-comparison h3{font-size:16px}.quote-lines>div{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding:12px 0;font-size:12px}.quote-lines dd{text-align:right}.wallet-nft-import{border:1px solid var(--line);padding:20px;margin:20px 0;background:var(--paper)}.wallet-nft-import .hash{display:block;margin:10px 0}.wallet-nft-import ul{margin:12px 0}.wallet-nft-import li{margin:8px 0}

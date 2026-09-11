@@ -9,7 +9,7 @@ export function initialIntent(snapshot: MarketSnapshot, account: Address | null)
     sessionMask: tickets.reduce((mask, t) => mask | (1n << BigInt(t.sessionId)), 0n),
     sectionMask: tickets.reduce((mask, t) => mask | (1n << BigInt(t.sectionId)), 0n),
     exactCount: 2, mustShareSession: true, mustShareSection: true, mustBeAdjacent: true,
-    maxNetPay: 0n, deadline: BigInt(snapshot.timestamp) + 86400n, nonce: nextRecordedNonce(snapshot, account),
+    maxNetPay: 1000000n, deadline: BigInt(snapshot.timestamp) + 86400n, nonce: nextRecordedNonce(snapshot, account),
   };
 }
 export function nextRecordedNonce(snapshot: MarketSnapshot, account: Address | null) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { isAddress, type Address } from 'viem';
-import { walletConnectionMessage } from '../wallet-errors';
+import { walletActionMessage, walletConnectionMessage } from '../wallet-errors';
 import { CHAIN } from '../config';
 import { walletRequest } from '../wallet-request';
 
@@ -132,7 +132,7 @@ export function useWallet() {
       walletReady = true;
       await action(current);
     } catch (reason) {
-      if (!walletReady) setError(reason instanceof Error ? reason.message : walletConnectionMessage(reason));
+      if (!walletReady) setError(walletActionMessage(reason));
       throw reason;
     } finally {
       actionPending.current = false;

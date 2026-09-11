@@ -32,6 +32,7 @@ export function getSeatCustody(session: number, section: number, snapshot: Marke
 }
 export const getSettlementReceipt = (hash: Hex) => readJson<ChainReceipt>(`/api/market/receipt?hash=${hash}`);
 export const getTicketsApproved = (address: Address) => getPublicClient().readContract({ address: CONTRACTS.ticketNFT, abi: erc721Abi, functionName: 'isApprovedForAll', args: [address, CONTRACTS.escrow] });
+export const getTicketHolder = (tokenId: bigint) => getPublicClient().readContract({ address: CONTRACTS.ticketNFT, abi: erc721Abi, functionName: 'ownerOf', args: [tokenId] });
 export const getTicketDepositor = (tokenId: bigint) => getPublicClient().readContract({ address: CONTRACTS.escrow, abi: escrowAbi, functionName: 'depositor', args: [tokenId] });
 export const getUSDCAllowance = (address: Address) => getPublicClient().readContract({ address: CONTRACTS.usdc, abi: erc20Abi, functionName: 'allowance', args: [address, CONTRACTS.settlement] });
 export async function getUnusedNonce(address: Address, minimum: bigint) {

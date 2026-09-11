@@ -41,7 +41,7 @@ Copy constants live in `lib/ui-copy.ts`. The site uses neutral colors except for
 The pasted visual specification contains several details that cannot be represented as deployed guarantees:
 
 - There is no signed row target or requested receiving ticket-ID field. The three-step builder sets session and section masks in one place. The closed, read-only seat map follows those masks; it does not promise a particular row. Count, masks, cohesion and adjacency remain independently editable signed conditions.
-- Tickets have no price field and the protocol does not assign ticket valuations. The interface shows actual section IDs instead of the proposed 600/400/200 tiers. Rows and sessions come from issued metadata instead of inventing a three-night venue. Empty grid positions are marked unissued. The map has no seat selection. Event names are editorial demo labels, with undisclosed venue/date information left undisclosed.
+- Tickets have no price field and the protocol does not assign ticket valuations. The interface shows actual section IDs, with explicitly labelled demo reference prices used to suggest a signed payment limit. These are not on-chain valuations or an enforced clearing price. Rows and sessions come from issued metadata instead of inventing a three-night venue. Empty grid positions are marked unissued. The map has no seat selection. Event names are editorial demo labels, with undisclosed venue/date information left undisclosed.
 - The objective is **gross USDC moved**, not total net payment. The latter is zero for every valid settlement. Shape labels are derived from actual ticket ownership edges; a generic reshuffle is not automatically called a cycle.
 - Signature authentication happened in `commit`. `settle` does not accept signatures. Validation rows use the deployed V0–V8 order, including ticket status, conservation and payment balance; the per-participant V5 checks are grouped because the contract executes them per participant.
 - Simulation and submission are separate RPC calls inside one UI action. They cannot eliminate the state-change window. A hash appears as soon as the wallet returns it; before that the UI describes wallet/preflight activity without inventing a hash or a check result.
@@ -79,10 +79,29 @@ Browser tests use explicit fixtures and a cancelling mock wallet, including desk
 
 ## Intent creation
 
-The single-column flow expands one step at a time: offering tickets, return conditions, then review and sign. Completed steps retain their values behind a Change button. Ticket positions show the first eight, with additional positions in a disclosure; page content has no nested scroll containers.
+The single-column flow expands one step at a time: return conditions, offering tickets and payment comparison, then review and sign. Completed steps retain their values behind a Change button. Ticket positions show the first eight, with additional positions in a disclosure; page content has no nested scroll containers.
 
 `lib/intent-draft.ts` initializes masks from issued metadata. `lib/ui-copy.ts` generates the review from the same Intent object handed to the signer, after resolving the connected owner and unused nonce. Adjacency, signed payment bounds and expiry remain contract inputs without any ABI changes. The sentence regression check mutates all twelve fields.
 
 Components obtain chain data through `lib/chain-reads.ts`: `getIntentPool`, `getTicketsFor`, `getSettlements` and `getSeatCustody` query a shared snapshot, keeping a coherent source block. Receipt, balance, approval, nonce and simulation reads use the same boundary. The existing public API remains the data source; no subgraph was added.
 
 Run `node scripts/test-intent-sentence.mjs` for sentence and mask checks. With the app at localhost:3101, run `node scripts/test-market-browser.mjs` for the mock-wallet browser checks.
+
+## Free demo tickets
+
+The `Get free tickets` button in step 2 connects the recipient wallet, switches to Arc Testnet if needed, and requests a personal-sign claim message. `/api/demo/tickets` verifies a fresh, single-use signature from that recipient before the registered server issuer mints two adjacent Event 1 tickets. The issuer pays minting gas. The user still needs test USDC for deposits and settlement. Tickets appear after verified mint receipts and a fresh public-state read; no intent or outcome is created automatically.
+
+Local development enables this endpoint when the issuer key is configured. Hosted demos must explicitly set `DEMO_TICKETS_ENABLED=true`; `false` disables it anywhere. `DEMO_ISSUER_PRIVATE_KEY` can select a separate registered issuer, otherwise the server uses `PRIVATE_KEY`. These keys remain server-side. Issuance is restricted to the recorded Arc Testnet NFT deployment, one pair per recipient and twenty new recipient claims per UTC day. Each mint uses an explicit gas limit and a maximum fee budget of 0.1 test USDC.
+
+Run this issuer on one persistent Node server (or workers sharing the same disk). Keep `.data/demo-tickets/` across restarts: it holds the claim journal and signed transactions, allowing retries to resume a partial pair without duplicates. The filesystem lock serializes issuer transactions. After a process crash, stop issuer workers and reconcile recorded transactions before removing a stale `issuer.lock`; do not delete the claim journal to clear an error. Do not run other issuer scripts concurrently with claims. An ephemeral/serverless deployment needs durable shared storage and coordinated transaction submission before enabling this endpoint.
+
+`node scripts/test-demo-tickets.mjs` exercises the issuer and claim API against a local RPC with a throwaway key, including receipt verification, partial-claim recovery, repeat claims, network checks, signatures and replay rejection. It does not broadcast to Arc. The browser test covers the `Get free tickets` button, cancelled signatures, issuer failures and refreshed ticket positions.
+
+
+## Wishlist and payment comparison
+
+The user first chooses acceptable sessions, sections, count and cohesion. Section labels and offered tickets show demo reference prices from `lib/demo-pricing.ts`: Section 0 is 1 USDC per ticket and Section 1 is 1.5 USDC. The second step compares the selected offered total with the desired bundle total; two Section 0 tickets for two Section 1 tickets suggest a 1 USDC debit ceiling. A reverse exchange suggests a 1 USDC credit floor. Multiple acceptable sections show a range and use its upper endpoint for the suggested signed limit. Unknown sections have no fabricated price and fall back to the manual limit.
+
+The user may override the suggestion before signing. Only `maxNetPay` is enforced by the existing contract; actual payment can differ within that limit. This user-requested demo reference table is neither a valuation oracle nor a new settlement rule. No specific row is promised, no USDC prepayment was added, and no existing signed intent is changed.
+
+After a free-ticket claim is confirmed, the app checks current NFT ownership and requests `wallet_watchAsset` with `type: ERC721`, the actual contract address and each token ID. Network/account changes stop import requests. MetaMask controls confirmation and display. Unsupported or declined imports preserve the successful claim and show contract/IDs/receipts plus an `Add to wallet` retry. Existing deployed tickets return an empty `tokenURI`, so this does not add NFT artwork; wallet placeholders are possible.

@@ -7,6 +7,9 @@ import maydayPoster from '@/lib/mayday_concert_poster.jpg';
 import taylorPoster from '@/lib/taylor_concert_poster.png';
 import { type Address, type Hex } from 'viem';
 import { useWallet } from '@/lib/hooks/useWallet';
+import { requestTicketImports } from '@/lib/wallet-nfts';
+import { FREE_TICKETS_LABEL, WALLET_IMPORT_NOTE } from '@/lib/ui-copy';
+import { walletActionMessage } from '@/lib/wallet-errors';
 import { settlementShape } from '@/lib/settlement-shape';
 import { CONTRACTS } from '@/lib/config';
 import { getWalletClient, approveNFTsForEscrow, depositTickets, withdrawTickets, signAndCommitIntent, revokeIntent, submitSettlement, approveUSDC, redeemTicket, type IntentParams } from '@/lib/contracts';
@@ -48,6 +51,7 @@ export default function Market() {
   const [status, setStatus] = useState('idle');
   const [rejection, setRejection] = useState<NamedRejection | null>(null);
   const [receipt, setReceipt] = useState<ChainReceipt | null>(null);
+  const [nftClaim, setNftClaim] = useState<{ owner: Address; tokenIds: string[]; hashes: Hex[]; message: string } | null>(null);
   const [approved, setApproved] = useState(false);
   const [attack, setAttack] = useState<Attack>('siphon');
   const [resetEnabled, setResetEnabled] = useState(false);
@@ -96,10 +100,30 @@ export default function Market() {
     if (activeAction.current) return;
     activeAction.current = true; setBusy(label); setNotice(''); setTxHash(undefined); setStatus('idle'); setRejection(null);
     try { await runWithWallet(fn); }
-    catch (e) { setNotice(e instanceof Error ? e.message : 'Wallet request cancelled. You can retry this action.'); }
+    catch (e) { setNotice(walletActionMessage(e)); }
     finally { setBusy(''); activeAction.current = false; }
   };
   const track = async (hash: Hex) => { setTxHash(hash); await waitForSuccess(hash); };
+  const claimDemo = () => action(FREE_TICKETS_LABEL, async address => {
+    const { message } = await jsonFetch<{ message: string }>(`/api/demo/tickets?address=${address}`);
+    const signature = await getWalletClient().signMessage({ account: address, message });
+    setNotice('Issuing your test tickets. Waiting for Arc Testnet confirmation…');
+    const result = await jsonFetch<{ tokenIds: string[]; hashes: Hex[] }>('/api/demo/tickets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message, signature }) });
+    setTxHash(result.hashes.at(-1));
+    setNotice(`Tickets ${result.tokenIds.map(id => `#${id}`).join(', ')} are confirmed. Open MetaMask to add them to its NFTs tab.`);
+    setNftClaim({ owner: address, ...result, message: 'Requesting NFT display in MetaMask...' });
+    const refreshRequest = refresh(true);
+    const messageResult = await requestTicketImports(address, result.tokenIds);
+    setNftClaim({ owner: address, ...result, message: messageResult });
+    await refreshRequest;
+    setNotice(`Claim confirmed for tickets ${result.tokenIds.map(id => `#${id}`).join(', ')}. ${messageResult}`);
+  });
+  const retryNFTImport = () => action('Add to wallet', async address => {
+    if (!nftClaim || !equal(address, nftClaim.owner)) throw new Error('Switch to the wallet that claimed these tickets.');
+    const message = await requestTicketImports(address, nftClaim.tokenIds);
+    setNftClaim({ ...nftClaim, message }); setNotice(message);
+  });
+
   const custody = (t: ChainTicket, mode: 'deposit' | 'withdraw') => action(mode === 'deposit' ? 'Deposit' : 'Withdraw', async address => {
     if (!equal(holder(t), address)) throw new Error(`Ticket #${t.tokenId} belongs to another participant. Use its holder’s wallet.`);
     if (mode === 'deposit') {
@@ -192,12 +216,13 @@ export default function Market() {
       <section id="events" className="event-section"><div className="section-heading"><h2>Choose a night.<br />Keep your options.</h2><p>One live demo event.<br />An outcome pool, not a ticket shop.</p></div><div className="posters">
         <button className="poster poster-live" disabled={!market} aria-busy={!market && !readError} aria-describedby="event-preload-status" aria-expanded={opened} aria-controls="workspace" onClick={() => { setOpened(true); setTimeout(() => scrollTo(workspace.current), 40); }}><span className="poster-top mono">RESHUFFLE PRESENTS / EVENT 1</span><span className="poster-photo"><Image src={maydayPoster} alt="Mayday concert poster" fill sizes="(max-width: 720px) 84vw, 28vw" /></span><span className="poster-title">AFTER<br />HOURS</span><span className="poster-sub">Demo concert · issuer-native tickets</span><span className="poster-dates mono">{sessions.length ? sessions.map(n => `SESSION ${n}`).join(' / ') : 'READING SESSIONS'}</span><span className="poster-status"><span className="mono">{market ? `${live.length} ${POOL_LABEL}` : 'Reading live intents…'}</span><span>Open workspace ↗</span></span></button>
         {[{ name: 'INTERLUDE', photo: sarahPoster, alt: 'Sarah Kang in Seoul concert poster' }, { name: 'ENCORE', photo: taylorPoster, alt: 'Taylor Swift The Eras Tour concert poster' }].map(({ name, photo, alt }, n) => <div key={name} className="poster poster-inert" aria-disabled="true"><span className="poster-top mono">UPCOMING PROGRAMME / 0{n + 2}</span><span className="poster-photo"><Image src={photo} alt={alt} fill sizes="(max-width: 720px) 84vw, 28vw" /></span><span className="poster-title">{name}</span><span className="poster-sub">Event details to be announced</span><span className="poster-dates mono">VENUE & DATES UNANNOUNCED</span><span className="poster-status">No live intents</span></div>)}
-      </div><p id="event-preload-status" className="quiet" role="status" aria-live="polite">{market ? `Ticket positions and intent commitments loaded for all deployed events ? Arc block ${market.blockNumber}.` : readError ? 'Event data could not be loaded. Retry the public reads below.' : 'Preloading public ticket positions and intent commitments for all deployed events. The event opens as soon as its data is ready.'}</p><p className="quiet">Event names are demo presentation labels. Session IDs and ticket metadata come from the deployed contracts; no venue dates or prices are recorded on-chain.</p>{readError && <p role="alert" className="read-error">{readError} <button onClick={() => void refresh(true)}>Retry public reads</button></p>}</section>
+      </div><p id="event-preload-status" className="quiet" role="status" aria-live="polite">{market ? `Ticket positions and intent commitments loaded for all deployed events / Arc block ${market.blockNumber}.` : readError ? 'Event data could not be loaded. Retry the public reads below.' : 'Preloading public ticket positions and intent commitments for all deployed events. The event opens as soon as its data is ready.'}</p><p className="quiet">Event names are demo presentation labels. Session IDs and ticket metadata come from the deployed contracts; no venue dates or prices are recorded on-chain.</p>{readError && <p role="alert" className="read-error">{readError} <button onClick={() => void refresh(true)}>Retry public reads</button></p>}</section>
       {market && <section id="workspace" hidden={!opened} ref={workspace} className="workspace-section"><div className="section-heading"><div><span className="eyebrow">The workspace / Event 1</span><h2>Keep the ticket.<br />Change the outcome.</h2></div><div><p className="mono">{market ? `ARC BLOCK ${market.blockNumber}` : 'READING ARC'}</p><button className="text-button" onClick={() => void refresh(true)}>Refresh public state ↻</button></div></div>
         <div className="network-note">USDC pays for both settlement and native gas on Arc. You don’t need a second token.</div>
         {(notice || busy) && <div className="activity" role="status"><strong>{busy || 'Activity'}</strong><p>{notice || 'Complete the request in your wallet. The original action continues automatically.'}</p>{txHash && <a className="hash" href={`${EXPLORER}/tx/${txHash}`} target="_blank" rel="noreferrer">{txHash} ↗</a>}</div>}
+        {nftClaim && equal(nftClaim.owner, account) && <section className="wallet-nft-import"><h3>Your free tickets</h3><p role="status">{nftClaim.message}</p><p className="quiet">{WALLET_IMPORT_NOTE}</p><span className="mono hash">NFT contract: {CONTRACTS.ticketNFT}</span><ul>{nftClaim.tokenIds.map((id, n) => <li key={id} className="mono">Token ID: {id} / <a href={`${EXPLORER}/tx/${nftClaim.hashes[n]}`} target="_blank" rel="noreferrer">Mint receipt</a></li>)}</ul><button className="secondary" disabled={disabled} onClick={() => void retryNFTImport()}>Add to wallet</button></section>}
         <div className="workspace-stack">
-          <IntentBuilder market={market} account={account} approved={approved} busy={disabled} onCustody={custody} onSign={sign} onApprove={() => action('Approve tickets', async address => { await track(await approveNFTsForEscrow(address)); setApproved(true); })} />
+          <IntentBuilder market={market} account={account} approved={approved} busy={disabled} onCustody={custody} onSign={sign} onDemo={claimDemo} onApprove={() => action('Approve tickets', async address => { await track(await approveNFTsForEscrow(address)); setApproved(true); })} />
           <section className="workspace-panel"><div className="panel-heading"><h2>The intent pool</h2><span className="mono">{live.length} {POOL_LABEL}</span></div><p className="quiet">{POOL_NOTE}</p><div className="pool-list">{live.map((i, index) => <article key={i.hash} className="pool-row"><label><input type="checkbox" checked={selected.includes(i.hash)} disabled={disabled} onChange={() => selectIntent(i.hash)} /><span>Participant <span className="mono">{index + 1} · {truncateAddress(i.owner)}</span></span></label><p>{condition(restoreIntent(i))}</p><div><a className="mono" href={`${EXPLORER}/tx/${i.commitTx}`} target="_blank" rel="noreferrer">Commit {i.commitTx.slice(0, 10)}… ↗</a>{equal(i.owner, account) && <button disabled={disabled} onClick={() => void action('Revoke intent', async address => { await track(await revokeIntent(address, i.hash)); await refresh(true); setProposal(null); setEvidence(null); })}>Revoke my intent</button>}</div></article>)}</div>{!live.length && <p>{EMPTY_RESULT}</p>}
             <div className="solver-actions"><button className="secondary" disabled={solving || disabled || selected.length < 2 || selected.length > 4} onClick={() => void runSolver(selected)}>{solving ? 'Reading and searching…' : 'Run solver'} <span className="mono">({selected.length}/4)</span></button>{resetEnabled && equal(account, operator) && <button className="text-button" disabled={disabled} onClick={() => void reset()}>Reset demo</button>}</div>
             {solverError && <p role="alert">{solverError}</p>}{evidence && !proposal && <div><p>{EMPTY_RESULT}</p>{evidence.candidatesExcluded.some(i => /capacity|allowance/i.test(i.reason)) && <p>Insufficient USDC balance or allowance for a candidate. Update spending capacity before settling.</p>}</div>}
