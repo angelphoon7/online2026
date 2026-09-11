@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-labelledby="title description">
+<title id="title">RESHUFFLE — deployed Arc Testnet architecture</title>
+<desc id="description">Participants sign outcome conditions through a Next.js frontend. A Node.js backend reads Arc RPC state, runs a bounded TypeScript solver, simulates with eth_call, and stores evidence. A submitting wallet sends the settlement transaction. Four Solidity contracts enforce conditions and transfer USDC and tickets. The receipt is verified before displaying the net USDC distribution. The Graph integration is planned.</desc>
+<defs>
+  <marker id="blue" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#93c5fd"/></marker>
+  <marker id="green" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#6ee7b7"/></marker>
+</defs>
+<rect width="1920" height="1080" fill="#080f1c"/>
+<g font-family="Arial, Helvetica, sans-serif">
+<text x="64" y="77" font-size="46" fill="#f8fafc" font-weight="700" >RESHUFFLE</text>
+<text x="382" y="77" font-size="32" fill="#94a3b8" font-weight="400" >Signed outcomes. Verified settlement.</text>
+<text x="64" y="122" font-size="25" fill="#cbd5e1" font-weight="400" >Every participant’s own signed conditions must hold before tickets or USDC move.</text>
+<rect x="1450" y="43" width="406" height="48" rx="24" fill="#0a2d2a" stroke="#276759" />
+<text x="1653" y="75" font-size="21" fill="#6ee7b7" font-weight="700" text-anchor="middle">ARC TESTNET  /  5042002</text>
+
+<rect x="64" y="157" width="1792" height="52" rx="10" fill="#101b2c" stroke="#243247" />
+<text x="88" y="191" font-size="20" fill="#e2e8f0" font-weight="700" >01  SIGN CONDITIONS</text>
+<text x="531" y="191" font-size="20" fill="#93c5fd" font-weight="700" >02  SEARCH + SIMULATE</text>
+<text x="1038" y="191" font-size="20" fill="#6ee7b7" font-weight="700" >03  VERIFY + EXECUTE</text>
+<text x="1510" y="191" font-size="20" fill="#e2e8f0" font-weight="700" >04  SHOW EVIDENCE</text>
+
+<rect x="64" y="237" width="450" height="583" rx="16" fill="#0e192b" stroke="#334155" />
+<text x="88" y="278" font-size="23" fill="#f8fafc" font-weight="700" >FRONTEND + WALLETS</text>
+<rect x="88" y="301" width="402" height="137" rx="16" fill="#142036" stroke="#334155" />
+<text x="108" y="336" font-size="25" fill="#f8fafc" font-weight="700" >Next.js application</text>
+<text x="108" y="369" font-size="20" fill="#cbd5e1" font-weight="400" >Swapper · buyer · seller · issuer</text><text x="108" y="399" font-size="20" fill="#cbd5e1" font-weight="400" >Choose tickets and outcome conditions</text><text x="108" y="429" font-size="20" fill="#cbd5e1" font-weight="400" >Approve / deposit · sign / commit</text>
+<rect x="88" y="458" width="402" height="159" rx="16" fill="#142036" stroke="#334155" />
+<text x="108" y="493" font-size="24" fill="#f8fafc" font-weight="700" >Outcome authorisation</text>
+<text x="108" y="526" font-size="20" fill="#cbd5e1" font-weight="400" >EIP-712 signature → IntentRegistry</text><text x="108" y="552" font-size="20" fill="#cbd5e1" font-weight="400" >Bound to chain ID + registry address</text><text x="108" y="578" font-size="20" fill="#cbd5e1" font-weight="400" >Users need not return to approve</text><text x="108" y="604" font-size="20" fill="#cbd5e1" font-weight="400" >the discovered settlement proposal.</text>
+<rect x="88" y="637" width="402" height="159" rx="16" fill="#0b2928" stroke="#276759" />
+<text x="108" y="672" font-size="24" fill="#6ee7b7" font-weight="700" >Submitting wallet</text>
+<text x="108" y="706" font-size="19" fill="#cbd5e1" font-weight="400" >Signs and broadcasts settlement</text><text x="108" y="731" font-size="19" fill="#cbd5e1" font-weight="400" >After verified receipt: who paid / received</text><text x="108" y="756" font-size="19" fill="#cbd5e1" font-weight="400" >USDC net distribution · Σ = 0</text><text x="108" y="781" font-size="19" fill="#cbd5e1" font-weight="400" >Gas excluded from the payment sum</text>
+
+<rect x="634" y="237" width="500" height="583" rx="16" fill="#0e192b" stroke="#334155" />
+<text x="658" y="278" font-size="23" fill="#f8fafc" font-weight="700" >BACKEND / NODE.JS</text>
+<rect x="658" y="301" width="452" height="101" rx="16" fill="#142036" stroke="#334155" />
+<text x="678" y="336" font-size="25" fill="#93c5fd" font-weight="700" >POST /api/solve</text>
+<text x="678" y="368" font-size="20" fill="#cbd5e1" font-weight="400" >Committed hashes in · signed fields from RPC</text>
+<rect x="658" y="423" width="452" height="166" rx="16" fill="#142036" stroke="#334155" />
+<text x="678" y="458" font-size="24" fill="#f8fafc" font-weight="700" >TypeScript solver + simulation</text>
+<text x="678" y="491" font-size="20" fill="#cbd5e1" font-weight="400" >Read custody, intents and payment capacity</text><text x="678" y="518" font-size="20" fill="#cbd5e1" font-weight="400" >Bounded search · deterministic ranking</text><text x="678" y="545" font-size="20" fill="#cbd5e1" font-weight="400" >Least gross cash moved among candidates</text><text x="678" y="572" font-size="20" fill="#cbd5e1" font-weight="400" >found within the search budget · eth_call</text>
+<rect x="658" y="610" width="452" height="186" rx="16" fill="#142036" stroke="#334155" />
+<text x="678" y="645" font-size="24" fill="#f8fafc" font-weight="700" >Inspectable evidence</text>
+<text x="678" y="678" font-size="20" fill="#cbd5e1" font-weight="400" >Source block · candidates · exclusions</text><text x="678" y="703" font-size="20" fill="#cbd5e1" font-weight="400" >Chosen proposal · simulation · tx hash</text><text x="678" y="728" font-size="20" fill="#cbd5e1" font-weight="400" >Receipt API checks calldata + chain result</text><text x="678" y="753" font-size="20" fill="#cbd5e1" font-weight="400" >JSON persisted in .data/evidence</text><text x="678" y="778" font-size="20" fill="#cbd5e1" font-weight="400" >HTTP backend holds no signing wallet</text>
+
+<rect x="1254" y="237" width="602" height="583" rx="16" fill="#0b211f" stroke="#276759" />
+<text x="1278" y="278" font-size="23" fill="#6ee7b7" font-weight="700" >ARC TESTNET / FOUR CONTRACTS</text>
+<rect x="1278" y="301" width="268" height="115" rx="16" fill="#102b2a" stroke="#276759" />
+<text x="1298" y="336" font-size="24" fill="#f8fafc" font-weight="700" >TicketNFT</text>
+<text x="1298" y="369" font-size="19" fill="#cbd5e1" font-weight="400" >ERC-721 · seat metadata</text><text x="1298" y="395" font-size="19" fill="#cbd5e1" font-weight="400" >Holder redemption</text>
+<rect x="1566" y="301" width="266" height="115" rx="16" fill="#102b2a" stroke="#276759" />
+<text x="1586" y="336" font-size="24" fill="#f8fafc" font-weight="700" >Escrow</text>
+<text x="1586" y="369" font-size="18" fill="#cbd5e1" font-weight="400" >Custody · owner withdrawal</text><text x="1586" y="395" font-size="18" fill="#cbd5e1" font-weight="400" >Settlement-only release</text>
+<rect x="1278" y="437" width="554" height="104" rx="16" fill="#102b2a" stroke="#276759" />
+<text x="1298" y="472" font-size="24" fill="#f8fafc" font-weight="700" >IntentRegistry</text>
+<text x="1298" y="504" font-size="19" fill="#cbd5e1" font-weight="400" >Authenticate signature · reserve nonce · commit / revoke</text>
+<rect x="1278" y="562" width="554" height="234" rx="16" fill="#113b32" stroke="#40947b" />
+<text x="1298" y="598" font-size="25" fill="#6ee7b7" font-weight="700" >Settlement — the trust boundary</text>
+<text x="1298" y="633" font-size="19" fill="#e2e8f0" font-weight="400" >V0–V8: recheck every signed condition at execution</text><text x="1298" y="660" font-size="19" fill="#e2e8f0" font-weight="400" >Intent validity · custody · conservation · seat constraints</text><text x="1298" y="687" font-size="19" fill="#e2e8f0" font-weight="400" >Signed budgets · balanced payments · owner capacity</text>
+<text x="1298" y="727" font-size="19" fill="#6ee7b7" font-weight="700" >1  Mark intents settled     2  Pull / push net USDC</text>
+<text x="1298" y="758" font-size="19" fill="#6ee7b7" font-weight="700" >3  Release tickets            4  Emit settlement event</text>
+
+<path d="M514 347 H634" fill="none" stroke="#93c5fd" stroke-width="3" marker-end="url(#blue)"/>
+<text x="574" y="318" font-size="17" fill="#93c5fd" font-weight="400" text-anchor="middle">Hashes</text>
+<path d="M634 573 H514" fill="none" stroke="#93c5fd" stroke-width="3" marker-end="url(#blue)"/>
+<text x="574" y="532" font-size="16" fill="#93c5fd" font-weight="400" text-anchor="middle">Proposal +</text>
+<text x="574" y="554" font-size="16" fill="#93c5fd" font-weight="400" text-anchor="middle">evidence</text>
+<path d="M1134 366 H1254" fill="none" stroke="#93c5fd" stroke-width="3" marker-end="url(#blue)"/>
+<text x="1194" y="317" font-size="17" fill="#93c5fd" font-weight="400" text-anchor="middle">RPC reads</text>
+<text x="1194" y="340" font-size="17" fill="#93c5fd" font-weight="400" text-anchor="middle">+ eth_call</text>
+<path d="M1254 688 H1134" fill="none" stroke="#93c5fd" stroke-width="3" marker-end="url(#blue)"/>
+<text x="1194" y="642" font-size="17" fill="#93c5fd" font-weight="400" text-anchor="middle">State +</text>
+<text x="1194" y="665" font-size="17" fill="#93c5fd" font-weight="400" text-anchor="middle">receipts</text>
+
+<path d="M289 820 V874 H1555 V820" fill="none" stroke="#6ee7b7" stroke-width="3" marker-end="url(#green)"/>
+<rect x="546" y="850" width="756" height="46" rx="0" fill="#080f1c" stroke="#080f1c" />
+<text x="924" y="880" font-size="23" fill="#6ee7b7" font-weight="700" text-anchor="middle">WALLET → settle(intents, legs) · one onchain transaction</text>
+
+<rect x="64" y="923" width="1090" height="103" rx="14" fill="#0b2928" stroke="#276759" />
+<text x="88" y="960" font-size="25" fill="#6ee7b7" font-weight="700" >USDC is both the settlement asset and native gas token.</text>
+<text x="88" y="996" font-size="21" fill="#cbd5e1" font-weight="400" >No second token needed. All signed conditions are checked before any transfer.</text>
+<rect x="1178" y="923" width="678" height="103" rx="14" fill="#101724" stroke="#64748b" stroke-dasharray="7 6"/>
+<text x="1202" y="959" font-size="23" fill="#cbd5e1" font-weight="700" >PLANNED · The Graph discovery adapter</text>
+<text x="1202" y="995" font-size="20" fill="#94a3b8" font-weight="400" >Current backend uses Arc RPC logs; no subgraph is connected.</text>
+<text x="64" y="1057" font-size="17" fill="#94a3b8" font-weight="400" >Implementation: app/reshuffle · app/api · server/ · solver/ · src/     |     Simulation does not lock state; contracts revalidate at execution.</text>
+</g>
+</svg>
