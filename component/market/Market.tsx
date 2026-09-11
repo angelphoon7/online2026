@@ -19,6 +19,7 @@ import { restoreIntent, type MarketSnapshot, type ChainReceipt, type ChainTicket
 import { HERO_TITLE_LINES, HERO_SUBTITLE, EMPTY_RESULT, POOL_NOTE, condition, EXPLORER, POOL_LABEL, RANKING_RULE, SOLVER_NOTE } from '@/lib/ui-copy';
 import { dishonestProposal, namedRejection, simulate, type Attack, type NamedRejection } from '@/lib/proposal-controls';
 import ArcWalletBalance from '@/component/reshuffle/ArcWalletBalance';
+import AnimatedTicketIcon from './AnimatedTicketIcon';
 import IntentBuilder from './IntentBuilder';
 import Validation from './Validation';
 import { getMarketSnapshot, getIntentPool, getTicketsFor, getSettlements, getTicketsApproved, getTicketDepositor, getUSDCAllowance, getUnusedNonce, getSettlementReceipt, waitForReceipt, waitForSuccess, ticketHolder as holder } from '@/lib/chain-reads';
@@ -212,7 +213,27 @@ export default function Market() {
       {account && <div className="wallet-meta"><span className="mono">{truncateAddress(account)}</span><ArcWalletBalance account={account} walletChainId={chainId} compact />{chainId !== 5042002 && <button disabled={disabled} onClick={() => void action('Switch network', async () => {})}>Wrong network · switch</button>}</div>}
     </header>
     <main>
-      <section className="hero"><div className="eyebrow">An outcome market for tickets</div><h1>{HERO_TITLE_LINES[0]}<br /><span>{HERO_TITLE_LINES[1]}</span></h1><div className="hero-bottom"><p>{HERO_SUBTITLE}</p><div className="hero-actions"><button className="primary" onClick={() => scrollTo(document.getElementById('events'))}>See it settle <span>↓</span></button><a className="secondary" href={`${EXPLORER}/address/${CONTRACTS.settlement}`} target="_blank" rel="noreferrer">Contracts on Arc ↗</a></div></div><div className="hero-foot mono">SIGN ONCE. LEAVE. EVERY SIGNED CONDITION CHECKED ON-CHAIN.</div></section>
+      <section className="hero">
+        <div className="hero-grid">
+          <div className="hero-text-block">
+            <div className="eyebrow">An outcome market for tickets</div>
+            <h1>{HERO_TITLE_LINES[0]}<br /><span>{HERO_TITLE_LINES[1]}</span></h1>
+            <div className="hero-bottom">
+              <p>{HERO_SUBTITLE}</p>
+              <div className="hero-actions">
+                <button className="primary" onClick={() => scrollTo(document.getElementById('events'))}>See it settle <span>↓</span></button>
+                <a className="secondary" href={`${EXPLORER}/address/${CONTRACTS.settlement}`} target="_blank" rel="noreferrer">Contracts on Arc ↗</a>
+              </div>
+            </div>
+          </div>
+          <div className="hero-visual">
+            <div className="hero-icon-card">
+              <AnimatedTicketIcon />
+            </div>
+          </div>
+        </div>
+        <div className="hero-foot mono">SIGN ONCE. LEAVE. EVERY SIGNED CONDITION CHECKED ON-CHAIN.</div>
+      </section>
       <section id="events" className="event-section"><div className="section-heading"><h2>Choose a night.<br />Keep your options.</h2><p>One live demo event.<br />An outcome pool, not a ticket shop.</p></div><div className="posters">
         <button className="poster poster-live" disabled={!market} aria-busy={!market && !readError} aria-describedby="event-preload-status" aria-expanded={opened} aria-controls="workspace" onClick={() => { setOpened(true); setTimeout(() => scrollTo(workspace.current), 40); }}><span className="poster-top mono">RESHUFFLE PRESENTS / EVENT 1</span><span className="poster-photo"><Image src={maydayPoster} alt="Mayday concert poster" fill sizes="(max-width: 720px) 84vw, 28vw" /></span><span className="poster-title">AFTER<br />HOURS</span><span className="poster-sub">Demo concert · issuer-native tickets</span><span className="poster-dates mono">{sessions.length ? sessions.map(n => `SESSION ${n}`).join(' / ') : 'READING SESSIONS'}</span><span className="poster-status"><span className="mono">{market ? `${live.length} ${POOL_LABEL}` : 'Reading live intents…'}</span><span>Open workspace ↗</span></span></button>
         {[{ name: 'INTERLUDE', photo: sarahPoster, alt: 'Sarah Kang in Seoul concert poster' }, { name: 'ENCORE', photo: taylorPoster, alt: 'Taylor Swift The Eras Tour concert poster' }].map(({ name, photo, alt }, n) => <div key={name} className="poster poster-inert" aria-disabled="true"><span className="poster-top mono">UPCOMING PROGRAMME / 0{n + 2}</span><span className="poster-photo"><Image src={photo} alt={alt} fill sizes="(max-width: 720px) 84vw, 28vw" /></span><span className="poster-title">{name}</span><span className="poster-sub">Event details to be announced</span><span className="poster-dates mono">VENUE & DATES UNANNOUNCED</span><span className="poster-status">No live intents</span></div>)}
