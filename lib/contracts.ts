@@ -11,6 +11,7 @@ import {
   type Hex,
   type Address,
 } from 'viem';
+import { intentTypedData } from './intent-typed-data';
 import { CHAIN, CONTRACTS, NETWORK } from './config';
 import {
   ticketNFTAbi,
@@ -196,48 +197,7 @@ export async function signAndCommitIntent(
 ) {
   const wallet = getWalletClient();
 
-  const types = {
-    Intent: [
-      { name: 'owner', type: 'address' },
-      { name: 'offered', type: 'uint256[]' },
-      { name: 'eventId', type: 'uint32' },
-      { name: 'sessionMask', type: 'uint256' },
-      { name: 'sectionMask', type: 'uint256' },
-      { name: 'exactCount', type: 'uint8' },
-      { name: 'mustShareSession', type: 'bool' },
-      { name: 'mustShareSection', type: 'bool' },
-      { name: 'mustBeAdjacent', type: 'bool' },
-      { name: 'maxNetPay', type: 'int256' },
-      { name: 'deadline', type: 'uint64' },
-      { name: 'nonce', type: 'uint256' },
-    ],
-  } as const;
-
-  const sig = await wallet.signTypedData({
-    account,
-    domain: {
-      name: 'RESHUFFLE',
-      version: '1',
-      chainId: BigInt(CHAIN.id),
-      verifyingContract: CONTRACTS.intentRegistry,
-    },
-    types,
-    primaryType: 'Intent',
-    message: {
-      owner: intent.owner,
-      offered: intent.offered,
-      eventId: intent.eventId,
-      sessionMask: intent.sessionMask,
-      sectionMask: intent.sectionMask,
-      exactCount: intent.exactCount,
-      mustShareSession: intent.mustShareSession,
-      mustShareSection: intent.mustShareSection,
-      mustBeAdjacent: intent.mustBeAdjacent,
-      maxNetPay: intent.maxNetPay,
-      deadline: intent.deadline,
-      nonce: intent.nonce,
-    },
-  });
+  const sig = await wallet.signTypedData({ account, ...intentTypedData(intent) });
 
   return wallet.writeContract({
     account,

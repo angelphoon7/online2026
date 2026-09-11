@@ -4,6 +4,8 @@ Swap tickets without selling first.
 
 *Every condition you sign is checked on-chain.*
 
+The current demo is a single page at `/`: open the live event poster to use the workspace, then inspect receipts in place. [UI flow, contract mappings and validation](docs/UI_IMPLEMENTATION.md).
+
 **Target Arc bounties: Best DeFi / Onchain Finance · Launch on Testnet & Push to Mainnet — [category confirmation pending](#bounty-category-verification).**
 
 **A market for outcomes, not listings.**

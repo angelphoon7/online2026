@@ -1,5 +1,2 @@
-import RecordedSettlement from '@/component/reshuffle/RecordedSettlement';
-
-export default function ActTwoPage() {
-  return <RecordedSettlement scene="two" />;
-}
+import { redirect } from 'next/navigation';
+export default function LegacyDemo() { redirect('/'); }

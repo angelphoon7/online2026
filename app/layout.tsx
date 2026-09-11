@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RESHUFFLE — A market for outcomes, not listings",
+  title: "RESHUFFLE — Sign the outcome",
   description: "Multi-party conditional exchange for event tickets. Sign the outcome you would accept.",
 };
 

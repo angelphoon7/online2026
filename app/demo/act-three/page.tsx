@@ -1,5 +1,2 @@
-import RejectedSettlement from '@/component/reshuffle/RejectedSettlement';
-
-export default function ActThreePage() {
-  return <RejectedSettlement />;
-}
+import { redirect } from 'next/navigation';
+export default function LegacyDemo() { redirect('/'); }

@@ -1,5 +1,2 @@
-import OfflineSettlement from '@/component/reshuffle/OfflineSettlement';
-
-export default function Page() {
-  return <OfflineSettlement />;
-}
+import { redirect } from 'next/navigation';
+export default function LegacyDemo() { redirect('/'); }
