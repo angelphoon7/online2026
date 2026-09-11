@@ -54,8 +54,12 @@ export interface ExcludedCandidate {
 export interface SearchResult {
     candidates: Candidate[];
     excluded: ExcludedCandidate[];
+    termination: 'complete' | 'timeout' | 'candidate-limit';
 }
 export interface Evidence {
+    search?: {
+        termination: SearchResult['termination'];
+    };
     timestamp: string;
     intentsConsidered: number;
     candidatesFound: number;

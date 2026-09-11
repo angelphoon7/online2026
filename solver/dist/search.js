@@ -13,9 +13,9 @@ export function search(intents, state, config = DEFAULT_CONFIG) {
     for (let size = 2; size <= maxSize; size++) {
         for (const subset of combinations(intents, size)) {
             if (Date.now() - startTime > config.timeoutMs)
-                return { candidates, excluded };
+                return { candidates, excluded, termination: 'timeout' };
             if (candidates.length >= config.maxCandidates)
-                return { candidates, excluded };
+                return { candidates, excluded, termination: 'candidate-limit' };
             const poolSize = subset.reduce((s, i) => s + i.offered.length, 0);
             const neededSize = subset.reduce((s, i) => s + i.exactCount, 0);
             if (poolSize !== neededSize) {
@@ -31,6 +31,8 @@ export function search(intents, state, config = DEFAULT_CONFIG) {
             }
             const assignments = findAssignments(subset, pool, state, 100, startTime + config.timeoutMs);
             if (assignments.length === 0) {
+                if (Date.now() > startTime + config.timeoutMs)
+                    return { candidates, excluded, termination: 'timeout' };
                 excluded.push({
                     intentHashes: hashes,
                     reason: 'No valid ticket assignment satisfying all predicates',
@@ -64,7 +66,7 @@ export function search(intents, state, config = DEFAULT_CONFIG) {
             }
         }
     }
-    return { candidates, excluded };
+    return { candidates, excluded, termination: Date.now() > startTime + config.timeoutMs ? 'timeout' : candidates.length >= config.maxCandidates ? 'candidate-limit' : 'complete' };
 }
 export function computeMinGrossPayment(intents) {
     const n = intents.length;
