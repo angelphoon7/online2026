@@ -31,3 +31,5 @@
 @media(max-width:540px){.intent-step-actions{flex-direction:column;align-items:stretch}.intent-step-actions .step-continue{margin-left:0}}
 
 .inline-intent-review{border-top:1px solid var(--line);margin-top:24px;padding-top:24px}.inline-intent-review h3{margin:0 0 16px}.inline-intent-review .sign-intent{margin-top:20px}
+
+.section-supply{font-weight:700}

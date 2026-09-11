@@ -66,6 +66,7 @@ try {
     if(location.search.includes('largePool'))for(let n=0;n<3;n++)market.intents.push({...market.intents[0],owner:'0x'+'1'.repeat(40),hash:'0x'+String(n+7).repeat(64),nonce:String(n+20)});
     if(location.search.includes('batch'))for(const t of market.tickets.filter(t=>['101','103'].includes(t.tokenId))){t.owner=window.testWallet.account;t.depositor='0x'+'0'.repeat(40);}
     window.testWallet.depositFixture=id=>{const t=market.tickets.find(t=>t.tokenId===id);t.owner='${escrow}';t.depositor=window.testWallet.account;};
+    window.testWallet.setAllIntentStates=state=>market.intents.forEach(i=>i.state=state);
     window.testWallet.setRequestState=(state,expired=false)=>{const i=market.intents.find(i=>i.owner.toLowerCase()===window.testWallet.account.toLowerCase());i.state=state;i.expired=expired;};
     const originalInterval=window.setInterval.bind(window);
     const originalClearInterval=window.clearInterval.bind(window),pollers=new Map();
@@ -225,6 +226,18 @@ try {
   await assert("!document.getElementById('adjacent-seats').checked && !document.querySelector('.adjacency-illustration')", 'Multi-ticket count change overwrites a manual opt-out');
   await changeCount('Decrease');await changeCount('Decrease');await changeCount('Increase');
   await assert("document.getElementById('adjacent-seats').checked && !!document.querySelector('.adjacency-illustration')", 'Repeated one-to-two transition fails to restore adjacency');
+  const sectionOffered = section => `document.querySelector('[name="wanted-section"][value="${section}"]').closest('label').querySelector('.section-supply').dataset.offered`;
+  await evaluate("document.querySelector('[name=wanted-session][value=\"0\"]').click()");
+  await assert(`${sectionOffered(0)}==='2' && ${sectionOffered(1)}==='2' && ${sectionOffered(2)}==='0'`, 'Section supply includes merely issued/uncommitted tickets or wrong section');
+  await evaluate("document.querySelector('[name=wanted-session][value=\"1\"]').click()");
+  await assert(`${sectionOffered(0)}==='2' && ${sectionOffered(1)}==='0'`, 'Section supply did not follow the selected night');
+  await evaluate('window.testWallet.setAllIntentStates(2);window.testWallet.poll()');
+  await waitFor(`${sectionOffered(0)}==='0'`);
+  await assert("document.querySelector('[name=wanted-section][value=\"0\"]').closest('label').textContent.includes('deposited /') && !document.querySelector('[name=wanted-section][value=\"2\"]').disabled", 'Revocation erased deposited inventory or disabled future wishlist sections');
+  await evaluate('window.testWallet.setAllIntentStates(1);window.testWallet.poll()');
+  await waitFor(`${sectionOffered(0)}==='2'`);
+  await evaluate("document.querySelector('[name=wanted-session][value=\"0\"]').click()");
+  console.log('PASS section cards show live offered supply by night/section and refresh after revocation; empty sections remain selectable.');
   console.log('PASS adjacency restores at two tickets and stays visible at three/four; manual opt-out remains available.');
   await evaluate("document.getElementById('adjacent-seats').click()");
   await assert("!document.querySelector('.adjacency-illustration')", 'Unchecked adjacency illustration visible');

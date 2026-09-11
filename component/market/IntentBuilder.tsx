@@ -5,6 +5,8 @@ import type { IntentParams } from '@/lib/contracts';
 import type { ChainTicket, MarketSnapshot } from '@/lib/market-types';
 import { intentTypedData, jsonNumbers } from '@/lib/intent-typed-data';
 import { initialIntent, nextRecordedNonce } from '@/lib/intent-draft';
+import { sectionSupply } from '@/lib/section-supply';
+import { CONTRACTS } from '@/lib/config';
 import { getIntentPool, getSeatCustody, getTicketsFor, ticketHolder } from '@/lib/chain-reads';
 import { DEMO_SECTION_PRICES, demoPriceQuote } from '@/lib/demo-pricing';
 import { selectedClass, sessionStart, sessionDeadline, formatEventTime } from '@/lib/event-schedule';
@@ -67,6 +69,7 @@ export default function IntentBuilder({ market, account, approved, busy, onAppro
   const review = intentReview(intent, !account);
   const preview = intentTypedData(intent);
   const selectedSession = selectedClass(intent.sessionMask);
+  const supply = sectionSupply(market, intent.eventId, selectedSession, CONTRACTS.escrow);
   const eventStart = selectedSession === null ? null : sessionStart(selectedSession);
   const cutoff = sessionDeadline(intent.sessionMask);
   const timingUnavailable = cutoff === null || cutoff <= BigInt(market.timestamp);
@@ -149,9 +152,10 @@ export default function IntentBuilder({ market, account, approved, busy, onAppro
             </div><span className="quiet">{EXACT_COUNT_NOTE}</span></div></div>
             <div className="condition-row"><span id="sessions-label">Which night</span><div className="chips" role="radiogroup" aria-labelledby="sessions-label">{sessions.map(n => <label key={n} className="single-choice" data-selected={hasClass(intent.sessionMask, n)}><input type="radio" name="wanted-session" value={n} disabled={busy} checked={hasClass(intent.sessionMask, n)} onChange={() => update({ sessionMask: 1n << BigInt(n), deadline: sessionDeadline(1n << BigInt(n)) ?? 0n })} /><span>SESSION <span className="mono">{n}</span>{sessionStart(n) !== null && <span className="choice-detail mono">{formatEventTime(sessionStart(n)!)}</span>}</span></label>)}</div></div>
             <div className="condition-row"><span id="sections-label">Which section</span><div className="chips" role="radiogroup" aria-labelledby="sections-label">{sections.map(n => {
-              const issued = allTickets.filter(t => t.sessionId === selectedSession && t.sectionId === n).length;
-              return <label key={n} className="single-choice" data-selected={hasClass(intent.sectionMask, n)}><input type="radio" name="wanted-section" value={n} disabled={busy} checked={hasClass(intent.sectionMask, n)} onChange={() => update({ sectionMask: 1n << BigInt(n) })} /><span>SECTION <span className="mono">{n}</span>{DEMO_SECTION_PRICES[n] !== undefined && <span className="choice-detail mono">{formatUSDC(DEMO_SECTION_PRICES[n])} USDC / ticket</span>}<span className="choice-detail">{issued ? `${issued} issued tickets` : 'No tickets issued yet'}</span></span></label>;
+              const counts = supply.get(n) ?? { issued: 0, deposited: 0, offered: 0 };
+              return <label key={n} className="single-choice" data-selected={hasClass(intent.sectionMask, n)}><input type="radio" name="wanted-section" value={n} disabled={busy} checked={hasClass(intent.sectionMask, n)} onChange={() => update({ sectionMask: 1n << BigInt(n) })} /><span>SECTION <span className="mono">{n}</span>{DEMO_SECTION_PRICES[n] !== undefined && <span className="choice-detail mono">{formatUSDC(DEMO_SECTION_PRICES[n])} USDC / ticket</span>}<span className="choice-detail section-supply" data-offered={counts.offered}>{counts.offered ? `${counts.offered} ticket${counts.offered === 1 ? '' : 's'} offered for swap` : 'No tickets offered yet'}</span><span className="choice-detail">{counts.issued ? `${counts.deposited} deposited / ${counts.issued} issued` : 'No tickets issued yet'}</span></span></label>;
             })}</div></div>
+            <p className="quiet">For the selected night, at Arc block {market.blockNumber}. Offered tickets are deposited and included in live swap requests. A match still depends on everyone&apos;s signed conditions. You can choose an empty section and wait for offers.</p>
             <div className="condition-row"><span>Cohesion</span><div className="toggles"><label><input type="checkbox" disabled={busy} checked={intent.mustShareSection} onChange={e => update({ mustShareSection: e.target.checked })} />Same section</label><label><input type="checkbox" disabled={busy} checked={intent.mustShareSession} onChange={e => update({ mustShareSession: e.target.checked })} />Same session</label></div></div>
             <div className="condition-row"><label htmlFor="adjacent-seats">Seats must be next to each other</label><div><input id="adjacent-seats" type="checkbox" disabled={busy} checked={intent.mustBeAdjacent} onChange={e => update({ mustBeAdjacent: e.target.checked, ...(e.target.checked && intent.exactCount < 2 ? { exactCount: 2 } : {}) })} />
               {intent.mustBeAdjacent && <div className="adjacency-illustration" role="img" aria-label={`${ADJACENCY_ACCEPTED}: 3, 4. ${ADJACENCY_ERROR}: 3, 5.`}>
