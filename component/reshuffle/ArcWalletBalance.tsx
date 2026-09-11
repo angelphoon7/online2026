@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { formatUnits, type Address } from 'viem';
-import { getPublicClient } from '@/lib/contracts';
+import { getNativeUSDCBalance } from '@/lib/chain-reads';
 import { CHAIN } from '@/lib/config';
 import ArcGasNotice from './ArcGasNotice';
 
@@ -18,9 +18,7 @@ export default function ArcWalletBalance({ account, walletChainId, compact = fal
       if (pending) return;
       pending = true;
       try {
-        const client = getPublicClient();
-        if (await client.getChainId() !== 5042002) throw new Error('Wrong balance source');
-        const balance = await client.getBalance({ address: account });
+        const balance = await getNativeUSDCBalance(account);
         if (!cancelled) setSnapshot({ account, balance });
       } catch {
         if (!cancelled) setSnapshot({ account, error: true });

@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { parseAbiItem } from 'viem';
-import { getPublicClient } from '@/lib/contracts';
-import { CONTRACTS } from '@/lib/config';
+import { getMarketSnapshot, getSettlements } from '@/lib/chain-reads';
 
 export default function PastSettlements({ refreshKey }: { refreshKey?: string }) {
   const [rows, setRows] = useState<{ hash: string; block: string; count: string }[]>([]);
@@ -11,21 +9,10 @@ export default function PastSettlements({ refreshKey }: { refreshKey?: string })
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const client = getPublicClient();
-      const latest = await client.getBlockNumber();
-      const deployment = BigInt(process.env.NEXT_PUBLIC_DEPLOYMENT_BLOCK ?? '0');
-      const start = latest > deployment + 100000n ? latest - 99999n : deployment;
-      const found: typeof rows = [];
-      for (let from = start; from <= latest; from += 10000n) {
-        if (cancelled) return;
-        const logs = await client.getLogs({ address: CONTRACTS.settlement,
-          event: parseAbiItem('event Settled(address indexed proposer,bytes32[] intentHashes,uint256 participantCount)'),
-          fromBlock: from, toBlock: from + 9999n < latest ? from + 9999n : latest, strict: true });
-        for (const log of logs) if (log.transactionHash && log.blockNumber !== null) found.push({ hash: log.transactionHash, block: log.blockNumber.toString(), count: log.args.participantCount.toString() });
-      }
+      const snapshot = await getMarketSnapshot();
       if (!cancelled) {
-        setRows(found.reverse());
-        setStatus(`Confirmed events from blocks ${start}–${latest}${found.length ? '' : '. No settlements in this range.'}`);
+        setRows(getSettlements(snapshot).map(row => ({ hash: row.hash, block: row.block, count: row.participants })));
+        setStatus(`Settlement history at block ${snapshot.blockNumber}`);
       }
     })().catch(() => { if (!cancelled) setStatus('Settlement history is unavailable. Refresh to retry.'); });
     return () => { cancelled = true; };
@@ -33,7 +20,7 @@ export default function PastSettlements({ refreshKey }: { refreshKey?: string })
   return <section className="rounded border border-white/15 p-4">
     <h2 className="text-lg font-medium">Past settlements</h2>
     <p className="mt-2 text-xs text-white/60">{status}</p>
-    <ul className="mt-3 max-h-64 space-y-2 overflow-auto">
+    <ul className="mt-3 space-y-2">
       {rows.map(row => <li key={row.hash} className="text-sm">
         <a className="text-blue-300 underline" href={`https://testnet.arcscan.app/tx/${row.hash}`} target="_blank" rel="noreferrer">{row.hash.slice(0, 12)}…</a>
         {' · '}{row.count} participants · block {row.block}

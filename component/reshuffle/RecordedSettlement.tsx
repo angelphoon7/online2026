@@ -1,4 +1,5 @@
 "use client";
+import { EMPTY_RESULT } from '@/lib/ui-copy';
 
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -75,7 +76,7 @@ export default function RecordedSettlement({ scene = 'one' }: { scene?: 'one' | 
         <div className="mt-4 grid gap-4 md:grid-cols-2">{broken.map(item => <div key={item.label} className="flex flex-col gap-3">
           <h3 className="font-medium text-amber-200">{item.label === 'without-buyer' ? 'Without the buyer' : 'Without the seller'}</h3>
           <p className="text-sm text-white/60">{item.evidence.intentsConsidered} intents considered · {item.evidence.candidatesFound} candidates found · block {item.evidence.source.blockNumber}</p>
-          <p className="text-sm text-amber-200">{item.evidence.chosen ? 'Candidate found' : 'No solution found within the search bound.'}</p>
+          <p className="text-sm text-amber-200">{item.evidence.chosen ? 'Candidate found' : EMPTY_RESULT}</p>
           <EvidencePanel evidence={item.evidence} />
         </div>)}</div>
         <h3 className="mt-5 font-semibold text-emerald-300">With both endpoints, the open chain settled below.</h3>

@@ -40,8 +40,8 @@ Copy constants live in `lib/ui-copy.ts`. The site uses neutral colors except for
 
 The pasted visual specification contains several details that cannot be represented as deployed guarantees:
 
-- There is no signed row target or requested receiving ticket-ID field. Selecting seats sets session and section masks. The builder states this explicitly; it does not promise a particular row. Count, masks, cohesion and adjacency remain independently editable signed conditions.
-- Tickets have no price field and the protocol does not assign ticket valuations. The interface shows actual section IDs instead of the proposed 600/400/200 tiers. Rows and sessions come from issued metadata instead of inventing a three-night venue. Empty grid positions are marked unissued and cannot be selected. Event names are editorial demo labels, with undisclosed venue/date information left undisclosed.
+- There is no signed row target or requested receiving ticket-ID field. The three-step builder sets session and section masks in one place. The closed, read-only seat map follows those masks; it does not promise a particular row. Count, masks, cohesion and adjacency remain independently editable signed conditions.
+- Tickets have no price field and the protocol does not assign ticket valuations. The interface shows actual section IDs instead of the proposed 600/400/200 tiers. Rows and sessions come from issued metadata instead of inventing a three-night venue. Empty grid positions are marked unissued. The map has no seat selection. Event names are editorial demo labels, with undisclosed venue/date information left undisclosed.
 - The objective is **gross USDC moved**, not total net payment. The latter is zero for every valid settlement. Shape labels are derived from actual ticket ownership edges; a generic reshuffle is not automatically called a cycle.
 - Signature authentication happened in `commit`. `settle` does not accept signatures. Validation rows use the deployed V0–V8 order, including ticket status, conservation and payment balance; the per-participant V5 checks are grouped because the contract executes them per participant.
 - Simulation and submission are separate RPC calls inside one UI action. They cannot eliminate the state-change window. A hash appears as soon as the wallet returns it; before that the UI describes wallet/preflight activity without inventing a hash or a check result.
@@ -74,4 +74,15 @@ node scripts/test-market-browser.mjs
 node scripts/test-market-rejections.mjs
 ```
 
-Browser tests use explicit fixtures and a cancelling mock wallet, including desktop/mobile layout, no initial connection, seat-selection behavior, all four deferred actions, cancellation, solver outage and inline receipt claims. The rejection integration test uses real Arc `eth_call` with the same mutation function as the UI. At block **61476648**, its valid control passed and all three mutations returned the expected distinct named errors. Real receipt checks also verified the six-ticket act-one receipt and decoded the recorded `SeatsNotAdjacent` rejection. Unauthorized reset requests were rejected with HTTP 403.
+Browser tests use explicit fixtures and a cancelling mock wallet, including desktop/mobile layout, no initial connection, step progression, draft persistence, read-only map behavior and review-to-wallet payload equality, all four deferred actions, cancellation, solver outage and inline receipt claims. The rejection integration test uses real Arc `eth_call` with the same mutation function as the UI. At block **61476648**, its valid control passed and all three mutations returned the expected distinct named errors. Real receipt checks also verified the six-ticket act-one receipt and decoded the recorded `SeatsNotAdjacent` rejection. Unauthorized reset requests were rejected with HTTP 403.
+
+
+## Intent creation
+
+The single-column flow expands one step at a time: offering tickets, return conditions, then review and sign. Completed steps retain their values behind a Change button. Ticket positions show the first eight, with additional positions in a disclosure; page content has no nested scroll containers.
+
+`lib/intent-draft.ts` initializes masks from issued metadata. `lib/ui-copy.ts` generates the review from the same Intent object handed to the signer, after resolving the connected owner and unused nonce. Adjacency, signed payment bounds and expiry remain contract inputs without any ABI changes. The sentence regression check mutates all twelve fields.
+
+Components obtain chain data through `lib/chain-reads.ts`: `getIntentPool`, `getTicketsFor`, `getSettlements` and `getSeatCustody` query a shared snapshot, keeping a coherent source block. Receipt, balance, approval, nonce and simulation reads use the same boundary. The existing public API remains the data source; no subgraph was added.
+
+Run `node scripts/test-intent-sentence.mjs` for sentence and mask checks. With the app at localhost:3101, run `node scripts/test-market-browser.mjs` for the mock-wallet browser checks.

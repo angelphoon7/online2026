@@ -1,10 +1,12 @@
 "use client";
+import { waitForSuccess } from '@/lib/chain-reads';
+import { EMPTY_RESULT } from '@/lib/ui-copy';
 
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Hex } from 'viem';
 import type { useWallet } from '@/lib/hooks/useWallet';
-import { submitSettlement, waitForTransaction } from '@/lib/contracts';
+import { submitSettlement } from '@/lib/contracts';
 import { findSettlement, confirmSettlementEvidence, type SettlementProposal, type SolveEvidence } from '@/lib/solve-api';
 import { formatUSDC, truncateAddress } from '@/lib/format';
 import { CHAIN, sessionName, sectionName } from '@/lib/config';
@@ -79,7 +81,7 @@ export default function ReadyDemo({ wallet }: { wallet: ReturnType<typeof useWal
         setProposal(fresh.proposal); setEvidence(fresh.evidence);
         const hash = await submitSettlement(address, fresh.proposal.intents, fresh.proposal.legs);
         setTxHash(hash);
-        await waitForTransaction(hash);
+        await waitForSuccess(hash);
         const confirmed = await confirmSettlementEvidence(fresh.evidence.id, hash);
         setEvidence(confirmed);
         if (confirmed.receipt) setBlock(confirmed.receipt.blockNumber);
@@ -133,7 +135,7 @@ export default function ReadyDemo({ wallet }: { wallet: ReturnType<typeof useWal
     {busy && <p role="status" className="text-blue-300">{status === 'submitting' ? 'Waiting for submission and confirmed receipt…' : 'Checking chain state, searching and simulating…'}</p>}
     {error && <p role="alert" className="break-words rounded border border-red-400/30 p-4 text-red-300">{error}</p>}
     {!busy && evidence && !proposal && <div className="rounded border border-amber-400/30 p-4 text-amber-200">
-      <p>No solution found within the search bound.</p>
+      <p>{EMPTY_RESULT}</p>
       {intents.some(i => i.state !== 1 || i.expired) && <p className="mt-2 text-sm">This shared demo has changed or expired. The operator can prepare the next round; the evidence below shows the current result.</p>}
     </div>}
     {proposal && <>
