@@ -17,11 +17,11 @@ schema:
 dataSources:
   - kind: ethereum/contract
     name: TicketNFT
-    network: arc-testnet
+    network: {{network}}
     source:
-      address: "0xb2490568bb27c9c38588e3b5511ee3980892cce4"
+      address: "{{TicketNFT.address}}"
       abi: TicketNFT
-      startBlock: 61264501
+      startBlock: {{TicketNFT.startBlock}}
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -49,11 +49,11 @@ dataSources:
 
   - kind: ethereum/contract
     name: IntentRegistry
-    network: arc-testnet
+    network: {{network}}
     source:
-      address: "0x479b4455f494679dcdd6f6f32e93e08682deda75"
+      address: "{{IntentRegistry.address}}"
       abi: IntentRegistry
-      startBlock: 61264518
+      startBlock: {{IntentRegistry.startBlock}}
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -74,11 +74,11 @@ dataSources:
 
   - kind: ethereum/contract
     name: Settlement
-    network: arc-testnet
+    network: {{network}}
     source:
-      address: "0x75872168f2d6ae13c7d9258159e59025fd9b5eae"
+      address: "{{Settlement.address}}"
       abi: Settlement
-      startBlock: 61264529
+      startBlock: {{Settlement.startBlock}}
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9

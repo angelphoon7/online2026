@@ -54,6 +54,37 @@ export function configTs(deployment) {
 
 export const serialiseNetworks = (value) => JSON.stringify(value, null, 2) + '\n';
 
+/**
+ * Render subgraph.template.yaml into subgraph.yaml.
+ *
+ * The manifest is generated rather than hand-maintained so its addresses cannot drift from
+ * the deployment record. It is rendered here rather than substituted by `graph build
+ * --network`, because that rewrites the file in place and strips every comment — including
+ * the notes recording that the event is TicketRedeemedEvt and that Settled takes three
+ * parameters. Build and deploy therefore run without `--network`.
+ */
+export function renderManifest(deployment, template) {
+  const values = new Map([['network', deployment.network]]);
+  for (const name of CONTRACT_NAMES) {
+    values.set(`${name}.address`, deployment.contracts[name].address);
+    values.set(`${name}.startBlock`, String(deployment.contracts[name].startBlock));
+  }
+
+  const unresolved = [];
+  const rendered = template.replace(/\{\{([^}]+)\}\}/g, (_match, key) => {
+    const trimmed = key.trim();
+    if (!values.has(trimmed)) {
+      unresolved.push(trimmed);
+      return `{{${trimmed}}}`;
+    }
+    return values.get(trimmed);
+  });
+  if (unresolved.length > 0) {
+    throw new Error(`subgraph.template.yaml has unknown placeholders: ${unresolved.join(', ')}`);
+  }
+  return rendered;
+}
+
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const network = deploymentName(process.argv.slice(2).find((a) => !a.startsWith('--')));
   const deployment = loadDeployment(network);
@@ -62,7 +93,14 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   fs.writeFileSync(path.join('subgraph', 'networks.json'), serialiseNetworks(networksJson(deployment)));
   fs.writeFileSync(path.join('subgraph', 'src', 'config.ts'), configTs(deployment));
 
-  console.log(`networks.json + src/config.ts written for ${network}`);
+  const templatePath = path.join('subgraph', 'subgraph.template.yaml');
+  if (!fs.existsSync(templatePath)) throw new Error(`Missing ${templatePath}`);
+  fs.writeFileSync(
+    path.join('subgraph', 'subgraph.yaml'),
+    renderManifest(deployment, fs.readFileSync(templatePath, 'utf8'))
+  );
+
+  console.log(`subgraph.yaml + networks.json + src/config.ts written for ${network}`);
   for (const name of DATA_SOURCES) {
     const { address, startBlock } = deployment.contracts[name];
     console.log(`  ${name.padEnd(15)} ${address}  startBlock ${startBlock}`);
