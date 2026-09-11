@@ -1,0 +1,62 @@
+{
+  "block": "61619336",
+  "totalTickets": 100,
+  "cells": [
+    {
+      "session": 0,
+      "section": 0,
+      "issued": 22,
+      "deposited": 8,
+      "offered": 8
+    },
+    {
+      "session": 0,
+      "section": 1,
+      "issued": 18,
+      "deposited": 8,
+      "offered": 8
+    },
+    {
+      "session": 0,
+      "section": 2,
+      "issued": 8,
+      "deposited": 8,
+      "offered": 8
+    },
+    {
+      "session": 0,
+      "section": 3,
+      "issued": 8,
+      "deposited": 8,
+      "offered": 8
+    },
+    {
+      "session": 1,
+      "section": 0,
+      "issued": 20,
+      "deposited": 10,
+      "offered": 10
+    },
+    {
+      "session": 1,
+      "section": 1,
+      "issued": 8,
+      "deposited": 8,
+      "offered": 8
+    },
+    {
+      "session": 1,
+      "section": 2,
+      "issued": 8,
+      "deposited": 8,
+      "offered": 8
+    },
+    {
+      "session": 1,
+      "section": 3,
+      "issued": 8,
+      "deposited": 8,
+      "offered": 8
+    }
+  ]
+}

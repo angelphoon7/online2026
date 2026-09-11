@@ -16,6 +16,7 @@
     "mainnet:verify": "node scripts/mainnet.mjs verify",
     "mainnet:rehearse": "node scripts/rehearse-mainnet.mjs",
     "predemo:prepare": "npm --prefix solver run build",
+    "demo:inventory": "node scripts/seed-inventory.mjs",
     "demo:prepare": "node scripts/prepare-demo.mjs",
     "predemo:act-one": "npm --prefix solver run build",
     "demo:act-one": "node scripts/act-one.mjs",

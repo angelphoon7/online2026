@@ -59,6 +59,8 @@ Open **[localhost:3000/demo](http://localhost:3000/demo)**. The first command pr
 
 The demo opens without a wallet and automatically searches all live event intents through `/api/solve/pool`, retrying after public-state refreshes while the page is open. Each candidate contains two to four participants; the full pool is searched within a 100-candidate / two-second budget. Results show when that budget is reached. Pool sizes above the 256-intent service guard return an explicit error rather than being silently truncated. Checkboxes optionally switch to manual selection for testing. Submission requires a proposer wallet with Arc test USDC for gas; participants need not return or sign again. The seed command does **not** execute the settlement.
 
+For broader wishlist inventory, `npm run demo:inventory -- --broadcast` prepares 64 additional tickets across both sessions and all four sections, deposits them and commits 32 adjacent-pair swap offers. Reruns resume the same batch. [Inventory setup and verification](docs/DEMO_INVENTORY.md) | [Public ticket IDs and transaction hashes](deployments/section-inventory.json).
+
 For asynchronous judging, host the Next.js frontend **and backend** and share its `/demo` URL. Seed before publishing the public manifest. A shared on-chain round can be consumed once; reseed and redeploy the updated manifest for the next round on hosts with immutable files. See [setup, recovery and hosting details](docs/DEMO_SETUP.md).
 
 ## The problem

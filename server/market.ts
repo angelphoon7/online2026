@@ -43,11 +43,12 @@ export async function marketSnapshot(fresh = false): Promise<MarketSnapshot> {
     const settlements = previous?.settlements.map(r => ({ hash: r.hash, block: BigInt(r.block), participants: BigInt(r.participants) })).reverse() ?? [];
     for (let from = previous ? BigInt(previous.blockNumber) + 1n : startBlock; from <= block.number; from += 10000n) {
       const to = from + 9999n < block.number ? from + 9999n : block.number;
-      const [commits, executions] = await Promise.all([
-        client.getLogs({ address: addresses.IntentRegistry, event: committedEvent, fromBlock: from, toBlock: to, strict: true }),
-        client.getLogs({ address: addresses.Settlement, event: settledEvent, fromBlock: from, toBlock: to, strict: true }),
-      ]);
-      await pause();
+      // Pace historical log queries to avoid Arc RPC rate limits on cold scans,
+      // even when ranges are empty; a cold scan must not burst through history.
+      const commits = await client.getLogs({ address: addresses.IntentRegistry, event: committedEvent, fromBlock: from, toBlock: to, strict: true });
+      await new Promise(resolve => setTimeout(resolve, 1100));
+      const executions = await client.getLogs({ address: addresses.Settlement, event: settledEvent, fromBlock: from, toBlock: to, strict: true });
+      await new Promise(resolve => setTimeout(resolve, 1100));
       records.push(...commits.map(l => ({ args: { ...l.args, offered: [...l.args.offered] }, transactionHash: l.transactionHash! })));
       settlements.push(...executions.map(l => ({ hash: l.transactionHash!, block: l.blockNumber!, participants: l.args.participantCount })));
     }
