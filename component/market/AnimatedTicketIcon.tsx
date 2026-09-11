@@ -83,8 +83,8 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
         if (isCancelled || !canvas || !ctx) return;
         const time = (now - startTime) * 0.001;
 
-        // Ping-pong cycle: 4.8s (synchronized with the glow sweep)
-        const cycle = (time / 4.8) % 1.0;
+        // Slower, calmer ping-pong cycle: 7.2s (slow, luxurious gliding glow)
+        const cycle = (time / 7.2) % 1.0;
         const pingpong = 0.5 - 0.5 * Math.cos(cycle * 2.0 * Math.PI);
         const glowX = 0.18 + 0.64 * pingpong;
 
@@ -92,24 +92,23 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
         ctx.fillStyle = '#060e22';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Render ticket slice-by-slice: each section undulates like a wave
+        // Render ticket slice-by-slice: gentle, slow, non-vibrating wave motion
         for (let i = 0; i < totalSlices; i++) {
           const sx = i * SLICE_W;
           const normX = sx / canvas.width;
 
           // Edge damping ensures the outer padding remains completely still
-          const edgeDamp = Math.max(0, Math.min(1, (normX - 0.03) / 0.15)) *
-                           Math.max(0, Math.min(1, (0.97 - normX) / 0.15));
+          const edgeDamp = Math.max(0, Math.min(1, (normX - 0.04) / 0.14)) *
+                           Math.max(0, Math.min(1, (0.96 - normX) / 0.14));
 
-          // 1. Traveling wave pulse directly connected to the glowing light sweep
+          // 1. Broad, gentle wave crest that glides slowly with the glow (zero high-frequency vibration)
           const dist = normX - glowX;
-          const glowPulse = Math.sin(dist * 12.0) * Math.exp(-dist * dist * 18.0) * 14;
+          const glowPulse = -Math.cos(dist * Math.PI * 2.2) * Math.exp(-dist * dist * 18.0) * 4.8;
 
-          // 2. Harmonic liquid wave traveling across the ribbon
-          // Different horizontal points move at different times (wave propagation)
-          const harmonic = Math.sin(normX * Math.PI * 3.0 - time * 2.6) * 7.5;
+          // 2. Slow, broad harmonic ocean-like undulation across the ticket (single gentle curve, slow 7s period)
+          const harmonic = Math.sin(normX * Math.PI * 1.3 - time * 0.9) * 3.2;
 
-          // Combined wave displacement
+          // Combined gentle wave displacement
           const dy = (glowPulse + harmonic) * edgeDamp;
 
           // Draw base ribbon slice
