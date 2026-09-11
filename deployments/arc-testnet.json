@@ -2,7 +2,7 @@
   "network": "arc-testnet",
   "chainId": 5042002,
   "rpc": "https://rpc.testnet.arc.io",
-  "subgraphUrl": "https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.0",
+  "subgraphUrl": "https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1",
   "deployer": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
   "usdc": "0x3600000000000000000000000000000000000000",
   "contracts": {
@@ -423,5 +423,6 @@
       "0xb2693737652ef0ef9290d63a6b0116c8bd3b289a8a14150afd0ec2a5b1b9037a",
       "0x593fd2f24a5eaa6e04e55a8e2e4acb2cef555d8f65d87671d026eb661c94e965"
     ]
-  }
+  },
+  "subgraphDeployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL"
 }
