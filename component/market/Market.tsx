@@ -30,6 +30,8 @@ import { getMarketSnapshot, getIntentPool, getTicketsFor, getSettlements, getTic
 import { nextRecordedNonce } from '@/lib/intent-draft';
 import rejectionDemo from '@/deployments/act-three.json';
 
+import ConnectWalletButton from '@/component/connectWallet/ConnectWalletButton';
+
 const scrollTo = (element: HTMLElement | null) => element?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
 const equal = (a?: string | null, b?: string | null) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
 async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
@@ -247,8 +249,20 @@ export default function Market() {
   const selectIntent = (hash: Hex) => { setAutomatic(false); searchVersion.current++; searchInFlight.current = false; setSolving(false); setSelected(s => s.includes(hash) ? s.filter(h => h !== hash) : [...s, hash]); setProposal(null); setEvidence(null); setSolverError(''); };
 
   return <div className="reshuffle-ui">
-    <header className="site-header"><span className="wordmark">RESHUFFLE<span className="mark">↔</span></span><span className="header-network mono">ARC TESTNET / 5042002</span>
-      {account && <div className="wallet-meta"><span className="mono">{truncateAddress(account)}</span><ArcWalletBalance account={account} walletChainId={chainId} compact />{chainId !== 5042002 && <button disabled={disabled} onClick={() => void action('Switch network', async () => {})}>Wrong network · switch</button>}</div>}
+    <header className="site-header">
+      <div className="header-brand">
+        <Image
+          src="/logo.png"
+          alt="RESHUFFLE"
+          width={150}
+          height={50}
+          priority
+          className="header-logo"
+        />
+      </div>
+      <div className="header-actions">
+        <ConnectWalletButton />
+      </div>
     </header>
     <main>
       <section className="hero">
