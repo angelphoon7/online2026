@@ -1,0 +1,96 @@
+# SOURCE FILE — edit this, not subgraph.yaml.
+#
+# scripts/gen-subgraph-config.mjs renders this into subgraph.yaml, substituting the
+# double-brace placeholders from deployments/<network>.json. Build and deploy therefore run
+# WITHOUT `--network`: passing it
+# makes graph-cli rewrite subgraph.yaml in place from networks.json, which strips every comment
+# below — including the two notes that stop the signature traps from coming back.
+#
+# Verify with: npm run subgraph:check
+specVersion: 1.2.0
+description: >-
+  RESHUFFLE — the live intent pool and ticket custody on Arc Testnet. IntentRegistry stores
+  only hash -> state, so every matching condition exists on-chain solely inside the
+  IntentCommitted event. This implementation relies on The Graph to reconstruct the pool.
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum/contract
+    name: TicketNFT
+    network: arc-testnet
+    source:
+      address: "0xb2490568bb27c9c38588e3b5511ee3980892cce4"
+      abi: TicketNFT
+      startBlock: 61264501
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Ticket
+      abis:
+        - name: TicketNFT
+          file: ./abis/TicketNFT.json
+      eventHandlers:
+        # Metadata is carried by the mint event, so no eth_call is needed on first sight.
+        - event: TicketMinted(indexed uint256,indexed address,indexed uint32,uint16,uint16,uint16,uint16)
+          handler: handleTicketMinted
+        # Custody is derived here: a transfer into the Escrow address is a deposit, one out of
+        # it is a withdrawal or a settlement release. Escrow.deposit() pulls the NFT in with
+        # transferFrom and the contract implements no IERC721Receiver, so custody can only
+        # begin that way — which is what makes this derivation complete.
+        - event: Transfer(indexed address,indexed address,indexed uint256)
+          handler: handleTransfer
+        # TRAP: the event is TicketRedeemedEvt. `TicketRedeemed` is a Settlement *error* name.
+        # A wrong signature here still deploys; the handler just never fires.
+        - event: TicketRedeemedEvt(indexed uint256,indexed address)
+          handler: handleTicketRedeemed
+      file: ./src/ticket.ts
+
+  - kind: ethereum/contract
+    name: IntentRegistry
+    network: arc-testnet
+    source:
+      address: "0x479b4455f494679dcdd6f6f32e93e08682deda75"
+      abi: IntentRegistry
+      startBlock: 61264518
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Intent
+        - Ticket
+      abis:
+        - name: IntentRegistry
+          file: ./abis/IntentRegistry.json
+      eventHandlers:
+        # Carries all 12 signed fields, which is what makes the pool reconstructable at all.
+        - event: IntentCommitted(indexed bytes32,indexed address,indexed uint32,uint256[],uint256,uint256,uint8,bool,bool,bool,int256,uint64,uint256)
+          handler: handleIntentCommitted
+        - event: IntentRevoked(indexed bytes32,indexed address)
+          handler: handleIntentRevoked
+      file: ./src/registry.ts
+
+  - kind: ethereum/contract
+    name: Settlement
+    network: arc-testnet
+    source:
+      address: "0x75872168f2d6ae13c7d9258159e59025fd9b5eae"
+      abi: Settlement
+      startBlock: 61264529
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Settlement
+        - Intent
+      abis:
+        - name: Settlement
+          file: ./abis/Settlement.json
+      eventHandlers:
+        # TRAP: three parameters, not two. The participant count is part of the event.
+        - event: Settled(indexed address,bytes32[],uint256)
+          handler: handleSettled
+      file: ./src/settlement.ts

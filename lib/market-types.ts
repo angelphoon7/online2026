@@ -11,6 +11,12 @@ export interface ChainTicket {
 export interface MarketSnapshot {
   blockNumber: string; timestamp: string; tickets: ChainTicket[]; intents: WireIntent[];
   settlements: { hash: Hex; block: string; participants: string }[]; defaultHashes: Hex[];
+  // Which mechanism discovered this market. Displayed rather than assumed: the same UI runs
+  // against a local Anvil chain over RPC, and a label claiming The Graph there would be false.
+  source: 'graph' | 'rpc';
+  // Intents the subgraph returned that did not re-hash to the id they were published under
+  // (trust rule 1). Dropped from the pool, and named here so the drop is visible.
+  hashMismatched: Hex[];
 }
 export interface ChainReceipt {
   hash: Hex; blockNumber: string; status: 'success' | 'reverted'; proposer: Address; independent: boolean;

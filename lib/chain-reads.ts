@@ -14,9 +14,18 @@ async function readJson<T>(url: string): Promise<T> {
   if (!response.ok) throw new Error(body.error ?? 'Public chain reads unavailable');
   return body;
 }
-export async function getMarketSnapshot(fresh = false): Promise<MarketSnapshot> {
+export async function getMarketSnapshot(fresh = false, minBlock?: bigint): Promise<MarketSnapshot> {
   if (fresh && pending) await pending.catch(() => {});
-  if (!pending) pending = readJson<MarketSnapshot>(fresh ? '/api/market?fresh=1' : '/api/market').finally(() => { pending = null; });
+  if (!pending) {
+    // minBlock is the freshness floor (trust rule 2): the server refuses to answer from a
+    // block older than the transaction the user just sent, rather than returning a stale
+    // market in which their own action has not happened yet.
+    const query = new URLSearchParams();
+    if (fresh) query.set('fresh', '1');
+    if (minBlock !== undefined && minBlock > 0n) query.set('minBlock', minBlock.toString());
+    const suffix = query.size > 0 ? `?${query}` : '';
+    pending = readJson<MarketSnapshot>(`/api/market${suffix}`).finally(() => { pending = null; });
+  }
   return pending;
 }
 export const ticketHolder = (t: ChainTicket) => t.depositor !== '0x0000000000000000000000000000000000000000' ? t.depositor : t.owner;
@@ -34,6 +43,10 @@ export const getSettlementReceipt = (hash: Hex) => readJson<ChainReceipt>(`/api/
 export const getTicketsApproved = (address: Address) => getPublicClient().readContract({ address: CONTRACTS.ticketNFT, abi: erc721Abi, functionName: 'isApprovedForAll', args: [address, CONTRACTS.escrow] });
 export const getTicketHolder = (tokenId: bigint) => getPublicClient().readContract({ address: CONTRACTS.ticketNFT, abi: erc721Abi, functionName: 'ownerOf', args: [tokenId] });
 export const getChainTimestamp = async () => (await getPublicClient().getBlock()).timestamp;
+// The RPC's head, shown beside the indexed block so indexer lag is visible rather than
+// implied. Never used as a freshness floor: a receipt names the block a transaction is
+// actually in, while a load-balanced public endpoint can report a head that is behind.
+export const getChainBlockNumber = () => getPublicClient().getBlockNumber();
 export const getTicketDepositor = (tokenId: bigint) => getPublicClient().readContract({ address: CONTRACTS.escrow, abi: escrowAbi, functionName: 'depositor', args: [tokenId] });
 export const getUSDCAllowance = (address: Address) => getPublicClient().readContract({ address: CONTRACTS.usdc, abi: erc20Abi, functionName: 'allowance', args: [address, CONTRACTS.settlement] });
 export async function getUnusedNonce(address: Address, minimum: bigint) {

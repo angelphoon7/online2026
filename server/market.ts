@@ -7,21 +7,40 @@ import { serialize } from './evidence-store';
 import { restoreIntent, type MarketSnapshot } from '@/lib/market-types';
 import type { IntentParams } from '@/lib/contracts';
 import demo from '@/deployments/demo-ready.json';
+import { marketSnapshotFromGraph } from './market-graph';
+
+// Which source assembles the market: the subgraph (default on Arc) or direct RPC reads.
+// Studio cannot index a local Anvil chain, so local development must use 'rpc'.
+// The two produce an identical MarketSnapshot; only the discovery mechanism differs.
+export const readSource = () => process.env.READ_SOURCE ?? (process.env.SUBGRAPH_URL ? 'graph' : 'rpc');
 
 const committedEvent = parseAbiItem('event IntentCommitted(bytes32 indexed intentHash,address indexed owner,uint32 indexed eventId,uint256[] offered,uint256 sessionMask,uint256 sectionMask,uint8 exactCount,bool mustShareSession,bool mustShareSection,bool mustBeAdjacent,int256 maxNetPay,uint64 deadline,uint256 nonce)');
 const settledEvent = parseAbiItem('event Settled(address indexed proposer,bytes32[] intentHashes,uint256 participantCount)');
 let cached: { key: string; until: number; blockHash: Hex; value: MarketSnapshot } | undefined;
 let pending: Promise<MarketSnapshot> | undefined;
 
-export async function marketSnapshot(fresh = false): Promise<MarketSnapshot> {
-  const { addresses, startBlock } = chainConfig();
+export async function marketSnapshot(fresh = false, minBlock = 0n): Promise<MarketSnapshot> {
+  if (readSource() === 'graph') return marketSnapshotFromGraph(minBlock);
+  // Direct reads have no indexer to fall behind, but the cache below can still hold a snapshot
+  // that predates the caller's floor, so a floored read bypasses it. Answering below the floor
+  // would defeat the point: the caller asked not to be shown a market older than its own
+  // transaction, and silently ignoring that is worse than reporting the lag.
+  const snapshot = await marketSnapshotFromRpc(fresh || minBlock > 0n);
+  if (minBlock > 0n && BigInt(snapshot.blockNumber) < minBlock) {
+    throw new Error(`ChainLag: read block ${snapshot.blockNumber}, needed ${minBlock}`);
+  }
+  return snapshot;
+}
+
+async function marketSnapshotFromRpc(fresh = false): Promise<MarketSnapshot> {
+  const { addresses, startBlock, chainId } = chainConfig();
   const client = createPublicClient({ transport: http(process.env.ARC_RPC!, { batch: { batchSize: 8, wait: 25 }, retryCount: 4, retryDelay: 1500 }) });
   const pause = () => new Promise(resolve => setTimeout(resolve, 750));
   const key = `${addresses.IntentRegistry}:${startBlock}`;
   if (!fresh && cached?.key === key && cached.until > Date.now()) return cached.value;
   if (pending) return pending;
   pending = (async () => {
-    if (await client.getChainId() !== 5042002) throw new Error('Wrong RPC chain');
+    if (await client.getChainId() !== chainId) throw new Error('Wrong RPC chain');
     const block = await client.getBlock();
     const read = (name: keyof typeof addresses, functionName: string, args: unknown[] = []) => client.readContract({ address: addresses[name], abi: abi(name), functionName, args, blockNumber: block.number }).catch(error => { throw new Error(`${name}.${functionName}: ${error.shortMessage ?? error.name}`); });
     const count = await read('TicketNFT', 'nextTokenId') as bigint;
@@ -43,11 +62,12 @@ export async function marketSnapshot(fresh = false): Promise<MarketSnapshot> {
     const settlements = previous?.settlements.map(r => ({ hash: r.hash, block: BigInt(r.block), participants: BigInt(r.participants) })).reverse() ?? [];
     for (let from = previous ? BigInt(previous.blockNumber) + 1n : startBlock; from <= block.number; from += 10000n) {
       const to = from + 9999n < block.number ? from + 9999n : block.number;
-      const [commits, executions] = await Promise.all([
-        client.getLogs({ address: addresses.IntentRegistry, event: committedEvent, fromBlock: from, toBlock: to, strict: true }),
-        client.getLogs({ address: addresses.Settlement, event: settledEvent, fromBlock: from, toBlock: to, strict: true }),
-      ]);
-      await pause();
+      // Pace historical log queries to avoid Arc RPC rate limits on cold scans,
+      // even when ranges are empty; a cold scan must not burst through history.
+      const commits = await client.getLogs({ address: addresses.IntentRegistry, event: committedEvent, fromBlock: from, toBlock: to, strict: true });
+      await new Promise(resolve => setTimeout(resolve, 1100));
+      const executions = await client.getLogs({ address: addresses.Settlement, event: settledEvent, fromBlock: from, toBlock: to, strict: true });
+      await new Promise(resolve => setTimeout(resolve, 1100));
       records.push(...commits.map(l => ({ args: { ...l.args, offered: [...l.args.offered] }, transactionHash: l.transactionHash! })));
       settlements.push(...executions.map(l => ({ hash: l.transactionHash!, block: l.blockNumber!, participants: l.args.participantCount })));
     }
@@ -62,7 +82,9 @@ export async function marketSnapshot(fresh = false): Promise<MarketSnapshot> {
     let currentDemo = demo;
     try { currentDemo = JSON.parse(await readFile(join(process.cwd(), 'deployments/demo-ready.json'), 'utf8')); } catch { /* Bundled public manifest. */ }
     const value = JSON.parse(serialize({ blockNumber: block.number, timestamp: block.timestamp, tickets, intents,
-      settlements: settlements.reverse(), defaultHashes: currentDemo.intents.map(i => i.hash) })) as MarketSnapshot;
+      settlements: settlements.reverse(), defaultHashes: currentDemo.intents.map(i => i.hash),
+      // Intents here are read from this chain's own logs, so there is no indexer to re-hash against.
+      source: 'rpc', hashMismatched: [] })) as MarketSnapshot;
     cached = { key, blockHash: block.hash, until: Date.now() + 30000, value };
     return value;
   })().finally(() => { pending = undefined; });

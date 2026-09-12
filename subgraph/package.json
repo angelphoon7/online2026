@@ -1,0 +1,15 @@
+{
+  "name": "reshuffle-subgraph",
+  "version": "0.1.0",
+  "private": true,
+  "description": "RESHUFFLE intent pool and ticket custody, indexed from Arc Testnet",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "deploy": "graph deploy reshuffle"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "0.97.1",
+    "@graphprotocol/graph-ts": "0.38.1"
+  }
+}

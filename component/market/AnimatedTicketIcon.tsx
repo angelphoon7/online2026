@@ -128,16 +128,16 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
 
           // If glow is near this slice, composite the glowing wave highlights
           const absDist = Math.abs(dist);
-          if (absDist < 0.18) {
-            const glowIntensity = Math.pow(1 - absDist / 0.18, 1.8);
+          if (absDist < 0.20) {
+            const glowIntensity = Math.pow(1 - absDist / 0.20, 1.8);
 
             // Draw bright pass on the wave crest
-            ctx.globalAlpha = glowIntensity * 0.75;
+            ctx.globalAlpha = glowIntensity * 0.8;
             ctx.globalCompositeOperation = 'screen';
             ctx.drawImage(brightCanvas, sx, 0, SLICE_W, canvas.height, sx, dy, SLICE_W, canvas.height);
 
             // Draw luminous tint pass on the wave crest
-            ctx.globalAlpha = glowIntensity * 0.45;
+            ctx.globalAlpha = glowIntensity * 0.5;
             ctx.drawImage(tintCanvas, sx, 0, SLICE_W, canvas.height, sx, dy, SLICE_W, canvas.height);
 
             ctx.globalAlpha = 1.0;
@@ -236,6 +236,13 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
 
         .ticket-wave-canvas.visible {
           opacity: 1;
+        }
+
+        @media (min-width: 769px) {
+          .ticket-icon-container {
+            transform: scale(1.18);
+            transform-origin: center center;
+          }
         }
 
         @media (prefers-reduced-motion: reduce) {

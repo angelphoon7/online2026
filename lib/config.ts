@@ -1,17 +1,23 @@
 import { defineChain } from 'viem';
+import { DEPLOYMENT } from './deployment';
 
+// Addresses and chain identity come from deployments/<network>.json, selected by
+// NEXT_PUBLIC_DEPLOYMENT. They are deliberately NOT read from environment variables: a second
+// copy of a deployed address drifts silently. See lib/deployment.ts.
 export const CONTRACTS = {
-  ticketNFT: (process.env.NEXT_PUBLIC_TICKET_NFT ?? '') as `0x${string}`,
-  escrow: (process.env.NEXT_PUBLIC_ESCROW ?? '') as `0x${string}`,
-  intentRegistry: (process.env.NEXT_PUBLIC_INTENT_REGISTRY ?? '') as `0x${string}`,
-  settlement: (process.env.NEXT_PUBLIC_SETTLEMENT ?? '') as `0x${string}`,
-  usdc: (process.env.NEXT_PUBLIC_USDC ?? '') as `0x${string}`,
+  ticketNFT: DEPLOYMENT.ticketNFT,
+  escrow: DEPLOYMENT.escrow,
+  intentRegistry: DEPLOYMENT.intentRegistry,
+  settlement: DEPLOYMENT.settlement,
+  usdc: DEPLOYMENT.usdc,
 };
 
 export const CHAIN = {
-  id: Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? '31337'),
-  rpcUrl: process.env.NEXT_PUBLIC_RPC_URL ?? 'http://127.0.0.1:8545',
-  name: 'Arc Testnet',
+  id: DEPLOYMENT.chainId,
+  // The endpoint is environment, not deployment: the same contracts are reachable through
+  // any RPC for that chain. The record supplies the default.
+  rpcUrl: process.env.NEXT_PUBLIC_RPC_URL ?? DEPLOYMENT.rpc,
+  name: DEPLOYMENT.chainId === 31337 ? 'Local' : 'Arc Testnet',
 };
 
 export const NETWORK = defineChain({

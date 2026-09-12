@@ -1,0 +1,196 @@
+RESHUFFLE x The Graph -- Step 0-A / 0-B contract audit
+Generated: 2026-09-11
+Source: out/*.sol/*.json (Foundry artifacts), src/*.sol, deployments/arc-testnet.json
+
+NOTE ON LAYOUT: the plan assumes contracts/ and contracts/broadcast/. This repo is flat --
+Foundry lives at the repo root (src/, out/, script/, test/, broadcast/). Every path in
+RESHUFFLE_GRAPH_PLAN.md that says `contracts/X` means `X` here. The Arc Testnet deployment is
+NOT in broadcast/ (only DeployLocal 31337 is); it is recorded in deployments/arc-testnet.json,
+written by a custom script, not by forge broadcast.
+
+Environment: neither `forge` nor `jq` is on PATH in this shell. The dumps below were produced
+by reading out/*.json with node. Re-run after any contract change.
+
+================================================================================
+0-A  EVENT SIGNATURES
+================================================================================
+
+--- TicketNFT ---
+Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
+ApprovalForAll(address indexed owner, address indexed operator, bool approved)
+TicketMinted(uint256 indexed tokenId, address indexed to, uint32 indexed eventId, uint16 sessionId, uint16 sectionId, uint16 row, uint16 seat)
+TicketRedeemedEvt(uint256 indexed tokenId, address indexed holder)
+Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
+
+--- Escrow ---
+TicketEscrowed(uint256 indexed tokenId, address indexed depositorAddr)
+TicketWithdrawn(uint256 indexed tokenId, address indexed depositorAddr)
+
+--- IntentRegistry ---
+IntentCommitted(bytes32 indexed intentHash, address indexed owner, uint32 indexed eventId, uint256[] offered, uint256 sessionMask, uint256 sectionMask, uint8 exactCount, bool mustShareSession, bool mustShareSection, bool mustBeAdjacent, int256 maxNetPay, uint64 deadline, uint256 nonce)
+IntentRevoked(bytes32 indexed intentHash, address indexed owner)
+
+--- Settlement ---
+Settled(address indexed proposer, bytes32[] intentHashes, uint256 participantCount)
+
+================================================================================
+0-A  KEY FUNCTIONS AND STRUCTS
+================================================================================
+
+struct IntentRegistry.Intent (src/IntentRegistry.sol:5) -- 12 fields, in signing order:
+  address   owner
+  uint256[] offered
+  uint32    eventId
+  uint256   sessionMask
+  uint256   sectionMask
+  uint8     exactCount
+  bool      mustShareSession
+  bool      mustShareSection
+  bool      mustBeAdjacent
+  int256    maxNetPay
+  uint64    deadline
+  uint256   nonce
+
+struct Settlement.Leg: (bytes32 intentHash, uint256[] receives, int256 netPayment)
+  -- no participant field; the recipient is intent.owner, per AGENTS.md V0.
+
+Settlement.settle(Intent[] intents, Leg[] legs)                  -> ()      nonpayable
+  ** no signature array -- signatures are verified once at commit. **
+IntentRegistry.commit(Intent i, bytes sig)                       -> ()      nonpayable
+IntentRegistry.hashIntent(Intent i)                              -> bytes32 pure
+IntentRegistry.state(bytes32)                                    -> uint8   view
+IntentRegistry.intentOwner(bytes32)                              -> address view
+IntentRegistry.usedNonce(address, uint256)                       -> bool    view
+IntentRegistry.markSettled(bytes32)                              -> ()      onlySettlement
+IntentRegistry.revoke(bytes32)                                   -> ()      owner-only
+IntentRegistry.DOMAIN_SEPARATOR() / INTENT_TYPEHASH()            -> bytes32 view/const
+TicketNFT.meta(uint256) -> (uint32 eventId, uint16 sessionId, uint16 sectionId, uint16 row, uint16 seat, uint8 status)   view
+TicketNFT.isRedeemed(uint256) -> bool                            view
+TicketNFT.ACTIVE()=0 / REDEEMED()=1
+Escrow.depositor(uint256) -> address                             view
+Escrow.deposit(uint256[]) / withdraw(uint256[]) / releaseBatch(uint256[], address)
+
+State constants: NONE=0, LIVE=1, REVOKED=2, SETTLED=3.
+
+================================================================================
+0-B  THE SIX CHECKS
+================================================================================
+
+C1  IntentCommitted carries every Intent field                        ** PASS **
+    All 12 struct fields are present with matching types. `intentHash` is the indexed key;
+    `owner` and `eventId` are indexed topics (still decodable by graph-node). No field is
+    missing, so the subgraph can reconstruct the full signed intent from the event alone.
+    No contract change needed.
+
+C2  Which hash does the registry key on                               ** PASS **
+    src/IntentRegistry.sol:114-126 -- the key is the BARE STRUCT HASH (`structHash =
+    hashIntent(i)`), NOT the EIP-712 digest. The digest
+    (keccak256("\x19\x01" ++ DOMAIN_SEPARATOR ++ structHash), line 115) is used only for
+    ecrecover. `state[]`, `intentOwner[]` and the emitted `intentHash` all use structHash.
+
+    solver/src/hash.ts computes exactly this: same typehash string, same field order, and
+    hashOffered = keccak256(abi.encodePacked(offered)). Verified empirically -- recomputing
+    all three seed intents from deployments/arc-testnet.json reproduces the committed hashes:
+      0xc949a634...6e8ed8  MATCH
+      0x3dd1dad0...2dafe8  MATCH
+      0xf1379158...686835  MATCH
+      INTENT_TYPEHASH = 0x91f516d8c49db0dc6f0c19637e160da3ebab539eb1d439344398a2c1e8a14488
+    This is the hash-binding implementation for plan rule 1; it is the one to lift into
+    shared/intent.ts in step 5-A.
+
+    CAVEAT (not a failure, but a step-5 blocker if missed): lib/contracts.ts:212 `hashIntent`
+    is NOT a local implementation -- it is an eth_call to IntentRegistry.hashIntent. It cannot
+    be used for snapshot hash binding (one RPC per intent, and it defeats the point of
+    checking the indexer independently). shared/intent.ts must export the pure TS version from
+    solver/src/hash.ts, and the frontend should switch to it.
+
+C3  Is there an event telling the subgraph which intents settled       ** PASS (case A) **
+    Settlement emits `Settled(address indexed proposer, bytes32[] intentHashes,
+    uint256 participantCount)`. The intent hashes are in the event, so handleSettled can flip
+    each listed Intent to SETTLED. No D2 fallback, no RPC state sweep, no contract change.
+    IntentRegistry.markSettled() is silent (no event) -- that is fine; Settled covers it.
+
+    LIMITATION for schema 3-D: `Settled` carries NO per-leg data (no receives[], no
+    netPayment[], no participants[]). The `SettlementLeg` entity in the plan CANNOT be built
+    from events as the contract stands. Options, in order of preference:
+      (a) drop SettlementLeg; keep Settlement{proposer, txHash, block, timestamp,
+          participantCount, intents[]} and leave per-leg display on the existing RPC path.
+      (b) if a redeploy happens for another reason, widen Settled to carry legs.
+    Do NOT redeploy solely for this -- it is on the plan's own cut list.
+
+C4  Does settle() need signatures                                     ** PASS **
+    settle(Intent[], Leg[]) -- no `bytes[] sigs`. Signatures are verified once in commit();
+    V0 re-binds the supplied struct to the live hash. Therefore the subgraph does NOT need to
+    store `signature`, and the `signature: Bytes!` field mentioned in plan 3-D is not needed.
+
+C5  Is ticket metadata reachable                                      ** PASS (both ways) **
+    (i) `TicketMinted` already carries eventId, sessionId, sectionId, row, seat.
+    (ii) `meta(uint256)` is a public getter returning only value types
+         (uint32, uint16, uint16, uint16, uint16, uint8) -- safe for eth_call from a handler.
+    Prefer (i): add handleTicketMinted and read the event fields directly. No eth_call in the
+    mint path, so the plan's helpers.ts try_meta() fallback becomes belt-and-braces only.
+    Redemption status: `TicketRedeemedEvt(uint256 indexed tokenId, address indexed holder)`
+    -- NOTE THE NAME. The plan (3-E, 3-F) writes `TicketRedeemed`; that is the name of a
+    Settlement *error*, not the event. The subgraph.yaml entry must be
+      TicketRedeemedEvt(indexed uint256,indexed address)
+    and the handler must take a `TicketRedeemedEvt` event type.
+
+C6  Is there an Arc Testnet deployment record              ** PASS (non-standard source) **
+    NOT in broadcast/ -- broadcast/ only holds DeployLocal.s.sol/31337. The Arc Testnet record
+    is deployments/arc-testnet.json, already close to the shape step 1 wants:
+      chainId 5042002
+      TicketNFT       0xb2490568bb27c9c38588e3b5511ee3980892cce4   block 61264501
+      Escrow          0x07ab57380db7df630fab2d3d3a1019a5a890b018   block 61264510
+      IntentRegistry  0x479b4455f494679dcdd6f6f32e93e08682deda75   block 61264518
+      Settlement      0x75872168f2d6ae13c7d9258159e59025fd9b5eae   block 61264529
+      usdc            0x3600000000000000000000000000000000000000
+      startBlock      61264501
+    Consequence: scripts/export-deployment.ts (plan 1-A) is NOT needed as written -- there is
+    no run-latest.json to parse. Step 1 reduces to: add a `subgraphUrl` field, and make
+    gen-subgraph-config read per-contract startBlock from `transactions[]` (labels
+    "deploy:TicketNFT" etc.) rather than from a `contracts.X.startBlock` shape the file does
+    not have. Either reshape the file or adapt the generator -- pick one and do it once.
+
+    EIP-712 domain: verifyingContract = IntentRegistry = 0x479b4455...deda75, chainId 5042002.
+
+    RPC discrepancy to settle before step 4: deployments/arc-testnet.json and
+    deployments/graph-studio-support-check.json use https://rpc.testnet.arc.io, while The
+    Graph networks registry lists https://rpc.testnet.arc.network and
+    https://arc-testnet.drpc.org. Both have answered; confirm which one to publish.
+
+    Prior art already in repo: deployments/graph-studio-support-check.json confirms
+    arc-testnet is in the networks registry (caip2 eip155:5042002, subgraph service
+    https://api.studio.thegraph.com/deploy) and that a third-party Arc Testnet subgraph is
+    synced with hasIndexingErrors=false. Studio indexes this chain. Creating and deploying the
+    RESHUFFLE subgraph itself is still unverified.
+
+    Also note: the plan's `Settled(indexed address,bytes32[])` example signature is WRONG for
+    this contract -- the real one has a third param. Use:
+      Settled(indexed address,bytes32[],uint256)
+
+================================================================================
+0-C  DECISION
+================================================================================
+
+C1, C2, C3, C4, C5, C6 all PASS.
+
+** NO CONTRACT CHANGE. NO REDEPLOY. NO RESEED. **
+No D1, no D2. Proceed straight to step 1 (deployment config) and step 3 (subgraph).
+The Arc Testnet addresses above are frozen and safe to bind the subgraph to.
+
+Corrections the plan must absorb before step 3:
+  1. All `contracts/` paths -> repo root.
+  2. Event name is TicketRedeemedEvt, not TicketRedeemed.
+  3. Settled signature is (indexed address, bytes32[], uint256) -- three params.
+  4. Drop `signature: Bytes!` from the Intent entity (C4).
+  5. Drop SettlementLeg, or accept it cannot be populated from events (C3).
+  6. Index TicketMinted for metadata instead of eth_call'ing meta() on first sight (C5).
+  7. Escrow emits TicketEscrowed/TicketWithdrawn carrying the depositor -- these are more
+     direct than deriving custody from Transfer. Recommend indexing Escrow as a dataSource
+     for `depositor`, and keeping Transfer for `owner`. The plan's Transfer-only derivation
+     also works (Escrow.deposit does transferFrom into the Escrow, confirmed at
+     Escrow.sol:41); using both gives a free cross-check.
+  8. Escrow does NOT implement IERC721Receiver, so a direct safeTransferFrom to it reverts.
+     Custody can therefore only begin via deposit(), which always sets depositor[] and emits.
+  9. Step 1-A's export-deployment.ts does not apply; deployments/arc-testnet.json already
+     exists in a different shape (C6).

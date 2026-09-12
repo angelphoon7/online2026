@@ -15,7 +15,7 @@ type Claim = { date: string; session: number; row: number; mints: Mint[] };
 type Journal = { claims: Record<string, Claim> };
 const directory = join(process.cwd(), '.data', 'demo-tickets');
 const filename = join(directory, `${deployment.contracts.TicketNFT.toLowerCase()}.json`);
-const network = defineChain({ id: 5042002, name: 'Arc Testnet', nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 }, rpcUrls: { default: { http: [deployment.rpc] } } });
+const network = defineChain({ id: deployment.chainId, name: 'Arc Testnet', nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 }, rpcUrls: { default: { http: [deployment.rpc] } } });
 
 export function demoTicketConfig() {
   if (process.env.DEMO_TICKETS_ENABLED === 'false' || (process.env.NODE_ENV !== 'development' && process.env.DEMO_TICKETS_ENABLED !== 'true')) {

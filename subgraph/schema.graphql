@@ -1,0 +1,89 @@
+enum IntentState {
+  LIVE
+  REVOKED
+  SETTLED
+}
+
+"""
+An issued ticket. Metadata is written once at mint and never changes; custody and redemption
+do. `escrowed`/`depositor` are derived from ERC-721 Transfer against the Escrow address —
+Escrow.deposit() pulls the NFT in with transferFrom, and the contract implements no
+IERC721Receiver, so custody can only ever begin that way.
+"""
+type Ticket @entity(immutable: false) {
+  "tokenId as a decimal string"
+  id: ID!
+  tokenId: BigInt!
+
+  eventId: Int!
+  sessionId: Int!
+  sectionId: Int!
+  row: Int!
+  seat: Int!
+
+  "Current ERC-721 owner — the Escrow address while escrowed."
+  owner: Bytes!
+  "Who placed it in escrow; null when not escrowed."
+  depositor: Bytes
+  escrowed: Boolean!
+  redeemed: Boolean!
+
+  mintedAtBlock: BigInt!
+  updatedAtBlock: BigInt!
+}
+
+"""
+A signed outcome commitment. Every matching condition lives only in the IntentCommitted
+event: IntentRegistry stores just hash -> state, and mappings cannot be enumerated on-chain.
+Reconstructing this entity is the reason an indexer is structurally required here.
+
+The field set is exactly the signed struct, so hashIntent() can be recomputed off-chain and
+checked against `id`. No signature is stored: settle() takes none, because commit() already
+verified it.
+"""
+type Intent @entity(immutable: false) {
+  "intentHash — the bare struct hash the registry keys on, not the EIP-712 digest"
+  id: Bytes!
+  owner: Bytes!
+  eventId: Int!
+
+  "Exact order as signed — the hash depends on it, so this must never be re-sorted."
+  offered: [BigInt!]!
+  "The same ids as relations, for nested custody checks in one query."
+  offeredTickets: [Ticket!]!
+
+  sessionMask: BigInt!
+  sectionMask: BigInt!
+  exactCount: Int!
+  mustShareSession: Boolean!
+  mustShareSection: Boolean!
+  mustBeAdjacent: Boolean!
+  "Signed: positive is a debit ceiling, negative is a credit floor."
+  maxNetPay: BigInt!
+  deadline: BigInt!
+  nonce: BigInt!
+
+  state: IntentState!
+  committedAtBlock: BigInt!
+  committedAtTimestamp: BigInt!
+  committedTx: Bytes!
+  closedAtBlock: BigInt
+  closedTx: Bytes
+  settlement: Settlement
+}
+
+"""
+One executed reshuffle. Settled carries the intent hashes and a participant count but no
+per-leg data, so received tickets and net payments are not reconstructable from events; a
+SettlementLeg entity would be unpopulated. See docs/graph-audit.txt, C3.
+"""
+type Settlement @entity(immutable: true) {
+  "txHash ++ logIndex"
+  id: Bytes!
+  proposer: Bytes!
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  participantCount: BigInt!
+  intents: [Intent!]!
+}

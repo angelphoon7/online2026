@@ -1,0 +1,9 @@
+▲ Next.js 16.3.4 (Turbopack)
+- Local:         http://localhost:3463
+- Network:       http://192.168.73.91:3463
+- Environments: .env
+✓ Ready in 778ms
+✓ Running next.config.ts took 73ms
+
+pool source: subgraph @ block 61652445 — 73 searchable, 0 excluded
+ GET /api/demo/budget 200 in 1360ms (next.js: 740ms, application-code: 620ms)
