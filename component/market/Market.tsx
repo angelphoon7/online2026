@@ -8,7 +8,7 @@ import taylorPoster from '@/lib/taylor_concert_poster.png';
 import { type Address, type Hex } from 'viem';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { validateNewIntentTiming, selectedClass } from '@/lib/event-schedule';
-import { getChainTimestamp, getTicketHolder } from '@/lib/chain-reads';
+import { getChainTimestamp, getTicketHolder, getChainBlockNumber } from '@/lib/chain-reads';
 import { requestTicketImports } from '@/lib/wallet-nfts';
 import { FREE_TICKETS_LABEL, WALLET_IMPORT_NOTE } from '@/lib/ui-copy';
 import { walletActionMessage } from '@/lib/wallet-errors';
@@ -26,6 +26,8 @@ import IntentBuilder from './IntentBuilder';
 import Validation from './Validation';
 import MatchingStatus from './MatchingStatus';
 import PoolDialog from './PoolDialog';
+import JudgeControls, { type BudgetChange, type Revocation } from './JudgeControls';
+import AgentDrawer from './AgentDrawer';
 import { automaticSelection, latestRequest } from '@/lib/matching-status';
 import { waitForIndexed, SubgraphLagTimeout } from '@/shared/graph';
 import { getMarketSnapshot, getIntentPool, getTicketsFor, getSettlements, getTicketsApproved, getTicketDepositor, getUSDCAllowance, getUnusedNonce, getSettlementReceipt, waitForReceipt, waitForSuccess, ticketHolder as holder } from '@/lib/chain-reads';
@@ -86,6 +88,10 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
   const searchInFlight = useRef(false);
   // Highest block the subgraph was confirmed to have indexed after one of our writes.
   const floor = useRef(0n);
+  // The intent the Agent drawer is answering about, and the chain head it is compared against.
+  const [agentOpen, setAgentOpen] = useState(false);
+  const [agentHash, setAgentHash] = useState<Hex | null>(null);
+  const [chainBlock, setChainBlock] = useState<string | null>(null);
 
   const runSolver = useCallback(async (hashes: Hex[], wholePool = false) => {
     const version = ++searchVersion.current;
@@ -93,7 +99,10 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
     setSolving(true); setSolverError('');
     try {
       if (!wholePool && (hashes.length < 2 || hashes.length > 4)) throw new Error('Select 2–4 live intents for this bounded search.');
-      const result = wholePool ? await findPoolSettlement() : await findSettlement(hashes.map(hash => ({ hash })));
+      // The floor carries into the search: after one of our writes the pool must not be
+      // searched at a block that predates it, or the solver reasons about a market in which
+      // the user's own commit or revocation has not happened.
+      const result = wholePool ? await findPoolSettlement(floor.current || undefined) : await findSettlement(hashes.map(hash => ({ hash })), floor.current || undefined);
       if (version !== searchVersion.current) return;
       setProposal(result.proposal); setEvidence(result.evidence);
     } catch (e) { if (version === searchVersion.current) { setProposal(null); setEvidence(null); setSolverError(e instanceof Error && /^(Select|Live pool exceeds)/.test(e.message) ? e.message : 'Solver unreachable. Public chain reads remain available. Retry the solver.'); } }
@@ -120,6 +129,16 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
   useEffect(() => {
     void jsonFetch<{ enabled: boolean; operator?: string }>('/api/demo/reset').then(d => { setResetEnabled(d.enabled); setOperator(d.operator ?? ''); }).catch(() => {});
   }, []);
+  // The head comes from RPC while the pool comes from the indexer; showing both is how the
+  // drawer can display lag instead of implying there is none.
+  useEffect(() => {
+    if (!agentOpen) return;
+    let cancelled = false;
+    const read = () => void getChainBlockNumber().then(value => { if (!cancelled) setChainBlock(value.toString()); }).catch(() => {});
+    read();
+    const timer = setInterval(read, 15000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [agentOpen]);
   useEffect(() => {
     let cancelled = false;
     if (account) void getTicketsApproved(account).then(value => { if (!cancelled) setApproved(value); }).catch(() => { if (!cancelled) setApproved(false); });
@@ -162,6 +181,51 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
     setTxHash(hash);
     return indexed(await waitForSuccess(hash));
   };
+  // Judge controls need no wallet: the transactions are signed server-side with the seeded
+  // participants' own keys, because revoke() is owner-only. Same busy gating as action(), so a
+  // judge cannot start one while a wallet action is mid-flight.
+  const operate = async <T,>(label: string, fn: () => Promise<T>): Promise<T> => {
+    if (activeAction.current) throw new Error('Another action is already running.');
+    activeAction.current = true; setBusy(label); setNotice(''); setTxHash(undefined);
+    try { return await fn(); }
+    finally { setBusy(''); activeAction.current = false; }
+  };
+  // Both judge controls end the same way: wait for the indexer to reach the block the change
+  // landed in, then re-read the pool at that floor. Without the wait the judge changes a
+  // condition and the pool still shows the old one, which reads as the control not working.
+  const judged = async (block: string, notice: string) => {
+    await indexed({ blockNumber: BigInt(block) });
+    await refreshWritten();
+    setProposal(null); setEvidence(null); setAutomatic(true);
+    setNotice(notice);
+  };
+  const applyJudgeBudget = (hash: Hex, usdc: number) => operate('Apply budget', async () => {
+    const change = await jsonFetch<BudgetChange>('/api/demo/budget', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ intentHash: hash, maxNetPayUsdc: usdc }),
+    });
+    setTxHash(change.commitTx);
+    // The budget lives in the hash, so the changed intent is a NEW intent. Any selection
+    // naming the old hash has to follow it, or the next bounded search asks about an intent
+    // that is now revoked.
+    setSelected(current => current.map(h => (equal(h, change.oldHash) ? change.newHash : h)));
+    // The Agent drawer must follow too: after this the old hash is revoked, and a diagnosis of
+    // it would answer about an intent that no longer exists.
+    setAgentHash(current => (equal(current, change.oldHash) ? change.newHash : current));
+    await judged(change.commitBlock, `Budget changed on-chain. The intent is now ${change.newHash.slice(0, 10)}… with a signed limit of ${usdc} USDC.`);
+    return change;
+  });
+  const revokeJudgeIntent = (hash: Hex) => operate('Revoke participant', async () => {
+    const result = await jsonFetch<Revocation>('/api/demo/revoke', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ intentHash: hash }),
+    });
+    setTxHash(result.revokeTx);
+    setSelected(current => current.filter(h => !equal(h, result.intentHash)));
+    setAgentHash(current => (equal(current, result.intentHash) ? null : current));
+    await judged(result.revokeBlock, 'Intent revoked on-chain. It is out of the pool, and any reshuffle that needed it is no longer available.');
+    return result;
+  });
   // The read that follows a write. Separate from refresh() so the periodic poll and the retry
   // button stay unfloored — they are not reading back a transaction of ours.
   const refreshWritten = () => refresh(true, floor.current || undefined);
@@ -259,7 +323,7 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
     try {
       let hashes = proposal?.legs.map(leg => leg.intentHash) ?? selected;
       if (malicious === 'adjacency') hashes = rejectionDemo.control.proposal.legs.map(l => l.intentHash as Hex);
-      const fresh = await findSettlement(hashes.map(hash => ({ hash })));
+      const fresh = await findSettlement(hashes.map(hash => ({ hash })), floor.current || undefined);
       if (!fresh.proposal || !fresh.evidence.simulationResult?.success) {
         setProposal(fresh.proposal); setEvidence(fresh.evidence);
         throw new Error(fresh.evidence.simulationResult?.error ?? EMPTY_RESULT);
@@ -367,7 +431,7 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
         <div className="network-note">USDC pays for both settlement and native gas on Arc. You don’t need a second token.</div>
         <div className="workspace-tools"><button className="secondary pool-toggle" aria-haspopup="dialog" aria-expanded={poolOpen} onClick={() => setPoolOpen(true)}>Intent pool ({live.length})</button><p className="quiet">See what others offer and want. Opening the list is optional; matching runs automatically.</p></div>
         <PoolDialog open={poolOpen} onClose={() => setPoolOpen(false)}>
-          <p className="mono">{live.length} {POOL_LABEL}</p><p className="quiet">{POOL_NOTE}</p><div className="pool-list">{live.map((i, index) => <article key={i.hash} className="pool-row"><label><input type="checkbox" checked={selected.includes(i.hash)} disabled={disabled} onChange={() => selectIntent(i.hash)} /><span>{walletLabel(i.owner)} <span className="mono">/ Request {index + 1}</span></span></label><p>{condition(restoreIntent(i))}</p><details className="wallet-details"><summary>Wallet and transaction details</summary><a className="hash" href={`${EXPLORER}/address/${i.owner}`} target="_blank" rel="noreferrer">{i.owner}</a><a className="mono" href={`${EXPLORER}/tx/${i.commitTx}`} target="_blank" rel="noreferrer">Commit {i.commitTx.slice(0, 10)}… ↗</a></details>{equal(i.owner, account) && <button disabled={disabled} onClick={() => void action('Revoke intent', async address => { await track(await revokeIntent(address, i.hash)); await refreshWritten(); setProposal(null); setEvidence(null); })}>Revoke my intent</button>}</article>)}</div>{!live.length && <p>No live requests yet. Submit an intent to join the pool.</p>}{!!market.hashMismatched.length && <p className="quiet" role="status">{market.hashMismatched.length} indexed {market.hashMismatched.length === 1 ? 'request is' : 'requests are'} excluded from this pool: the indexed fields do not re-hash to the id they were committed under, so they are not shown. <span className="mono">{market.hashMismatched.map(h => `${h.slice(0, 10)}…`).join(' ')}</span></p>}
+          <p className="mono">{live.length} {POOL_LABEL}</p><p className="quiet">{POOL_NOTE}</p><div className="pool-list">{live.map((i, index) => <article key={i.hash} className="pool-row"><label><input type="checkbox" checked={selected.includes(i.hash)} disabled={disabled} onChange={() => selectIntent(i.hash)} /><span>{walletLabel(i.owner)} <span className="mono">/ Request {index + 1}</span></span></label><p>{condition(restoreIntent(i))}</p><details className="wallet-details"><summary>Wallet and transaction details</summary><a className="hash" href={`${EXPLORER}/address/${i.owner}`} target="_blank" rel="noreferrer">{i.owner}</a><a className="mono" href={`${EXPLORER}/tx/${i.commitTx}`} target="_blank" rel="noreferrer">Commit {i.commitTx.slice(0, 10)}… ↗</a></details><button className="text-button" onClick={() => { setAgentHash(i.hash); setAgentOpen(true); setPoolOpen(false); }}>Why no match?</button>{equal(i.owner, account) && <button disabled={disabled} onClick={() => void action('Revoke intent', async address => { await track(await revokeIntent(address, i.hash)); await refreshWritten(); setProposal(null); setEvidence(null); })}>Revoke my intent</button>}</article>)}</div>{!live.length && <p>No live requests yet. Submit an intent to join the pool.</p>}{!!market.hashMismatched.length && <p className="quiet" role="status">{market.hashMismatched.length} indexed {market.hashMismatched.length === 1 ? 'request is' : 'requests are'} excluded from this pool: the indexed fields do not re-hash to the id they were committed under, so they are not shown. <span className="mono">{market.hashMismatched.map(h => `${h.slice(0, 10)}…`).join(' ')}</span></p>}
           <div className="pool-dialog-actions">{!automatic && <><button className="secondary" disabled={disabled} onClick={() => { setAutomatic(true); setPoolOpen(false); }}>Resume automatic matching</button><button className="primary" disabled={disabled || solving || selected.length < 2 || selected.length > 4} onClick={() => { void runSolver(selected); setPoolOpen(false); }}>Search selected requests ({selected.length}/4)</button></>}</div>
         </PoolDialog>
         {(notice || busy) && <div className="activity" role="status"><strong>{busy || 'Activity'}</strong><p>{notice || 'Complete the request in your wallet. The original action continues automatically.'}</p>{txHash && <a className="hash" href={`${EXPLORER}/tx/${txHash}`} target="_blank" rel="noreferrer">{txHash} ↗</a>}</div>}
@@ -376,11 +440,12 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
           {request && <MatchingStatus request={request} selected={selected} solving={solving} error={readError || solverError} proposal={proposal} evidence={evidence} automatic={automatic} resume={() => setAutomatic(true)} busy={disabled} />}
           <IntentBuilder onConnect={async () => { await wallet.connect(); await refresh(true); }} connectionError={wallet.error} market={market} account={account} approved={approved} busy={disabled} onCustody={custody} onDepositSelected={depositSelected} onSign={sign} onDemo={claimDemo} onApprove={() => action('Approve tickets', async address => { await track(await approveNFTsForEscrow(address)); setApproved(true); })} />
           <section className="workspace-panel matching-panel"><div className="panel-heading"><h2>Matching</h2><span className="eyebrow">{automatic ? 'Automatic search' : 'Manual search'}</span></div>
-            <div className="solver-actions"><button className="secondary" disabled={solving || disabled || (automatic ? live.length < 2 : selected.length < 2 || selected.length > 4)} onClick={() => void runSolver(selected, automatic)}>{solving ? 'Reading and searching…' : automatic ? 'Check all intents' : 'Run solver'} <span className="mono">({automatic ? `${live.length} in pool` : `${selected.length}/4`})</span></button>{resetEnabled && equal(account, operator) && <button className="text-button" disabled={disabled} onClick={() => void reset()}>Reset demo</button>}</div>
+            <div className="solver-actions"><button className="secondary" disabled={solving || disabled || (automatic ? live.length < 2 : selected.length < 2 || selected.length > 4)} onClick={() => void runSolver(selected, automatic)}>{solving ? 'Reading and searching…' : automatic ? 'Check all intents' : 'Run solver'} <span className="mono">({automatic ? `${live.length} in pool` : `${selected.length}/4`})</span></button><button className="text-button" onClick={() => { setAgentHash(current => current ?? request?.hash ?? live[0]?.hash ?? null); setAgentOpen(true); }}>Ask the agent</button>{resetEnabled && equal(account, operator) && <button className="text-button" disabled={disabled} onClick={() => void reset()}>Reset demo</button>}</div>
             <p className="quiet">{automatic ? 'Automatic matching searches all live event intents. You do not need to choose participants. Each candidate contains two to four participants; public-state refreshes retry the search while this page is open.' : 'Manual search is on. Choose 2–4 requests, then Run solver.'}</p>{!automatic && !request && <button className="text-button" disabled={disabled} onClick={() => setAutomatic(true)}>Resume automatic matching</button>}
             {solving && <p className="quiet" role="status">Checking current intents and ticket availability...</p>}{evidence?.pool && <details className="search-details" open={searchDetailsOpen} onToggle={event => setSearchDetailsOpen(event.currentTarget.open)}><summary>Search details and evidence</summary><p className="quiet mono">{evidence.pool.liveIntents} live requests / {evidence.pool.searchableIntents} within ticket-count limits / {evidence.pool.excludedIntents} excluded with reasons. Maximum 4 participants per candidate, 100 candidates, 2-second search budget. <a href={`/api/evidence/${evidence.id}`} target="_blank" rel="noreferrer">View search evidence and exclusion reasons</a></p></details>}{evidence?.search && !solving && <p className="quiet">{evidence.search.termination === 'complete' ? 'Search completed within the configured bounds.' : 'Search budget reached. Further combinations may remain unchecked.'}</p>}{solverError && <p role="alert">{solverError}</p>}{evidence && !proposal && !solving && <div className="matching-empty" role="status"><h3>Waiting for a match</h3><p>{EMPTY_RESULT}. New requests may make a swap possible; you can wait or try another selection.</p>{evidence.candidatesExcluded.some(i => /capacity|allowance/i.test(i.reason)) && <p>Insufficient USDC balance or allowance for a candidate. Update spending capacity before settling.</p>}</div>}
             {proposal && <div className="candidate"><p className="eyebrow">{solving ? 'Rechecking previous match' : evidence?.simulationResult?.success ? 'Candidate found - awaiting settlement' : 'Candidate needs rechecking'}</p><p className="quiet">{solving ? 'The previous result stays visible while current conditions are checked. Settlement is unavailable until this search finishes.' : evidence?.simulationResult?.success ? 'A candidate is not a completed swap. Propose and settle submits it for on-chain validation.' : 'This candidate has not passed simulation and cannot be submitted yet.'}</p><div className="panel-heading"><strong>{settlementShape(proposal)}</strong><span className="mono">{proposal.candidatesFound} candidates</span></div><details className="search-details" open={matchDetailsOpen} onToggle={event => setMatchDetailsOpen(event.currentTarget.open)}><summary>Why this match?</summary><p className="quiet">{RANKING_RULE}. Ties: fewer participants, then ordered intent hashes. Source block <span className="mono">{evidence?.source.blockNumber}</span>.</p></details><table className="net-table"><thead><tr><th>Participant</th><th>USDC net</th></tr></thead><tbody>{proposal.legs.map(l => <tr key={l.intentHash}><td><a href={`${EXPLORER}/address/${l.owner}`} title={l.owner} target="_blank" rel="noreferrer">{walletLabel(l.owner)}</a></td><td className="mono">{l.netPayment > 0n ? '−' : l.netPayment < 0n ? '+' : ''}{formatUSDC(l.netPayment < 0n ? -l.netPayment : l.netPayment)}</td></tr>)}</tbody><tfoot><tr><td>Σ</td><td className="mono">{formatUSDC(proposal.legs.reduce((n, l) => n - l.netPayment, 0n))}</td></tr></tfoot></table></div>}
             <button className="primary full" disabled={disabled || solving || !proposal || !evidence?.simulationResult?.success} onClick={() => void settle()}>Propose and settle <span>↗</span></button><p className="quiet">When a match is ready, click Propose and settle and confirm the transaction in your wallet. The proposer pays gas in USDC. Participants do not sign their intents again. Your swap is complete only after the receipt confirms success.</p>
+            <JudgeControls busy={disabled} label={walletLabel} onBudget={applyJudgeBudget} onRevoke={revokeJudgeIntent} />
             <details className="dishonest"><summary>Submit dishonest proposal ▾</summary><p>Intentionally submit a failing transaction. The proposer pays its gas in USDC. The adjacency case uses the separate live rejection-demo intents.</p><select value={attack} onChange={e => setAttack(e.target.value as Attack)}><option value="siphon">Siphon 20 USDC</option><option value="adjacency">Non-adjacent seats</option><option value="count">Wrong count</option></select><button className="secondary" disabled={disabled || solving || !proposal} onClick={() => void settle(attack)}>Submit dishonest proposal</button></details>
           </section>
         </div>
@@ -396,6 +461,7 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
         <ul>{replacementIds.map(id => <li key={id} className="mono">Token ID: {id}</li>)}</ul>
         <button className="secondary" disabled={disabled} onClick={() => void action('Add replacement tickets to wallet', address => importReplacementTickets(receipt, address))}>Add to wallet</button>
       </section>}<div className="redeem-list">{receipt.participants.filter(p => equal(p.owner, account)).flatMap(p => p.receives).map(id => { const t = tickets.find(t => t.tokenId === id); return <div key={id}><span className="mono">Ticket #{id}</span>{t?.status === 1 ? <span className="badge">USED</span> : <button disabled={disabled || !t || !equal(t.owner, account)} onClick={() => void action('Redeem', async address => { await track(await redeemTicket(address, BigInt(id))); await refreshWritten(); })}>Redeem</button>}</div>; })}</div><p className="quiet">Redeem marks your ticket used permanently. Only its current holder can redeem it.</p></section>}
+      <AgentDrawer open={agentOpen} onClose={() => setAgentOpen(false)} intentHash={agentHash} chainBlock={chainBlock} indexingBlock={indexingBlock} label={walletLabel} />
     </main><footer className="site-footer"><span className="wordmark">RESHUFFLE ↔</span><p>Swap tickets without selling first.<br />Every condition you sign is checked on-chain.</p><span className="mono">ARC TESTNET / USDC</span></footer>
   </div>;
 }

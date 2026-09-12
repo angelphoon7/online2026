@@ -33,16 +33,11 @@ export type GraphPool = {
   source: PoolSource;
 };
 
-/**
- * Build the searchable pool from a subgraph snapshot.
- *
- * `minBlock` is the freshness floor: pass the block of a transaction just sent so the pool
- * cannot predate it.
- */
-export async function graphPool(minBlock = 0n): Promise<GraphPool> {
-  const snapshot = await getPoolSnapshot({ minBlock });
+export type Excluded = { intentHashes: Hex[]; reason: string };
 
-  const excluded = snapshot.excluded.map((e) => ({
+/** Name every exclusion the snapshot recorded, then apply the published per-intent bound. */
+function searchable(snapshot: Snapshot): { committed: Map<Hex, Intent>; excluded: Excluded[] } {
+  const excluded: Excluded[] = snapshot.excluded.map((e) => ({
     intentHashes: [e.id],
     reason: e.detail ? `${EXCLUSION_TEXT[e.reason]} (${e.detail})` : EXCLUSION_TEXT[e.reason],
   }));
@@ -60,6 +55,26 @@ export async function graphPool(minBlock = 0n): Promise<GraphPool> {
     }
     committed.set(intent.hash, intent);
   }
+  return { committed, excluded };
+}
+
+const source = (snapshot: Snapshot, liveIntents: number, excluded: Excluded[]): PoolSource => ({
+  liveIntents,
+  excluded,
+  kind: 'subgraph',
+  snapshotBlock: snapshot.block.toString(),
+  endpoint: process.env.SUBGRAPH_URL ?? null,
+});
+
+/**
+ * Build the whole searchable pool from a subgraph snapshot.
+ *
+ * `minBlock` is the freshness floor: pass the block of a transaction just sent so the pool
+ * cannot predate it.
+ */
+export async function graphPool(minBlock = 0n): Promise<GraphPool> {
+  const snapshot = await getPoolSnapshot({ minBlock });
+  const { committed, excluded } = searchable(snapshot);
 
   if (committed.size > MAX_POOL_INTENTS) {
     // Never silently search a prefix of an oversized pool.
@@ -71,16 +86,45 @@ export async function graphPool(minBlock = 0n): Promise<GraphPool> {
     `pool source: subgraph @ block ${snapshot.block} — ${committed.size} searchable, ${excluded.length} excluded`
   );
 
+  return { snapshot, committed, source: source(snapshot, snapshot.intents.length, excluded) };
+}
+
+/**
+ * Discovery for a bounded search over specific hashes — the checkbox path in the UI.
+ *
+ * Two differences from graphPool, both because the request names its own intents:
+ *
+ *   - No pool-size guard. A search over four named hashes does not become invalid because
+ *     some other part of the pool grew past the service limit.
+ *   - Exclusions are filtered to the requested hashes, so the evidence explains THIS request
+ *     rather than padding it with reasons about intents nobody asked about.
+ *
+ * A requested hash the snapshot does not carry is simply absent from the map; solveOnChain
+ * then falls back to log discovery for it, so a search cannot fail merely because the indexer
+ * has not caught up with a commit.
+ */
+export async function graphIntents(hashes: Hex[], minBlock = 0n): Promise<GraphPool> {
+  const snapshot = await getPoolSnapshot({ minBlock });
+  const { committed, excluded } = searchable(snapshot);
+  const requested = new Set(hashes.map((h) => h.toLowerCase()));
+
+  const selected = new Map<Hex, Intent>();
+  for (const [hash, intent] of committed) {
+    if (requested.has(hash.toLowerCase())) selected.set(hash, intent);
+  }
+
+  console.log(
+    `pool source: subgraph @ block ${snapshot.block} — ${selected.size} of ${hashes.length} requested hashes discovered`
+  );
+
   return {
     snapshot,
-    committed,
-    source: {
-      liveIntents: snapshot.intents.length,
-      excluded,
-      kind: 'subgraph',
-      snapshotBlock: snapshot.block.toString(),
-      endpoint: process.env.SUBGRAPH_URL ?? null,
-    },
+    committed: selected,
+    source: source(
+      snapshot,
+      snapshot.intents.length,
+      excluded.filter((e) => e.intentHashes.some((h) => requested.has(h.toLowerCase())))
+    ),
   };
 }
 
@@ -91,15 +135,10 @@ export async function solveLivePoolFromGraph(minBlock = 0n) {
   return solveOnChain([...committed.keys()].sort(), committed, source);
 }
 
-// The agent's what-if (plan 7-E) is NOT implemented here, deliberately.
+// The agent's what-if (plan 7-E) lives in server/solve-hypothetical.ts, not here.
 //
-// A hypothetical intent cannot flow through solveOnChain: that path rejects any intent whose
-// hash does not match the key it is presented under, and solve() then filters on registry
-// state being LIVE. A varied intent is neither committed nor LIVE, so it would be discarded
-// rather than searched — the function would look like it worked and silently return the
-// unmodified result.
-//
-// Doing it correctly means assembling a ChainState directly (ticket metadata and custody from
-// the snapshot, USDC capacity from RPC) and calling solve() with the hypothetical marked LIVE,
-// never building a transaction for it. That belongs with whatIf in step 7, where the
-// submittable:false contract is enforced end to end.
+// It cannot reuse solveOnChain: that path binds every intent to the hash it is presented under
+// and then filters on registry state being LIVE. A varied intent is neither committed nor
+// LIVE, so it would be discarded and the call would look like it worked while returning the
+// unmodified result. solveHypothetical assembles ChainState from a snapshot instead, marks the
+// hypothetical LIVE in memory only, and returns submittable: false with no calldata anywhere.

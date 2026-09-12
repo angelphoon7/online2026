@@ -29,11 +29,15 @@ export async function solvePoolSnapshot(snapshot: MarketSnapshot) {
 
 let cached: { key: string; until: number; result: Awaited<ReturnType<typeof solvePoolSnapshot>> } | undefined;
 let pending: { key: string; result: Promise<Awaited<ReturnType<typeof solvePoolSnapshot>>> } | undefined;
-export async function solveLivePool() {
+export async function solveLivePool(minBlock = 0n) {
   // Prefer subgraph discovery: it carries a snapshot block and named exclusions, both of
   // which land in the evidence. The MarketSnapshot path stays for local Anvil.
-  if (readSource() === 'graph') return solveLivePoolFromGraph();
-  const snapshot = await marketSnapshot();
+  //
+  // minBlock is the freshness floor (trust rule 2). It is deliberately not part of the cache
+  // key below: the RPC path keys on the snapshot's own block, which already satisfies a floor
+  // or does not, and a floored request must never be answered from a pre-floor cache entry.
+  if (readSource() === 'graph') return solveLivePoolFromGraph(minBlock);
+  const snapshot = await marketSnapshot(false, minBlock);
   const { addresses } = chainConfig();
   const key = `${addresses.IntentRegistry}:${snapshot.blockNumber}:${snapshot.intents.map(i => `${i.hash}:${i.state}:${i.expired}`).sort().join(',')}`;
   if (cached?.key === key && cached.until > Date.now()) return cached.result;

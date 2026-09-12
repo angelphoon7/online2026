@@ -1,5 +1,5 @@
 export { hashIntent, hashOffered, INTENT_TYPEHASH } from './hash.js';
-export { validateSettlement } from './validate.js';
+export { validateSettlement, checkReceivedBundle } from './validate.js';
 export { search, computeMinGrossPayment, findAssignments, combinations, DEFAULT_CONFIG } from './search.js';
 export { rankCandidates } from './rank.js';
 export { buildEvidence, addSimulationResult, addTransactionHash } from './evidence.js';

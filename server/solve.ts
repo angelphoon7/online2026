@@ -16,6 +16,21 @@ export function parseSolveRequest(body: unknown): Hex[] {
   return normalized.sort();
 }
 
+/**
+ * The freshness floor for discovery (trust rule 2): the block of a transaction the caller just
+ * sent, so the pool it searches cannot predate the caller's own action. Optional — a plain
+ * search carries no floor, and 0 means "whatever the indexer has".
+ */
+export function parseMinBlock(body: unknown): bigint {
+  const value = (body as { minBlock?: unknown })?.minBlock;
+  if (value === undefined || value === null || value === '') return 0n;
+  if (typeof value !== 'string' && typeof value !== 'number') throw new Error('minBlock must be a block number');
+  let block: bigint;
+  try { block = BigInt(value); } catch { throw new Error('minBlock must be a block number'); }
+  if (block < 0n || block > 10n ** 12n) throw new Error('minBlock is outside the plausible block range');
+  return block;
+}
+
 export type PoolSource = {
   liveIntents: number;
   excluded: { intentHashes: Hex[]; reason: string }[];
@@ -32,14 +47,19 @@ export async function solveOnChain(hashes: Hex[], committed?: ReadonlyMap<Hex, I
   const block = await client.getBlock();
   const event = parseAbiItem('event IntentCommitted(bytes32 indexed intentHash,address indexed owner,uint32 indexed eventId,uint256[] offered,uint256 sessionMask,uint256 sectionMask,uint8 exactCount,bool mustShareSession,bool mustShareSection,bool mustBeAdjacent,int256 maxNetPay,uint64 deadline,uint256 nonce)');
   const discovered = new Map<Hex, Intent>();
+  // A supplied map may be partial — subgraph discovery has a freshness floor but no guarantee
+  // of having seen a commit from seconds ago. Hash binding still applies to everything it did
+  // supply: an intent that does not hash to the key it is presented under is never searched.
   if (committed) for (const hash of hashes) {
     const intent = committed.get(hash);
-    if (!intent || hashIntent(intent) !== hash) throw new Error('Committed intent hash mismatch');
+    if (!intent) continue;
+    if (hashIntent(intent) !== hash) throw new Error('Committed intent hash mismatch');
     discovered.set(hash, intent);
   }
-  // Fixed deployment scope, selected hashes, and bounded log range per call.
+  // Fixed deployment scope, selected hashes, and bounded log range per call. Reached only for
+  // hashes discovery did not supply, so a complete subgraph pool scans no logs at all.
   let pages = 0;
-  for (let from = startBlock; !committed && from <= block.number; from += 10000n) {
+  for (let from = startBlock; discovered.size < hashes.length && from <= block.number; from += 10000n) {
     if (++pages > 100) throw new Error('Discovery range exceeds demo cap; configure an indexed discovery adapter');
     const toBlock = from + 9999n < block.number ? from + 9999n : block.number;
     const logs = await client.getLogs({ address: addresses.IntentRegistry, event, args: { intentHash: hashes }, fromBlock: from, toBlock, strict: true });

@@ -111,6 +111,67 @@ export type BudgetChange = {
   nonce: string;
 };
 
+export type Revocation = {
+  revokeTx: Hex;
+  /** The block the UI passes to waitForIndexed before re-reading the pool. */
+  revokeBlock: string;
+  intentHash: Hex;
+  owner: Address;
+};
+
+/**
+ * Revoke a live intent on-chain, as its owner.
+ *
+ * The other half of the judge controls: a judge removes a participant from the pool and
+ * watches a reshuffle that depended on them stop being available. Like a budget change this
+ * has to be a real transaction — revoke() is owner-only, so the server signs with that
+ * participant's own key, and the subgraph learns about it from IntentRevoked.
+ *
+ * Withdrawing tickets is deliberately NOT done here. Revocation and custody are separate:
+ * withdrawing does not revoke, and V2 would catch a withdrawn ticket at settlement anyway.
+ * Conflating them would make the control demonstrate two different checks at once.
+ */
+export async function revokeAsJudge(intentHash: Hex): Promise<Revocation> {
+  if (!judgeControlsEnabled()) {
+    throw new JudgeControlError('Judge controls are disabled on this server.', 403);
+  }
+
+  const { client, addresses } = chainConfig();
+  const { committed, snapshot } = await graphPool();
+
+  const current = committed.get(intentHash.toLowerCase() as Hex) ?? committed.get(intentHash);
+  if (!current) {
+    throw new JudgeControlError(
+      `Intent ${intentHash} is not live in the pool at block ${snapshot.block}.`,
+      404
+    );
+  }
+
+  const owner = current.owner.toLowerCase() as Address;
+  const account = participantKeys().get(owner);
+  if (!account) {
+    throw new JudgeControlError(
+      `The server holds no key for ${owner}; only seeded demo participants can be changed.`,
+      403
+    );
+  }
+
+  const wallet = createWalletClient({ account, chain: network, transport: http(process.env.ARC_RPC ?? DEPLOYMENT.rpc) });
+  const revokeTx = await wallet.writeContract({
+    address: addresses.IntentRegistry,
+    abi: abi('IntentRegistry'),
+    functionName: 'revoke',
+    args: [intentHash],
+    gas: 200000n,
+  });
+  const receipt = await client.waitForTransactionReceipt({ hash: revokeTx });
+  if (receipt.status !== 'success') {
+    throw new JudgeControlError(`Revoke reverted (${revokeTx}); the intent is still live.`, 502);
+  }
+
+  return { revokeTx, revokeBlock: receipt.blockNumber.toString(), intentHash, owner };
+}
+
 /**
  * Revoke `intentHash` and commit the same conditions with a different maxNetPay.
  *

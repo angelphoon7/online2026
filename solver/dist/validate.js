@@ -165,6 +165,19 @@ function checkConservation(intents, legs) {
     }
     return null;
 }
+/**
+ * V5 for one candidate bundle, without a whole settlement.
+ *
+ * The agent's supply funnel needs to ask "would this intent accept these tickets?" - masks,
+ * exactCount, cohesion and adjacency - about bundles that are not part of any proposal. It
+ * calls THIS, the same predicate settlement validation uses, rather than carrying a second
+ * implementation: two copies of the adjacency rule would eventually disagree, and a diagnosis
+ * that contradicts the contract is worse than no diagnosis.
+ */
+export function checkReceivedBundle(intent, receives, state) {
+    const intentHash = hashIntent(intent);
+    return checkPredicate(intentHash, intent, { intentHash, receives, netPayment: 0n }, state);
+}
 function checkPredicate(intentHash, intent, leg, state) {
     if (leg.receives.length !== intent.exactCount) {
         return {

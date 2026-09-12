@@ -11,8 +11,6 @@ export const dynamic = 'force-dynamic';
 // POST revokes one and commits the same conditions with a different maxNetPay, on-chain, and
 //      returns commitBlock so the caller can waitForIndexed before re-reading the pool.
 
-const USDC_DECIMALS = 6n;
-
 export async function GET() {
   if (!judgeControlsEnabled()) {
     return Response.json({ enabled: false, intents: [] }, { headers: { 'Cache-Control': 'no-store' } });

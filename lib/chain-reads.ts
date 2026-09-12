@@ -43,6 +43,10 @@ export const getSettlementReceipt = (hash: Hex) => readJson<ChainReceipt>(`/api/
 export const getTicketsApproved = (address: Address) => getPublicClient().readContract({ address: CONTRACTS.ticketNFT, abi: erc721Abi, functionName: 'isApprovedForAll', args: [address, CONTRACTS.escrow] });
 export const getTicketHolder = (tokenId: bigint) => getPublicClient().readContract({ address: CONTRACTS.ticketNFT, abi: erc721Abi, functionName: 'ownerOf', args: [tokenId] });
 export const getChainTimestamp = async () => (await getPublicClient().getBlock()).timestamp;
+// The RPC's head, shown beside the indexed block so indexer lag is visible rather than
+// implied. Never used as a freshness floor: a receipt names the block a transaction is
+// actually in, while a load-balanced public endpoint can report a head that is behind.
+export const getChainBlockNumber = () => getPublicClient().getBlockNumber();
 export const getTicketDepositor = (tokenId: bigint) => getPublicClient().readContract({ address: CONTRACTS.escrow, abi: escrowAbi, functionName: 'depositor', args: [tokenId] });
 export const getUSDCAllowance = (address: Address) => getPublicClient().readContract({ address: CONTRACTS.usdc, abi: erc20Abi, functionName: 'allowance', args: [address, CONTRACTS.settlement] });
 export async function getUnusedNonce(address: Address, minimum: bigint) {

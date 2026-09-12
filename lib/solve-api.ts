@@ -24,12 +24,17 @@ export interface SettlementProposal {
   candidatesFound: number;
   reason: string;
 }
-export async function findSettlement(intents: { hash: Hex }[]): Promise<{ proposal: SettlementProposal | null; evidence: SolveEvidence }> {
-  const response = await fetch('/api/solve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ intentHashes: intents.map(i => i.hash) }) });
+// minBlock is the freshness floor (trust rule 2): the block of a transaction just sent, so the
+// pool the backend searches cannot predate it. Omitted for an ordinary search, where any
+// indexed block is a truthful answer.
+const body = (fields: Record<string, unknown>, minBlock?: bigint) =>
+  JSON.stringify(minBlock && minBlock > 0n ? { ...fields, minBlock: minBlock.toString() } : fields);
+export async function findSettlement(intents: { hash: Hex }[], minBlock?: bigint): Promise<{ proposal: SettlementProposal | null; evidence: SolveEvidence }> {
+  const response = await fetch('/api/solve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body({ intentHashes: intents.map(i => i.hash) }, minBlock) });
   return parseSolveResponse(response);
 }
-export async function findPoolSettlement(): Promise<{ proposal: SettlementProposal | null; evidence: SolveEvidence }> {
-  return parseSolveResponse(await fetch('/api/solve/pool', { method: 'POST' }));
+export async function findPoolSettlement(minBlock?: bigint): Promise<{ proposal: SettlementProposal | null; evidence: SolveEvidence }> {
+  return parseSolveResponse(await fetch('/api/solve/pool', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body({}, minBlock) }));
 }
 async function parseSolveResponse(response: Response): Promise<{ proposal: SettlementProposal | null; evidence: SolveEvidence }> {
   const data = await response.json();

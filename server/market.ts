@@ -21,7 +21,15 @@ let pending: Promise<MarketSnapshot> | undefined;
 
 export async function marketSnapshot(fresh = false, minBlock = 0n): Promise<MarketSnapshot> {
   if (readSource() === 'graph') return marketSnapshotFromGraph(minBlock);
-  return marketSnapshotFromRpc(fresh);
+  // Direct reads have no indexer to fall behind, but the cache below can still hold a snapshot
+  // that predates the caller's floor, so a floored read bypasses it. Answering below the floor
+  // would defeat the point: the caller asked not to be shown a market older than its own
+  // transaction, and silently ignoring that is worse than reporting the lag.
+  const snapshot = await marketSnapshotFromRpc(fresh || minBlock > 0n);
+  if (minBlock > 0n && BigInt(snapshot.blockNumber) < minBlock) {
+    throw new Error(`ChainLag: read block ${snapshot.blockNumber}, needed ${minBlock}`);
+  }
+  return snapshot;
 }
 
 async function marketSnapshotFromRpc(fresh = false): Promise<MarketSnapshot> {
