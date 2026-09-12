@@ -307,6 +307,11 @@ it does not change event or exact ticket count. Hypotheticals are marked `submit
 and omit calldata. Acting on a change requires a newly signed commitment. The drawer's
 Evidence panel exposes the conditions tried and commitment transaction links.
 
+Grouping evidence identifies how many acceptable tickets were checked; a capped search is
+reported as incomplete. What-if inputs are validated at runtime. Candidate commitment links
+are bound to individual intent hashes, preserving separate commits from the same wallet.
+[Supply, input-validation and commitment-evidence fixes](docs/GRAPH_AGENT_INTEGRITY.md).
+
 Each solver run is bounded by **4 participants, 100 candidates and a 2,000 ms timeout**.
 The real settlement service accepts at most four offered/received tickets per intent and
 256 searchable live intents. Ranking minimizes gross cash moved among candidates found,
@@ -348,8 +353,11 @@ npx tsc --noEmit
 The Step 7-A / D follow-up passed **63 Graph/agent tests** and the production build, with
 [real Graph/RPC block traces](docs/checks/graph-diagnosis-block.json).
 The Step 7-G / H follow-up passed **95 Graph/agent tests** and the production build.
-The Step 7-I follow-up adds **22 request-control tests**; the current **128-test Graph/agent
-suite** and production build pass. [Captured output](docs/checks/graph-agent-requests-tests.txt).
+The Step 7-I follow-up added **22 request-control tests**; its **128-test Graph/agent
+suite** and production build passed. [Captured output](docs/checks/graph-agent-requests-tests.txt).
+The later supply/input/commitment-evidence follow-up passes **186 Graph/agent checks**,
+**3 browser tests**, and the production build.
+[Regression details and output](docs/GRAPH_AGENT_INTEGRITY.md#verification).
 `npm run agent:check:model -- --preflight` checks local key presence without network access;
 `npm run agent:check:model` runs the four live provider cases after configuration. Mocked
 SDK tests and no-model responses do not count as live provider acceptance.

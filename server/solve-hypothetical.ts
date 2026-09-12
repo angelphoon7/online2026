@@ -6,6 +6,7 @@ import type { Snapshot } from '@/shared/graph';
 import { chainConfig } from './chain';
 import { SEARCH_CONFIG } from './solve';
 import type { RequestBudget } from './agent/request-budget';
+import type { CounterpartyIntent } from '@/lib/agent-evidence';
 
 // The solver's hypothetical mode — step 6-C of docs/RESHUFFLE_GRAPH_PLAN.md, used by the
 // agent's what_if in step 7.
@@ -105,6 +106,7 @@ export type HypotheticalResult = {
   termination: 'complete' | 'timeout' | 'candidate-limit';
   /** Other participants in the reshuffle found, if one was. */
   counterparties: Address[];
+  counterpartyIntents: CounterpartyIntent[];
   participantCount: number | null;
   /** Signed, in contract units: what the hypothetical owner would pay (+) or receive (-). */
   targetNetPay: string | null;
@@ -178,6 +180,15 @@ export async function solveHypothetical(
   // A candidate that does not include the hypothetical answers a different question: it says
   // some other participants could settle among themselves, not that this variation helps.
   const found = !!chosen && !!leg;
+  const committed = new Map(pool.map(i => [i.hash.toLowerCase(), i]));
+  const counterpartyIntents: CounterpartyIntent[] = found ? chosen!.intents
+    .filter(i => hashIntent(i).toLowerCase() !== hypotheticalHash.toLowerCase())
+    .map(i => {
+      const hash = hashIntent(i);
+      const original = committed.get(hash.toLowerCase());
+      if (!original) throw new Error('CandidateIntentEvidenceMismatch: candidate intent is absent from the pinned snapshot.');
+      return { intentHash: original.hash, owner: original.owner.toLowerCase() as Address, committedTx: original.committedTx };
+    }) : [];
 
   return {
     submittable: false,
@@ -185,11 +196,8 @@ export async function solveHypothetical(
     snapshotBlock: snapshot.block.toString(),
     bounds: SEARCH_CONFIG,
     termination: result.evidence.search?.termination ?? 'complete',
-    counterparties: found
-      ? chosen!.intents
-          .filter((i) => hashIntent(i).toLowerCase() !== hypotheticalHash.toLowerCase())
-          .map((i) => i.owner.toLowerCase() as Address)
-      : [],
+    counterparties: counterpartyIntents.map(i => i.owner),
+    counterpartyIntents,
     participantCount: found ? chosen!.intents.length : null,
     targetNetPay: leg ? leg.netPayment.toString() : null,
     receives: leg ? leg.receives.map((id) => id.toString()) : [],

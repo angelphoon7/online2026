@@ -13,9 +13,9 @@ const otherHash = `0x${'2'.repeat(64)}`;
 const counterparty = `0x${'a'.repeat(40)}` as const;
 const baseline: Evidence = {
   block, timestamp: '1789173368', intent: hash, status: 'SETTLEABLE',
-  settleable: { participantCount: 2, counterparties: [counterparty], targetNetPay: '12500001', receives: ['7'] },
+  settleable: { participantCount: 2, counterparties: [counterparty], counterpartyIntents: [], targetNetPay: '12500001', receives: ['7'] },
   relaxations: [], bounds: { ...SEARCH_CONFIG, budgetCapUsdc: 100, groupSearchCap: 40 },
-  counterpartyTx: {}, runtimeMs: 0,
+  counterpartyIntents: [], runtimeMs: 0,
 };
 const entry = (output: Evidence = baseline): ToolLogEntry => ({ tool: 'diagnose_intent', input: { intentHash: output.intent }, output });
 const log = [entry()];
@@ -79,7 +79,7 @@ test('ticket identifiers and historical closing metadata do not replace the snap
 
 test('hypothetical limit, actual payment and received tickets cannot be interchanged', () => {
   const result: WhatIfResult = { block, intent: hash, submittable: false, changes: { maxNetPayUsdc: 30 },
-    found: true, participantCount: 2, counterparties: [counterparty], targetNetPay: '12500001', receives: ['7'], bounds: SEARCH_CONFIG };
+    found: true, participantCount: 2, counterparties: [counterparty], counterpartyIntents: [], targetNetPay: '12500001', receives: ['7'], bounds: SEARCH_CONFIG };
   const source = { tool: 'what_if', input: {}, output: result };
   const answer = answerOptions(source, block, hash)[0];
   assert.match(answer, /ceiling of 30 USDC/);

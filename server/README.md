@@ -29,11 +29,18 @@ npm.cmd run start -- --port 3101
 
 Both Agent APIs apply bounded sliding-window quotas: ask 12/minute and diagnose 30/minute
 per client per instance. Excess requests return `429 AgentRateLimited` with `Retry-After`.
+
 Their overall deadlines are 60 and 30 seconds respectively, including body/Graph/RPC/model
 reads, solver work and fallback; timeout returns `504 AgentRequestTimeout`. Cancellation is
 propagated downstream. By default callers share an unidentified bucket; only enable
 `AGENT_TRUST_PROXY=true` behind an ingress that overwrites `X-Forwarded-For`. Multiple
 instances need shared rate-limit enforcement. [Step 7-I configuration and tests](../docs/GRAPH_7I.md).
+
+Agent candidate evidence uses `counterpartyIntents: { intentHash, owner, committedTx }[]`
+instead of the earlier owner-keyed `counterpartyTx` map. Each candidate retains its actual
+commitments even when one wallet has several intents. Supply grouping reports its inspected
+subset, and what-if tool inputs undergo strict runtime validation before capacity reads.
+[API shape, behavior and regression cases](../docs/GRAPH_AGENT_INTEGRITY.md).
 
 Only hashes are accepted as explicit solver inputs; client-supplied budgets and ownership claims cannot change signed conditions. Explicit requests support 2–4 distinct committed intents. The pool service accepts up to 256 searchable live intents, forming candidates of at most four participants and four offered/received tickets per intent. Each search has 100-candidate and 2-second limits. Assignment recursion also checks the deadline. RPC mode scans bounded log pages; Graph discovery is the demo path. There is no claim about unbounded market search.
 

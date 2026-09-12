@@ -7,6 +7,7 @@ import { getIntentById } from '@/shared/graph';
 import { SEARCH_CONFIG } from '../solve';
 import { readCapacity, requireCapacityBlock, solveHypothetical, type Capacity, type HypotheticalResult } from '../solve-hypothetical';
 import type { RequestBudget } from './request-budget';
+import type { CounterpartyIntent } from '@/lib/agent-evidence';
 
 // Deterministic diagnosis - step 7-D of docs/RESHUFFLE_GRAPH_PLAN.md.
 //
@@ -39,6 +40,7 @@ export type Relaxation = {
   change: string;
   found: boolean;
   counterparties: Address[];
+  counterpartyIntents: CounterpartyIntent[];
   participantCount: number | null;
   /** Signed, in contract units. */
   targetNetPay: string | null;
@@ -71,6 +73,7 @@ export type Evidence = {
   /** Present for SETTLEABLE: a candidate containing this intent exists right now. */
   settleable?: {
     counterparties: Address[];
+    counterpartyIntents: CounterpartyIntent[];
     participantCount: number;
     targetNetPay: string;
     receives: string[];
@@ -81,14 +84,18 @@ export type Evidence = {
     /** The first stage whose count reached zero, if any. */
     firstZero: FunnelStage['stage'] | null;
     /**
-     * The stage that actually blocks this intent - the first zero, or 'cohesiveGroup' when
+     * A proven supply shortfall - the first zero, or 'cohesiveGroup' when
      * acceptable tickets exist but cannot be grouped into the requested count. Distinct from
      * firstZero, because "only one adjacent seat is available and you asked for two" blocks
-     * the intent without any stage reaching zero.
+     * the intent without any stage reaching zero. An incomplete grouping search cannot
+     * establish a shortfall across all acceptable tickets.
      */
     blockedAt: FunnelStage['stage'] | null;
+    /** Largest group found among groupSearched tickets, up to the requested count. */
     largestGroup: number;
     need: number;
+    groupSearched: number;
+    groupCandidates: number;
     /** True when the candidate set was capped before the group search. */
     truncated: boolean;
   };
@@ -99,8 +106,8 @@ export type Evidence = {
   };
   relaxations: Relaxation[];
   bounds: typeof SEARCH_CONFIG & { budgetCapUsdc: number; groupSearchCap: number };
-  /** address -> the transaction that committed their intent, for explorer links. */
-  counterpartyTx: Record<string, string>;
+  /** Union of the actual baseline/relaxation candidates' commitments, keyed by intent identity. */
+  counterpartyIntents: CounterpartyIntent[];
   runtimeMs: number;
 };
 
@@ -182,13 +189,15 @@ async function supplyFunnel(intent: LiveIntent, snapshot: Snapshot, state: Chain
   const largestGroup = await largestAcceptableGroup(intent, searched, state, budget);
   stages.push({ stage: 'cohesiveGroup', remaining: largestGroup });
 
-  const firstZero = stages.find((s) => s.remaining === 0)?.stage ?? null;
+  const firstZero = stages.find(s => s.remaining === 0 && (s.stage !== 'cohesiveGroup' || !truncated))?.stage ?? null;
   return {
     stages,
     firstZero,
-    blockedAt: firstZero ?? (largestGroup < intent.exactCount ? 'cohesiveGroup' : null),
+    blockedAt: firstZero ?? (!truncated && largestGroup < intent.exactCount ? 'cohesiveGroup' : null),
     largestGroup,
     need: intent.exactCount,
+    groupSearched: searched.length,
+    groupCandidates: pool.length,
     truncated,
   };
 }
@@ -235,6 +244,7 @@ const asRelaxation = (change: string, result: HypotheticalResult): Relaxation =>
   change,
   found: result.found,
   counterparties: result.counterparties,
+  counterpartyIntents: result.counterpartyIntents,
   participantCount: result.participantCount,
   targetNetPay: result.targetNetPay,
   receives: result.receives,
@@ -257,7 +267,7 @@ export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: C
     intent: intentHash,
     relaxations: [] as Relaxation[],
     bounds,
-    counterpartyTx: {} as Record<string, string>,
+    counterpartyIntents: [] as CounterpartyIntent[],
   };
   const done = (evidence: Omit<Evidence, 'runtimeMs'>): Evidence => {
     budget?.checkpoint();
@@ -287,9 +297,6 @@ export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: C
     return done({ ...base, status: 'UNKNOWN' });
   }
 
-  const counterpartyTx: Record<string, string> = {};
-  for (const other of snapshot.intents) counterpartyTx[lower(other.owner)] = other.committedTx;
-
   // Read payment capacity once and reuse it for the baseline and every relaxation. V8 is part
   // of validity, so a relaxation that ignored it could promise a settlement the contract
   // would reject.
@@ -306,10 +313,11 @@ export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: C
   if (baseline.found) {
     return done({
       ...base,
-      counterpartyTx,
+      counterpartyIntents: baseline.counterpartyIntents,
       status: 'SETTLEABLE',
       settleable: {
         counterparties: baseline.counterparties,
+        counterpartyIntents: baseline.counterpartyIntents,
         participantCount: baseline.participantCount!,
         targetNetPay: baseline.targetNetPay!,
         receives: baseline.receives,
@@ -359,7 +367,9 @@ export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: C
     );
   }
 
-  return done({ ...base, counterpartyTx, status: 'NOT_FOUND_WITHIN_BOUND', supply, demand, relaxations });
+  const counterpartyIntents = [...new Map(relaxations.flatMap(r => r.counterpartyIntents)
+    .map(i => [i.intentHash.toLowerCase(), i])).values()];
+  return done({ ...base, counterpartyIntents, status: 'NOT_FOUND_WITHIN_BOUND', supply, demand, relaxations });
 }
 
 /** The relaxation a judge should be shown first: one that worked, cheapest for this owner. */

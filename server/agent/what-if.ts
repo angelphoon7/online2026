@@ -5,6 +5,7 @@ import type { Snapshot } from '@/shared/graph';
 import { solveHypothetical, type Capacity } from '../solve-hypothetical';
 import { SEARCH_CONFIG } from '../solve';
 import type { RequestBudget } from './request-budget';
+import type { CounterpartyIntent } from '@/lib/agent-evidence';
 
 // what_if - step 7-E of docs/RESHUFFLE_GRAPH_PLAN.md.
 //
@@ -47,25 +48,59 @@ export function toContractUnits(usdc: number): bigint {
   return BigInt(Math.round(usdc * Number(USDC)));
 }
 
-function classIds(values: number[] | undefined, label: string): number[] {
-  if (!values) return [];
+function classIds(values: unknown, label: string): number[] {
+  if (!Array.isArray(values) || values.length > 256) {
+    throw new WhatIfError(`${label} must be an array of at most 256 class ids.`);
+  }
   for (const value of values) {
     if (!Number.isInteger(value) || value < 0 || value > MAX_CLASS_ID) {
       throw new WhatIfError(`${label} ids must be whole numbers between 0 and ${MAX_CLASS_ID}.`);
     }
   }
-  return values;
+  return [...new Set(values)] as number[];
+}
+
+const BOOLEAN_FIELDS = ['mustBeAdjacent', 'mustShareSection', 'mustShareSession'] as const;
+const CLASS_FIELDS = ['addSections', 'addSessions'] as const;
+const FIELDS = new Set<string>(['maxNetPayUsdc', ...BOOLEAN_FIELDS, ...CLASS_FIELDS]);
+
+/** Model tool schemas describe inputs; this runtime boundary enforces them. */
+export function parseWhatIfChanges(input: unknown): WhatIfChanges {
+  if (!input || typeof input !== 'object' || Array.isArray(input)
+    || ![Object.prototype, null].includes(Object.getPrototypeOf(input))) {
+    throw new WhatIfError('changes must be an object containing only supported fields.');
+  }
+  const raw = input as Record<string, unknown>;
+  for (const field of Object.keys(raw)) {
+    if (!FIELDS.has(field)) throw new WhatIfError(`Unsupported change field: ${field}.`);
+  }
+  const parsed: WhatIfChanges = {};
+  if (Object.hasOwn(raw, 'maxNetPayUsdc')) {
+    if (typeof raw.maxNetPayUsdc !== 'number') throw new WhatIfError('maxNetPayUsdc must be a finite number.');
+    toContractUnits(raw.maxNetPayUsdc);
+    parsed.maxNetPayUsdc = raw.maxNetPayUsdc;
+  }
+  for (const field of BOOLEAN_FIELDS) {
+    if (!Object.hasOwn(raw, field)) continue;
+    if (typeof raw[field] !== 'boolean') throw new WhatIfError(`${field} must be a boolean: true or false.`);
+    parsed[field] = raw[field];
+  }
+  for (const field of CLASS_FIELDS) {
+    if (Object.hasOwn(raw, field)) parsed[field] = classIds(raw[field], field);
+  }
+  return parsed;
 }
 
 /** Apply the requested changes to a committed intent, rejecting anything not offered. */
-export function applyChanges(intent: Intent, changes: WhatIfChanges): Intent {
+export function applyChanges(intent: Intent, input: unknown): Intent {
+  const changes = parseWhatIfChanges(input);
   const next: Intent = { ...intent };
   if (changes.maxNetPayUsdc !== undefined) next.maxNetPay = toContractUnits(changes.maxNetPayUsdc);
   if (changes.mustBeAdjacent !== undefined) next.mustBeAdjacent = changes.mustBeAdjacent;
   if (changes.mustShareSection !== undefined) next.mustShareSection = changes.mustShareSection;
   if (changes.mustShareSession !== undefined) next.mustShareSession = changes.mustShareSession;
-  for (const section of classIds(changes.addSections, 'Section')) next.sectionMask |= 1n << BigInt(section);
-  for (const session of classIds(changes.addSessions, 'Session')) next.sessionMask |= 1n << BigInt(session);
+  for (const section of changes.addSections ?? []) next.sectionMask |= 1n << BigInt(section);
+  for (const session of changes.addSessions ?? []) next.sessionMask |= 1n << BigInt(session);
 
   // mustBeAdjacent requires exactCount >= 2, enforced at commit. A hypothetical that turns it
   // on below that describes an intent the registry would refuse, so refuse it here too rather
@@ -84,6 +119,7 @@ export type WhatIfResult = {
   intent: string;
   changes: WhatIfChanges;
   counterparties: string[];
+  counterpartyIntents: CounterpartyIntent[];
   participantCount: number | null;
   targetNetPay: string | null;
   receives: string[];
@@ -94,11 +130,12 @@ export type WhatIfResult = {
 export async function whatIf(
   snapshot: Snapshot,
   intentHash: Hex,
-  changes: WhatIfChanges,
+  input: unknown,
   capacity?: Capacity,
   budget?: RequestBudget
 ): Promise<WhatIfResult> {
   budget?.checkpoint();
+  const changes = parseWhatIfChanges(input);
   const target = intentHash.toLowerCase();
   const intent = snapshot.intents.find((i) => i.hash.toLowerCase() === target);
   const shell = {
@@ -109,7 +146,7 @@ export async function whatIf(
     changes,
   };
   if (!intent) {
-    return { ...shell, found: false, counterparties: [], participantCount: null, targetNetPay: null, receives: [], unavailable: 'NOT_LIVE_AT_THIS_BLOCK' };
+    return { ...shell, found: false, counterparties: [], counterpartyIntents: [], participantCount: null, targetNetPay: null, receives: [], unavailable: 'NOT_LIVE_AT_THIS_BLOCK' };
   }
 
   const varied = applyChanges({ ...intent }, changes);
@@ -119,6 +156,7 @@ export async function whatIf(
     ...shell,
     found: result.found,
     counterparties: result.counterparties,
+    counterpartyIntents: result.counterpartyIntents,
     participantCount: result.participantCount,
     targetNetPay: result.targetNetPay,
     receives: result.receives,

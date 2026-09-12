@@ -129,11 +129,11 @@ test('a budget raise the committed limit already permits is not recommended', ()
     intent: '0xdead' as Hex,
     status: 'NOT_FOUND_WITHIN_BOUND' as const,
     relaxations: [
-      { change: 'maxNetPay->cap', found: true, counterparties: [B], participantCount: 2,
+      { change: 'maxNetPay->cap', found: true, counterparties: [B], counterpartyIntents: [], participantCount: 2,
         targetNetPay: '0', receives: ['3'], binding: false },
     ],
     bounds: { maxParticipants: 4, maxCandidates: 100, timeoutMs: 2000, budgetCapUsdc: 100, groupSearchCap: 40 },
-    counterpartyTx: {},
+    counterpartyIntents: [],
     runtimeMs: 1,
   };
 

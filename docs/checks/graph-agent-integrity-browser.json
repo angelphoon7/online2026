@@ -1,0 +1,50 @@
+{
+  "checkedAt": "2026-09-12T20:42:07.016Z",
+  "mockedUpstreams": true,
+  "transactionsSent": 0,
+  "modelRequests": 0,
+  "stats": {
+    "startTime": "2026-09-12T20:38:42.262Z",
+    "duration": 167568.095,
+    "expected": 3,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "checks": [
+    {
+      "name": "receipt floor survives errors, stale responses, agent hash changes and reload",
+      "expectedStatus": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "durationMs": 14678
+        }
+      ]
+    },
+    {
+      "name": "partial budget failure retains revoke receipt and waits before showing the pool",
+      "expectedStatus": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "durationMs": 13260
+        }
+      ]
+    },
+    {
+      "name": "drawer shows the selected intent, bounded grouping and separate commitments for one wallet",
+      "expectedStatus": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "durationMs": 7342
+        }
+      ]
+    }
+  ],
+  "cleanup": "All assertions passed. The sandbox blocked Windows process inspection during teardown; the verified test-only Next server on port 3215 was stopped with elevated cleanup permission, and the runner exited 0."
+}

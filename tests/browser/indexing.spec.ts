@@ -6,7 +6,7 @@ const hash = (digit: string) => `0x${digit.repeat(64)}`;
 const A = hash('1'), B = hash('2'), NEW = hash('3'), REVOKE = hash('a'), COMMIT = hash('b');
 const owner = (digit: string) => `0x${digit.repeat(40)}`;
 const intent = (id: string, who: string, state = 1) => ({ hash: id, owner: who, offered: [], eventId: 1, sessionMask: '1', sectionMask: '1', exactCount: 2, mustShareSession: true, mustShareSection: true, mustBeAdjacent: true, maxNetPay: '1000000', deadline: '2000000000', nonce: '1', commitTx: hash('c'), state, expired: false });
-const diagnosis = (id: string, block: number) => ({ block: String(block), intent: id, status: 'SETTLEABLE', relaxations: [], bounds: { maxParticipants: 4, maxCandidates: 100, timeoutMs: 2000, budgetCapUsdc: 40 }, counterpartyTx: {}, runtimeMs: 1 });
+const diagnosis = (id: string, block: number) => ({ block: String(block), intent: id, status: 'SETTLEABLE', relaxations: [], bounds: { maxParticipants: 4, maxCandidates: 100, timeoutMs: 2000, budgetCapUsdc: 40 }, counterpartyIntents: [], runtimeMs: 1 });
 
 async function fixture(page: Page, partial = false) {
   const control = { block: 100, graphBlock: 100, graphError: false, changed: false, staleMarket: false, holdMarket: false, holdAsk: false, oldMarket: null as Route | null, oldAsk: null as Route | null, reads: [] as string[] };
@@ -101,4 +101,42 @@ test('partial budget failure retains revoke receipt and waits before showing the
   await expect(page.locator('.workspace-stack')).toBeVisible();
   await page.getByRole('button', { name: /Intent pool \(/ }).click();
   await expect(page.locator(`.pool-list a[href$="${intent(A, owner('1')).commitTx}"]`)).toHaveCount(1); // only B remains live
+});
+
+test('drawer shows the selected intent, bounded grouping and separate commitments for one wallet', async ({ page }) => {
+  await fixture(page);
+  const refs = [
+    { intentHash: hash('4'), owner: owner('2'), committedTx: hash('e') },
+    { intentHash: hash('5'), owner: owner('2'), committedTx: hash('f') },
+  ];
+  await page.route('**/api/agent/ask', async route => route.fulfill({ json: {
+    block: '100', model: 'fixture', guardFallback: false, answer: 'At Arc Testnet block #100, grouping searched a subset.',
+    evidence: [
+      { tool: 'diagnose_intent', output: { ...diagnosis(B, 100), status: 'EXCLUDED', exclusion: { reason: 'EXPIRED', detail: 'Another intent expired' } } },
+      { tool: 'diagnose_intent', output: {
+        ...diagnosis(A, 100), status: 'NOT_FOUND_WITHIN_BOUND', counterpartyIntents: refs,
+        supply: { stages: [{ stage: 'cohesiveGroup', remaining: 1 }], firstZero: null, blockedAt: null, largestGroup: 1, need: 2, truncated: true, groupSearched: 40, groupCandidates: 42 },
+        relaxations: [{ change: 'maxNetPay->cap', found: true, counterparties: refs.map(r => r.owner), counterpartyIntents: refs, participantCount: 3, targetNetPay: '2000000' }],
+      } },
+      { tool: 'what_if', output: { block: '100', intent: A, submittable: false, found: true, participantCount: 2, targetNetPay: '1000000',
+        counterpartyIntents: [{ intentHash: hash('6'), owner: owner('2'), committedTx: hash('d') }] } },
+    ],
+  } }));
+  await page.getByRole('button', { name: 'Ask the agent', exact: true }).click();
+  const drawer = page.getByRole('dialog', { name: 'Settlement agent' });
+  await expect(drawer.getByText(/BLOCK #100/)).toBeVisible();
+  await drawer.getByRole('button', { name: "Why can't this intent settle?", exact: true }).click();
+  await expect(drawer.getByText('At Arc Testnet block #100, grouping searched a subset.')).toBeVisible();
+  await drawer.getByText('Evidence', { exact: true }).click();
+  await expect(drawer.getByText('Largest group found in searched subset')).toBeVisible();
+  await expect(drawer.getByText(/Grouping checked 40 of 42/)).toBeVisible();
+  await expect(drawer.getByText('Another intent expired')).toHaveCount(0);
+  for (const ref of refs) {
+    const link = drawer.locator(`a[href$="${ref.committedTx}"]`);
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAttribute('title', `Intent ${ref.intentHash} · owner ${ref.owner} · commit ${ref.committedTx}`);
+  }
+  await expect(drawer.getByText('What-if candidate commitments')).toBeVisible();
+  await expect(drawer.locator(`a[href$="${hash('d')}"]`)).toBeVisible();
+  await expect(drawer.locator('.agent-parties a')).toHaveCount(3);
 });

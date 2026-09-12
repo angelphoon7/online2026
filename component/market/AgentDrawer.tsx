@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { Hex } from 'viem';
 import { EXPLORER, indexingMessage, INDEXING_PENDING, INDEXING_RETRY } from '@/lib/ui-copy';
 import { MarketFreshness, requireSnapshotBlock } from '@/lib/market-freshness';
+import type { CounterpartyIntent } from '@/lib/agent-evidence';
+import type { WhatIfResult } from '@/server/agent/what-if';
 
 // The Agent drawer - step 8 of docs/RESHUFFLE_GRAPH_PLAN.md.
 //
@@ -25,6 +27,7 @@ type Relaxation = {
   change: string;
   found: boolean;
   counterparties: string[];
+  counterpartyIntents: CounterpartyIntent[];
   participantCount: number | null;
   targetNetPay: string | null;
 };
@@ -35,7 +38,7 @@ type Evidence = {
   status: 'SETTLEABLE' | 'NOT_FOUND_WITHIN_BOUND' | 'EXCLUDED' | 'CLOSED' | 'UNKNOWN';
   exclusion?: { reason: string; detail?: string };
   closed?: { state: string; tx: string | null };
-  settleable?: { counterparties: string[]; participantCount: number; targetNetPay: string };
+  settleable?: { counterparties: string[]; counterpartyIntents: CounterpartyIntent[]; participantCount: number; targetNetPay: string };
   supply?: {
     stages: { stage: string; remaining: number }[];
     firstZero: string | null;
@@ -43,11 +46,13 @@ type Evidence = {
     largestGroup: number;
     need: number;
     truncated: boolean;
+    groupSearched: number;
+    groupCandidates: number;
   };
   demand?: { perTicket: { ticket: string; acceptingIntents: number }[]; unwanted: string[] };
   relaxations: Relaxation[];
   bounds: { maxParticipants: number; maxCandidates: number; timeoutMs: number; budgetCapUsdc: number };
-  counterpartyTx: Record<string, string>;
+  counterpartyIntents: CounterpartyIntent[];
   runtimeMs: number;
 };
 
@@ -105,6 +110,15 @@ const changeLabel = (change: string) =>
   CHANGE_LABEL[change] ??
   change.replace(/^addSection=(\d+)$/, 'Also accept section $1').replace(/^addSession=(\d+)$/, 'Also accept session $1');
 
+function CommitmentLinks({ intents, label }: { intents: CounterpartyIntent[]; label: Props['label'] }) {
+  return <div className="agent-parties">{intents.map(intent => (
+    <a key={intent.intentHash} className="hash" href={`${EXPLORER}/tx/${intent.committedTx}`} target="_blank" rel="noreferrer"
+      title={`Intent ${intent.intentHash} · owner ${intent.owner} · commit ${intent.committedTx}`}>
+      {label(intent.owner)} · intent {intent.intentHash.slice(0, 12)} · commit {intent.committedTx.slice(0, 12)} open
+    </a>
+  ))}</div>;
+}
+
 export default function AgentDrawer({ open, onClose, intentHash, chainBlock, freshness, label }: Props) {
   const { floor, revision, indexingBlock, error: indexingError } = useSyncExternalStore(freshness.subscribe, freshness.getSnapshot, freshness.getServerSnapshot);
   const active = useRef<AbortController | null>(null);
@@ -122,6 +136,12 @@ export default function AgentDrawer({ open, onClose, intentHash, chainBlock, fre
     tagged && tagged.revision === revision && indexingBlock === null && BigInt(tagged.data.block) >= floor && intentHash && tagged.hash.toLowerCase() === intentHash.toLowerCase() ? tagged.data : null;
   const shown = forThis(answer);
   const evidence = forThis(held);
+  const hypotheticalCandidates = (shown?.evidence ?? []).flatMap((entry, index) => {
+    const result = entry.output as WhatIfResult | null;
+    return entry.tool === 'what_if' && result?.submittable === false && result.found
+      && result.block === shown?.block && result.intent.toLowerCase() === intentHash?.toLowerCase()
+      ? [{ result, index }] : [];
+  });
   const current = phase && phase.revision === revision && indexingBlock === null && intentHash && phase.hash.toLowerCase() === intentHash.toLowerCase() ? phase : null;
   const state = current?.value ?? 'idle';
   const error = current?.error ?? '';
@@ -185,7 +205,8 @@ export default function AgentDrawer({ open, onClose, intentHash, chainBlock, fre
       if (!freshness.canAnswer(revision, body.block)) return;
       // The answer's own tool results are the authoritative evidence for it; prefer them over
       // the diagnosis fetched before the question was asked.
-      const diagnosis = (body as AskResponse).evidence.find((entry) => entry.tool === 'diagnose_intent');
+      const diagnosis = (body as AskResponse).evidence.find(entry => entry.tool === 'diagnose_intent'
+        && (entry.output as Evidence)?.intent?.toLowerCase() === hash.toLowerCase());
       if (diagnosis && (diagnosis.output as Evidence).block !== body.block) throw new Error('Answer and evidence refer to different blocks. Retry the question.');
       setAnswer({ hash, revision, data: body as AskResponse });
       setPhase({ hash, revision, value: 'answered' });
@@ -255,19 +276,21 @@ export default function AgentDrawer({ open, onClose, intentHash, chainBlock, fre
 
         {evidence.closed && <p className="quiet">No longer live: <span className="mono">{evidence.closed.state}</span>{evidence.closed.tx && <> · <a className="hash" href={`${EXPLORER}/tx/${evidence.closed.tx}`} target="_blank" rel="noreferrer">{evidence.closed.tx.slice(0, 12)} open</a></>}</p>}
 
-        {evidence.settleable && <p className="quiet">A reshuffle exists now: {evidence.settleable.participantCount} participants, this intent {signedUsdc(evidence.settleable.targetNetPay)}.</p>}
+        {evidence.settleable && <><p className="quiet">A reshuffle exists at this block: {evidence.settleable.participantCount} participants, this intent {signedUsdc(evidence.settleable.targetNetPay)}.</p>
+          <CommitmentLinks intents={evidence.settleable.counterpartyIntents ?? []} label={label} />
+        </>}
 
         {evidence.supply && <>
           <h4>Do the tickets it wants exist?</h4>
           <table className="agent-table"><tbody>
             {evidence.supply.stages.map(stage => (
               <tr key={stage.stage} className={evidence.supply!.blockedAt === stage.stage ? 'agent-blocked' : undefined}>
-                <th scope="row">{STAGE_LABEL[stage.stage] ?? stage.stage}</th>
+                <th scope="row">{stage.stage === 'cohesiveGroup' && evidence.supply!.truncated ? 'Largest group found in searched subset' : STAGE_LABEL[stage.stage] ?? stage.stage}</th>
                 <td className="mono">{stage.remaining}</td>
               </tr>
             ))}
           </tbody></table>
-          <p className="quiet">Asks for exactly {evidence.supply.need}. This is a necessary condition only: tickets existing does not mean a whole reshuffle exists.{evidence.supply.truncated ? ' The candidate set was capped before the group search.' : ''}</p>
+          <p className="quiet">Asks for exactly {evidence.supply.need}. This is a necessary condition only: tickets existing does not mean a whole reshuffle exists.{evidence.supply.truncated ? ` Grouping checked ${evidence.supply.groupSearched} of ${evidence.supply.groupCandidates} acceptable tickets. The remaining tickets were not checked for grouping.` : ''}</p>
         </>}
 
         {evidence.demand && !!evidence.demand.perTicket.length && <>
@@ -293,6 +316,7 @@ export default function AgentDrawer({ open, onClose, intentHash, chainBlock, fre
                   {relaxation.found && relaxation.targetNetPay !== null
                     ? `${relaxation.participantCount} participants · ${signedUsdc(relaxation.targetNetPay)}`
                     : ''}
+                  {relaxation.found && <CommitmentLinks intents={relaxation.counterpartyIntents ?? []} label={label} />}
                 </td>
               </tr>
             ))}
@@ -300,16 +324,11 @@ export default function AgentDrawer({ open, onClose, intentHash, chainBlock, fre
           <p className="quiet">Hypothetical. Each was re-run through the solver at this block; acting on one means signing a new intent, and nothing moves until then. Only single changes were tried.</p>
         </>}
 
-        {!!Object.keys(evidence.counterpartyTx).length && <>
-          <h4>Counterparties in the pool</h4>
-          <div className="agent-parties">
-            {Object.entries(evidence.counterpartyTx).map(([address, tx]) => (
-              <a key={address} className="hash" href={`${EXPLORER}/tx/${tx}`} target="_blank" rel="noreferrer">
-                {label(address)} · commit {tx.slice(0, 12)} open
-              </a>
-            ))}
-          </div>
-        </>}
+        {hypotheticalCandidates.map(({ result, index }) => <div key={index}>
+          <h4>What-if candidate commitments</h4>
+          <p className="quiet">{result.participantCount} participants · {signedUsdc(result.targetNetPay!)}. This candidate uses hypothetical conditions; applying them requires a new signed intent.</p>
+          <CommitmentLinks intents={result.counterpartyIntents ?? []} label={label} />
+        </div>)}
 
         <p className="quiet mono">
           Search bound: {evidence.bounds.maxParticipants} participants, {evidence.bounds.maxCandidates} candidates,
