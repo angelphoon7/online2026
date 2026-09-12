@@ -68,6 +68,10 @@ For broader wishlist inventory, `npm run demo:inventory -- --broadcast` prepares
 For seeded one-, two- and three-ticket requests with varied session/section conditions, see
 [demo replacement inventory and matching checks](docs/DEMO_REPLACEMENT_INVENTORY.md).
 
+For three distinct users whose selected requests require a circle, use the
+[one- and three-ticket circle groups](docs/CIRCLE_DEMO.md). Each group has verified pair
+rejections and a successful three-user simulation; settlement remains for the live demo.
+
 For asynchronous judging, host the Next.js frontend **and backend** and share its `/demo` URL. Seed before publishing the public manifest. A shared on-chain round can be consumed once; reseed and redeploy the updated manifest for the next round on hosts with immutable files. See [setup, recovery and hosting details](docs/DEMO_SETUP.md).
 
 ## The Graph
@@ -241,7 +245,8 @@ GET http://localhost:3000/api/agent/diagnose/<committed-intent-hash>?minBlock=<r
 
 Use a full hash from the live pool. The endpoint returns named status, evidence, bounds,
 runtime and a deterministic sentence. `/api/agent/ask` also falls back to deterministic
-diagnosis when no model key is set. Free-form tool selection and narration require the key.
+diagnosis when no model key is set. Model tool selection requires the key; final wording is
+selected from complete passages rendered from tool evidence.
 Each question selects one indexed block N. USDC balances and allowances are read with
 `blockNumber: N`; closed-intent lookup uses exact `block: { number: N }`. Cached capacity
 must belong to the same N across the baseline and every what-if. Unavailable historical
@@ -281,7 +286,10 @@ testnet signatures do not authorize intents on a different chain or registry.
 ### Agent
 
 One indexed pool snapshot → deterministic supply/demand checks and solver reruns → optional
-Claude tool selection and narration. Tools are `diagnose_intent`, `what_if` and `pool_overview`.
+Claude tool selection and evidence-bound answers. Tools are `diagnose_intent`, `what_if` and `pool_overview`.
+The guard requires `At Arc Testnet block #N, ` at the start and matches complete evidence
+passages, binding amounts to their direction and context. Model call IDs and token usage
+are returned for inspection. [Step 7-G / H implementation and acceptance](docs/GRAPH_7G_7H.md).
 The agent module has no signing capability. Enabled testnet judge controls are a separate
 server feature that can sign for controlled participants.
 
@@ -307,12 +315,14 @@ not measured performance claims. [Recording guide](docs/DEMO_GRAPH.md).
   Retry starts a new diagnosis; missing history is never replaced with `latest`.
 - Snapshot lists are capped at 1,000 with no pagination yet. Large markets need pagination
   before the entire pool can be claimed as searched.
-- The narration guard rejects banned wording, unsupported full identifiers and a missing
-  expected block reference. It does not validate every amount/ticket reference or reject
-  all extra block references. Evidence JSON is the inspectable result, not proof of every
-  sentence the model might generate.
+- The narration guard accepts only complete supported passages derived from tool outputs;
+  it does not validate unrestricted prose. Correct paraphrases fall back to deterministic
+  diagnosis. Guard acceptance does not prove tool selection is relevant or remove the
+  underlying indexer/solver bounds.
 - Without a model key, ask returns a baseline diagnosis rather than interpreting arbitrary
-  what-if questions. Live narration and the hosted demo need separate verification.
+  what-if questions. Live Anthropic acceptance is currently **BLOCKED** by missing credentials
+  and pending approval to send the public evidence; the [record](docs/checks/graph-agent-model.json)
+  contains zero model calls. The hosted demo still needs separate verification.
 - Adjacency is enforceable for issuer-native tickets with consecutive seat numbering;
   external ticket systems are outside this demo.
 
@@ -329,6 +339,10 @@ npx tsc --noEmit
 
 The Step 7-A / D follow-up passed **63 Graph/agent tests** and the production build, with
 [real Graph/RPC block traces](docs/checks/graph-diagnosis-block.json).
+The Step 7-G / H follow-up passed **95 Graph/agent tests** and the production build.
+`npm run agent:check:model -- --preflight` checks local key presence without network access;
+`npm run agent:check:model` runs the four live provider cases after configuration. Mocked
+SDK tests and no-model responses do not count as live provider acceptance.
 The earlier Step 11 run passed 32 Solidity tests, 32 Graph/agent checks, 29 solver tests, 11 deployment checks,
 36 manifest checks and 1,719 live parity checks. [Review scope and remaining gaps](docs/STEP_11_REVIEW.md).
 To rebuild the subgraph, install its dependencies with `npm --prefix subgraph ci`, then run

@@ -73,16 +73,20 @@ it does not close the budget-write, browser-recording or Studio full-status chec
    mismatched reuse is rejected. Unavailable historical reads fail rather than substituting
    newer state; pruned Graph history is distinguished from indexing lag.
    [Implementation, 63 passing tests and real request traces](GRAPH_7A_7D.md).
-2. **Narration guard is partial.** `checkAnswer` requires the expected block somewhere in
-   the text, so it can also accept additional inconsistent block references. It checks full
-   identifiers and banned words, not all amounts, ticket IDs or causal claims. Passing guard
-   tests does not establish full evidence entailment.
+2. **Resolved for supported passages in Step 7-G / H (12 September 2026).** The guard now
+   requires the exact opening and rejects conflicting blocks. It matches complete
+   evidence-rendered passages, including amounts, payment direction, counts and hypothetical
+   qualifications. It does not certify arbitrary prose or tool relevance. [95 passing
+   tests, implementation and remaining live-provider requirement](GRAPH_7G_7H.md).
 3. **Large-pool completeness is bounded.** The snapshot query caps each list at 1,000 and
    does not paginate or detect every possible truncation. The service's 256-intent search
    cap is a separate bound. Do not describe discovery as unbounded.
 4. **No live-model run is established by this review.** The configured default model exists
    in [Anthropic's model documentation](https://platform.claude.com/docs/en/models/sonnet-5/whats-new-sonnet-5),
    but account access, hosted key configuration and narration still need an end-to-end check.
+   Step 7-G / H added `npm run agent:check:model`; its local preflight records `BLOCKED`
+   because the key is missing. Automatic review also requires approval to send public
+   intent/address evidence to Anthropic. No SDK fixture is presented as a live provider run.
    The ask route has a process-local rate limit; diagnose has no equivalent rate limit and
    the full agent request has no explicit overall deadline. Review before public hosting.
 5. **Step 10 evidence needs real writes and UI capture.** The rehearsal is explicitly read-only.

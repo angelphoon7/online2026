@@ -75,7 +75,7 @@ Tests cover both USDC calls, later funding, shared tool capacity, mismatched cac
 historical closure, wrong Graph block/deployment, future closure metadata, unavailable RPC
 history, unavailable Graph history, and the 503/409 distinction. No new transactions are needed.
 
-This closes the same-block data-read gap. The separate narration guard limitations remain
-listed in README; block-consistent evidence does not itself validate every model-generated
-number. Execution still performs fresh chain checks and simulation, then the contract checks
+This closes the same-block data-read gap. The later [Step 7-G / H follow-up](GRAPH_7G_7H.md)
+binds narration to complete evidence-rendered passages; live model acceptance remains pending.
+Execution still performs fresh chain checks and simulation, then the contract checks
 the signed conditions again; historical diagnosis does not reserve state for settlement.

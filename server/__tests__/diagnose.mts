@@ -336,7 +336,7 @@ test('guard rejects banned language, unsupported identifiers, and the wrong bloc
   const log = [{ tool: 'diagnose_intent', input: { intentHash: hashIntent(a) }, output: evidence }];
   const block = '61000000';
 
-  const good = `At Arc Testnet block #${block}, no settlement was found within the search bound. Raising the limit is the smallest change among those tried.`;
+  const good = renderEvidence(evidence);
   assert.equal(checkAnswer(good, log, block), null);
   assert.equal(guard(good, log, block, evidence).guardFallback, false);
 
@@ -350,12 +350,12 @@ test('guard rejects banned language, unsupported identifiers, and the wrong bloc
     checkAnswer(`At Arc Testnet block #${block}, your counterparty is ${invented}.`, log, block),
     'UNSUPPORTED_IDENTIFIER'
   );
-  // B's address IS in the evidence, so stating it is allowed.
-  assert.equal(checkAnswer(`At Arc Testnet block #${block}, ${B} holds the seat you want.`, log, block), null);
+  // Knowing an address is not evidence for a claim about that address's ownership.
+  assert.equal(checkAnswer(`At Arc Testnet block #${block}, ${B} holds the seat you want.`, log, block), 'UNSUPPORTED_CLAIM');
 
   // 3. A claim about some other moment, or no moment at all.
   assert.equal(checkAnswer('At Arc Testnet block #999, nothing was found.', log, block), 'WRONG_BLOCK');
-  assert.equal(checkAnswer('No settlement was found within the search bound.', log, block), 'WRONG_BLOCK');
+  assert.equal(checkAnswer('No settlement was found within the search bound.', log, block), 'INVALID_PREFIX');
   assert.equal(checkAnswer('', log, block), 'EMPTY');
 
   // A rejected answer is replaced by the deterministic sentence, never shown with a warning.

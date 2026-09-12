@@ -244,7 +244,7 @@ export default function AgentDrawer({ open, onClose, intentHash, chainBlock, fre
 
       {shown && <div className="agent-answer"><p>{shown.answer}</p>
         <p className="quiet mono">
-          {shown.model ? `narrated by ${shown.model}` : 'deterministic answer · no model configured'} · read-only · the agent holds no key
+          {shown.model ? (shown.guardFallback ? 'deterministic answer · model response not used' : `evidence selected by ${shown.model}`) : 'deterministic answer · no model configured'} · read-only · the agent holds no key
         </p>
       </div>}
 

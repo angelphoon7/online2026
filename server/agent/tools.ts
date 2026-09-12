@@ -107,8 +107,8 @@ export function dispatcher(snapshot: Snapshot, selected: Hex): Dispatcher {
 
     run: async (name, input) => {
       const args = (input ?? {}) as Record<string, unknown>;
-      // An intent hash the model invented cannot be diagnosed; fall back to the selected
-      // intent, which is the one the user actually has open.
+      // Malformed hashes fall back to the selected intent. Other valid hashes may be read
+      // for inspection, but the answer guard only narrates the selected intent's results.
       const hash = asHash(args.intentHash, selected);
 
       if (name === 'diagnose_intent') {

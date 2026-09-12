@@ -26,6 +26,7 @@
     "graph:solve:check": "node scripts/check-graph-solver.mjs",
     "test:graph-acceptance": "node --test scripts/test-graph-acceptance.mjs",
     "test:browser": "playwright test",
+    "agent:check:model": "npx --yes tsx --conditions=react-server scripts/check-agent-model.mts",
     "mainnet:check": "node scripts/mainnet.mjs check",
     "mainnet:plan": "node scripts/mainnet.mjs plan",
     "mainnet:deploy": "node scripts/mainnet.mjs deploy",

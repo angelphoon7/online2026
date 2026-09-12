@@ -52,8 +52,10 @@ The agent's pool, USDC balances/allowances and closed-intent lookup use the same
 Payment capacity is cached with its block and rejected if reused for another snapshot.
 Historical read failures return 503 without substituting `latest`; pruned Graph history is
 distinguished from indexing lag. [Step 7-A / D checks](../docs/GRAPH_7A_7D.md).
-The model guard remains a vocabulary/identifier/block-reference check, not complete numerical
-or semantic verification. See [Graph limitations](../README.md#graph-limitations).
+The model guard requires the exact block prefix and accepts complete evidence-rendered
+passages only. Amounts remain bound to direction and hypothetical context; arbitrary prose
+cannot pass based on a value allowlist. Provider IDs and token usage appear in `modelCalls`;
+fallback evidence is labelled separately. [Step 7-G / H checks and live acceptance setup](../docs/GRAPH_7G_7H.md).
 
 ## Testnet signing routes
 

@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-09-12T19:25:05.383Z",
+  "status": "BLOCKED",
+  "reason": "ANTHROPIC_API_KEY_MISSING",
+  "mocked": false,
+  "modelRequests": 0,
+  "transactionsSent": 0,
+  "records": []
+}
