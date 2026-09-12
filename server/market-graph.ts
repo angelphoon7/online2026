@@ -140,11 +140,19 @@ export async function marketSnapshotFromGraph(minBlock = 0n): Promise<MarketSnap
   }));
 
   const intents: WireIntent[] = [];
+  const hashMismatched: Hex[] = [];
   for (const g of data.intents) {
     // Trust rule 1: an intent that does not re-hash to its published id is not shown at all.
-    // Dropping it is right — it would be an intent nobody actually signed.
+    // Dropping it is right — it would be an intent nobody actually signed. It is named rather
+    // than dropped in silence: an intent vanishing from the pool with no reason given is
+    // indistinguishable from a missing one, and this is the check that makes the indexer
+    // untrusted rather than trusted.
     const intent = fromGraph(g);
-    if (hashIntent(intent) !== g.id) continue;
+    if (hashIntent(intent) !== g.id) {
+      hashMismatched.push(g.id as Hex);
+      console.warn(`Subgraph intent ${g.id} does not re-hash to its committed id; excluded from the market.`);
+      continue;
+    }
 
     intents.push({
       owner: g.owner as Address,
@@ -186,5 +194,7 @@ export async function marketSnapshotFromGraph(minBlock = 0n): Promise<MarketSnap
       participants: s.participantCount,
     })),
     defaultHashes: currentDemo.intents.map((i) => i.hash as Hex),
+    source: 'graph',
+    hashMismatched,
   };
 }

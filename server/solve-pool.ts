@@ -3,7 +3,8 @@ import { hashIntent } from '../solver/dist/index.js';
 import type { Intent } from '../solver/src/types';
 import type { Hex } from 'viem';
 import { restoreIntent, type MarketSnapshot } from '../lib/market-types';
-import { marketSnapshot } from './market';
+import { marketSnapshot, readSource } from './market';
+import { solveLivePoolFromGraph } from './solve-graph';
 import { chainConfig } from './chain';
 import { solveOnChain } from './solve';
 
@@ -29,6 +30,9 @@ export async function solvePoolSnapshot(snapshot: MarketSnapshot) {
 let cached: { key: string; until: number; result: Awaited<ReturnType<typeof solvePoolSnapshot>> } | undefined;
 let pending: { key: string; result: Promise<Awaited<ReturnType<typeof solvePoolSnapshot>>> } | undefined;
 export async function solveLivePool() {
+  // Prefer subgraph discovery: it carries a snapshot block and named exclusions, both of
+  // which land in the evidence. The MarketSnapshot path stays for local Anvil.
+  if (readSource() === 'graph') return solveLivePoolFromGraph();
   const snapshot = await marketSnapshot();
   const { addresses } = chainConfig();
   const key = `${addresses.IntentRegistry}:${snapshot.blockNumber}:${snapshot.intents.map(i => `${i.hash}:${i.state}:${i.expired}`).sort().join(',')}`;

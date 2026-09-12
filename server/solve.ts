@@ -16,9 +16,19 @@ export function parseSolveRequest(body: unknown): Hex[] {
   return normalized.sort();
 }
 
-export async function solveOnChain(hashes: Hex[], committed?: ReadonlyMap<Hex, Intent>, pool?: { liveIntents: number; excluded: { intentHashes: Hex[]; reason: string }[] }) {
-  const { client, addresses, usdc, startBlock } = chainConfig();
-  if (await client.getChainId() !== 5042002) throw new Error('RPC returned the wrong chain');
+export type PoolSource = {
+  liveIntents: number;
+  excluded: { intentHashes: Hex[]; reason: string }[];
+  /** 'subgraph' when discovery came from The Graph; 'rpc' for the local Anvil fallback. */
+  kind?: 'subgraph' | 'rpc';
+  /** The block the pool snapshot describes — reported so a proposal is traceable to it. */
+  snapshotBlock?: string;
+  endpoint?: string | null;
+};
+
+export async function solveOnChain(hashes: Hex[], committed?: ReadonlyMap<Hex, Intent>, pool?: PoolSource) {
+  const { client, addresses, usdc, startBlock, chainId } = chainConfig();
+  if (await client.getChainId() !== chainId) throw new Error('RPC returned the wrong chain');
   const block = await client.getBlock();
   const event = parseAbiItem('event IntentCommitted(bytes32 indexed intentHash,address indexed owner,uint32 indexed eventId,uint256[] offered,uint256 sessionMask,uint256 sectionMask,uint8 exactCount,bool mustShareSession,bool mustShareSection,bool mustBeAdjacent,int256 maxNetPay,uint64 deadline,uint256 nonce)');
   const discovered = new Map<Hex, Intent>();
@@ -87,7 +97,7 @@ export async function solveOnChain(hashes: Hex[], committed?: ReadonlyMap<Hex, I
     try {
       await client.simulateContract({ address: addresses.Settlement, abi: abi('Settlement'), functionName: 'settle', args, account: addresses.Settlement, gas: 8000000n, blockNumber: simulationBlock });
       simulationResult = { success: true };
-      transaction = { to: addresses.Settlement, data: encodeFunctionData({ abi: abi('Settlement'), functionName: 'settle', args }), gas: '8000000', chainId: 5042002 };
+      transaction = { to: addresses.Settlement, data: encodeFunctionData({ abi: abi('Settlement'), functionName: 'settle', args }), gas: '8000000', chainId };
     } catch (error) {
       // Decode named rejections without exposing an RPC URL or provider credentials.
       const detail = error as { walk?: (predicate: (e: { name?: string }) => boolean) => { data?: { errorName?: string } } };
@@ -97,11 +107,21 @@ export async function solveOnChain(hashes: Hex[], committed?: ReadonlyMap<Hex, I
   }
   return saveEvidence({
     ...result.evidence,
-    chainId: 5042002, registry: addresses.IntentRegistry, settlement: addresses.Settlement,
-    source: { kind: 'rpc', subgraphEndpoint: null, blockNumber: block.number.toString(), blockHash: block.hash },
+    chainId, registry: addresses.IntentRegistry, settlement: addresses.Settlement,
+    // Discovery provenance. The subgraph supplies the pool; every value below it was
+    // re-read from the chain at blockNumber, which is why index lag can cause a failed
+    // simulation but never an invalid settlement.
+    source: {
+      kind: pool?.kind ?? 'rpc',
+      subgraphEndpoint: pool?.endpoint ?? null,
+      snapshotBlock: pool?.snapshotBlock ?? null,
+      blockNumber: block.number.toString(),
+      blockHash: block.hash,
+    },
     requestedIntentHashes: hashes, intentsConsidered: intents.length,
     candidatesExcluded: [...(pool?.excluded ?? []), ...inputExclusions, ...result.evidence.candidatesExcluded],
-    ...(pool ? { pool: { liveIntents: pool.liveIntents, searchableIntents: intents.length, excludedIntents: pool.excluded.length } } : {}),
+    ...(pool ? { pool: { liveIntents: pool.liveIntents, searchableIntents: intents.length, excludedIntents: pool.excluded.length, source: pool.kind ?? 'rpc', snapshotBlock: pool.snapshotBlock ?? null } } : {}),
+    bounds: SEARCH_CONFIG,
     searchConfig: SEARCH_CONFIG, runtimeMs, simulationBlock: simulationBlock.toString(), simulationResult,
     proposal: result.chosen, transaction,
     message: result.chosen ? 'Candidate found within the search budget' : 'No solution found within the search bound',

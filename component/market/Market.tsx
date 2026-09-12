@@ -84,6 +84,8 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
   const activeAction = useRef(false);
   const searchVersion = useRef(0);
   const searchInFlight = useRef(false);
+  // Highest block the subgraph was confirmed to have indexed after one of our writes.
+  const floor = useRef(0n);
 
   const runSolver = useCallback(async (hashes: Hex[], wholePool = false) => {
     const version = ++searchVersion.current;
@@ -130,18 +132,21 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
     catch (e) { setNotice(walletActionMessage(e)); }
     finally { setBusy(''); activeAction.current = false; }
   };
-  // Every write goes through track(), so the indexing wait lives here rather than at each of
-  // the eight call sites. Without it the refresh that follows can read a pool that predates
-  // the user's own transaction, and their deposit or revocation appears not to have happened.
+  // Every write goes through indexed(), so the indexing wait lives here rather than at each
+  // call site. Without it the refresh that follows can read a pool that predates the user's
+  // own transaction, and their deposit, revocation or settlement appears not to have happened.
   //
   // waitForIndexed is given the RECEIPT's block, never getBlockNumber(): Arc's public RPC is
   // load balanced and its reported head can lag the subgraph (see docs/graph-acceptance.md).
-  const track = async (hash: Hex) => {
-    setTxHash(hash);
-    const receipt = await waitForSuccess(hash);
+  //
+  // The block it reached becomes the freshness floor for the following read (trust rule 2).
+  // It is only recorded when the wait succeeded: asking the server for a block the indexer
+  // never reached would turn a confirmed transaction into a failed read.
+  const indexed = async (receipt: { blockNumber: bigint }) => {
     setIndexingBlock(receipt.blockNumber);
     try {
       await waitForIndexed(receipt.blockNumber);
+      floor.current = receipt.blockNumber;
     } catch (error) {
       // Indexing lag must not discard a confirmed transaction: it is already on-chain and the
       // receipt panel still shows it. Surface the delay and let the read proceed.
@@ -153,15 +158,26 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
     }
     return receipt;
   };
+  const track = async (hash: Hex) => {
+    setTxHash(hash);
+    return indexed(await waitForSuccess(hash));
+  };
+  // The read that follows a write. Separate from refresh() so the periodic poll and the retry
+  // button stay unfloored — they are not reading back a transaction of ours.
+  const refreshWritten = () => refresh(true, floor.current || undefined);
   const claimDemo = () => action(FREE_TICKETS_LABEL, async address => {
     const { message } = await jsonFetch<{ message: string }>(`/api/demo/tickets?address=${address}`);
     const signature = await getWalletClient().signMessage({ account: address, message });
     setNotice('Issuing your test tickets. Waiting for Arc Testnet confirmation…');
     const result = await jsonFetch<{ tokenIds: string[]; hashes: Hex[] }>('/api/demo/tickets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message, signature }) });
-    setTxHash(result.hashes.at(-1));
+    const last = result.hashes.at(-1);
+    setTxHash(last);
     setNotice(`Tickets ${result.tokenIds.map(id => `#${id}`).join(', ')} are confirmed. Open MetaMask to add them to its NFTs tab.`);
+    // The mint was sent by the demo operator, not this wallet, but the pool read that follows
+    // is still a read-back of it, so it waits for the indexer like any other write.
+    if (last) await indexed(await waitForReceipt(last));
     setNftClaim({ owner: address, ...result, message: 'Requesting NFT display in MetaMask...' });
-    const refreshRequest = refresh(true);
+    const refreshRequest = refreshWritten();
     const messageResult = await requestTicketImports(address, result.tokenIds);
     setNftClaim({ owner: address, ...result, message: messageResult });
     await refreshRequest;
@@ -179,7 +195,7 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
       if (!await getTicketsApproved(address)) await track(await approveNFTsForEscrow(address));
       await track(await depositTickets(address, [BigInt(t.tokenId)]));
     } else await track(await withdrawTickets(address, [BigInt(t.tokenId)]));
-    setNotice(`Ticket #${t.tokenId}: ${mode} confirmed.`); await refresh(true);
+    setNotice(`Ticket #${t.tokenId}: ${mode} confirmed.`); await refreshWritten();
   });
   const depositSelected = (tokenIds: bigint[]) => action('Deposit selected tickets', async address => {
     const ids = [...new Set(tokenIds)];
@@ -194,7 +210,7 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
       pending.push(id);
     }
     if (!pending.length) {
-      setNotice('Your selected tickets are already deposited.'); await refresh(true); return;
+      setNotice('Your selected tickets are already deposited.'); await refreshWritten(); return;
     }
     if (!await getTicketsApproved(address)) {
       setNotice('Approve ticket access in your wallet. The batch deposit will follow after approval confirms.');
@@ -203,7 +219,7 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
     setNotice(`Confirm one deposit transaction for ${pending.length} selected ticket${pending.length === 1 ? '' : 's'}.`);
     await track(await depositTickets(address, pending));
     setNotice(`Deposited ${pending.length} ticket${pending.length === 1 ? '' : 's'} together: ${pending.map(id => `#${id}`).join(', ')}.`);
-    await refresh(true);
+    await refreshWritten();
   });
   const sign = (draft: IntentParams, prepared: (intent: IntentParams) => void) => action('Sign and commit', async address => {
     if (!market) return;
@@ -223,7 +239,7 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
     await track(await signAndCommitIntent(address, ready));
     searchVersion.current++; searchInFlight.current = false; setSolving(false);
     setReceipt(null); setProposal(null); setEvidence(null); setAutomatic(true);
-    setNotice('Intent committed. Matching will start automatically as soon as the refreshed pool includes your request.'); await refresh(true);
+    setNotice('Intent committed. Matching will start automatically as soon as the refreshed pool includes your request.'); await refreshWritten();
   });
   const openReceipt = async (hash: Hex) => {
     const result = await getSettlementReceipt(hash);
@@ -266,7 +282,10 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
       const verified = await openReceipt(hash);
       setStatus(r.status === 'success' ? 'confirmed' : 'reverted'); setRejection(verified.rejection);
       setProposal(null); setEvidence(null);
-      const refreshRequest = refresh(true);
+      // A reverted proposal changed no state, so there is nothing for the indexer to catch up
+      // to; a confirmed one settled intents and moved custody, and the pool must show that.
+      if (r.status === 'success') await indexed(r);
+      const refreshRequest = refreshWritten();
       if (r.status === 'success' && verified.status === 'success') await importReplacementTickets(verified, address);
       await refreshRequest;
     } catch (e) {
@@ -344,11 +363,11 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
         <button className="poster poster-live" disabled={!market} aria-busy={!market && !readError} aria-describedby="event-preload-status" aria-expanded={opened} aria-controls="workspace" onClick={() => { setOpened(true); setTimeout(() => scrollTo(workspace.current), 40); }}><span className="poster-top mono">RESHUFFLE PRESENTS / EVENT 1</span><span className="poster-photo"><Image src={maydayPoster} alt="Mayday concert poster" fill sizes="(max-width: 720px) 84vw, 28vw" /></span><span className="poster-title">AFTER<br />HOURS</span><span className="poster-sub">Demo concert · issuer-native tickets</span><span className="poster-dates mono">{sessions.length ? sessions.map(n => `SESSION ${n}`).join(' / ') : 'READING SESSIONS'}</span><span className="poster-status"><span className="mono">{market ? `${live.length} ${POOL_LABEL}` : 'Reading live intents…'}</span><span>Open workspace ↗</span></span></button>
         {[{ name: 'INTERLUDE', photo: sarahPoster, alt: 'Sarah Kang in Seoul concert poster' }, { name: 'ENCORE', photo: taylorPoster, alt: 'Taylor Swift The Eras Tour concert poster' }].map(({ name, photo, alt }, n) => <div key={name} className="poster poster-inert" aria-disabled="true"><span className="poster-top mono">UPCOMING PROGRAMME / 0{n + 2}</span><span className="poster-photo"><Image src={photo} alt={alt} fill sizes="(max-width: 720px) 84vw, 28vw" /></span><span className="poster-title">{name}</span><span className="poster-sub">Event details to be announced</span><span className="poster-dates mono">VENUE & DATES UNANNOUNCED</span><span className="poster-status">No live intents</span></div>)}
       </div><p id="event-preload-status" className="quiet" role="status" aria-live="polite">{market ? `Ticket positions and intent commitments loaded for all deployed events / Arc block ${market.blockNumber}.` : readError ? 'Event data could not be loaded. Retry the public reads below.' : 'Preloading public ticket positions and intent commitments for all deployed events. The event opens as soon as its data is ready.'}</p><p className="quiet">Event names are demo presentation labels. Session IDs and ticket metadata come from the deployed contracts; no venue dates or prices are recorded on-chain.</p>{readError && <p role="alert" className="read-error">{readError} <button onClick={() => void refresh(true)}>Retry public reads</button></p>}</section>
-      {market && <section id="workspace" hidden={!opened} ref={workspace} className="workspace-section"><div className="section-heading"><div><span className="eyebrow">The workspace / Event 1</span><h2>Keep the ticket.<br />Change the outcome.</h2></div><div><p className="mono" role="status" aria-live="polite">{indexingBlock !== null ? `INDEXING BLOCK ${indexingBlock}…` : market ? `ARC BLOCK ${market.blockNumber} / VIA THE GRAPH` : 'READING ARC'}</p><button className="text-button" onClick={() => void refresh(true)}>Refresh public state ↻</button></div></div>
+      {market && <section id="workspace" hidden={!opened} ref={workspace} className="workspace-section"><div className="section-heading"><div><span className="eyebrow">The workspace / Event 1</span><h2>Keep the ticket.<br />Change the outcome.</h2></div><div><p className="mono" role="status" aria-live="polite">{indexingBlock !== null ? `INDEXING BLOCK ${indexingBlock}…` : market ? `ARC BLOCK ${market.blockNumber} / ${market.source === 'graph' ? 'VIA THE GRAPH' : 'VIA DIRECT RPC READS'}` : 'READING ARC'}</p><button className="text-button" onClick={() => void refresh(true)}>Refresh public state ↻</button></div></div>
         <div className="network-note">USDC pays for both settlement and native gas on Arc. You don’t need a second token.</div>
         <div className="workspace-tools"><button className="secondary pool-toggle" aria-haspopup="dialog" aria-expanded={poolOpen} onClick={() => setPoolOpen(true)}>Intent pool ({live.length})</button><p className="quiet">See what others offer and want. Opening the list is optional; matching runs automatically.</p></div>
         <PoolDialog open={poolOpen} onClose={() => setPoolOpen(false)}>
-          <p className="mono">{live.length} {POOL_LABEL}</p><p className="quiet">{POOL_NOTE}</p><div className="pool-list">{live.map((i, index) => <article key={i.hash} className="pool-row"><label><input type="checkbox" checked={selected.includes(i.hash)} disabled={disabled} onChange={() => selectIntent(i.hash)} /><span>{walletLabel(i.owner)} <span className="mono">/ Request {index + 1}</span></span></label><p>{condition(restoreIntent(i))}</p><details className="wallet-details"><summary>Wallet and transaction details</summary><a className="hash" href={`${EXPLORER}/address/${i.owner}`} target="_blank" rel="noreferrer">{i.owner}</a><a className="mono" href={`${EXPLORER}/tx/${i.commitTx}`} target="_blank" rel="noreferrer">Commit {i.commitTx.slice(0, 10)}… ↗</a></details>{equal(i.owner, account) && <button disabled={disabled} onClick={() => void action('Revoke intent', async address => { await track(await revokeIntent(address, i.hash)); await refresh(true); setProposal(null); setEvidence(null); })}>Revoke my intent</button>}</article>)}</div>{!live.length && <p>No live requests yet. Submit an intent to join the pool.</p>}
+          <p className="mono">{live.length} {POOL_LABEL}</p><p className="quiet">{POOL_NOTE}</p><div className="pool-list">{live.map((i, index) => <article key={i.hash} className="pool-row"><label><input type="checkbox" checked={selected.includes(i.hash)} disabled={disabled} onChange={() => selectIntent(i.hash)} /><span>{walletLabel(i.owner)} <span className="mono">/ Request {index + 1}</span></span></label><p>{condition(restoreIntent(i))}</p><details className="wallet-details"><summary>Wallet and transaction details</summary><a className="hash" href={`${EXPLORER}/address/${i.owner}`} target="_blank" rel="noreferrer">{i.owner}</a><a className="mono" href={`${EXPLORER}/tx/${i.commitTx}`} target="_blank" rel="noreferrer">Commit {i.commitTx.slice(0, 10)}… ↗</a></details>{equal(i.owner, account) && <button disabled={disabled} onClick={() => void action('Revoke intent', async address => { await track(await revokeIntent(address, i.hash)); await refreshWritten(); setProposal(null); setEvidence(null); })}>Revoke my intent</button>}</article>)}</div>{!live.length && <p>No live requests yet. Submit an intent to join the pool.</p>}{!!market.hashMismatched.length && <p className="quiet" role="status">{market.hashMismatched.length} indexed {market.hashMismatched.length === 1 ? 'request is' : 'requests are'} excluded from this pool: the indexed fields do not re-hash to the id they were committed under, so they are not shown. <span className="mono">{market.hashMismatched.map(h => `${h.slice(0, 10)}…`).join(' ')}</span></p>}
           <div className="pool-dialog-actions">{!automatic && <><button className="secondary" disabled={disabled} onClick={() => { setAutomatic(true); setPoolOpen(false); }}>Resume automatic matching</button><button className="primary" disabled={disabled || solving || selected.length < 2 || selected.length > 4} onClick={() => { void runSolver(selected); setPoolOpen(false); }}>Search selected requests ({selected.length}/4)</button></>}</div>
         </PoolDialog>
         {(notice || busy) && <div className="activity" role="status"><strong>{busy || 'Activity'}</strong><p>{notice || 'Complete the request in your wallet. The original action continues automatically.'}</p>{txHash && <a className="hash" href={`${EXPLORER}/tx/${txHash}`} target="_blank" rel="noreferrer">{txHash} ↗</a>}</div>}
@@ -376,7 +395,7 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
         <span className="mono hash">NFT contract: {CONTRACTS.ticketNFT}</span>
         <ul>{replacementIds.map(id => <li key={id} className="mono">Token ID: {id}</li>)}</ul>
         <button className="secondary" disabled={disabled} onClick={() => void action('Add replacement tickets to wallet', address => importReplacementTickets(receipt, address))}>Add to wallet</button>
-      </section>}<div className="redeem-list">{receipt.participants.filter(p => equal(p.owner, account)).flatMap(p => p.receives).map(id => { const t = tickets.find(t => t.tokenId === id); return <div key={id}><span className="mono">Ticket #{id}</span>{t?.status === 1 ? <span className="badge">USED</span> : <button disabled={disabled || !t || !equal(t.owner, account)} onClick={() => void action('Redeem', async address => { await track(await redeemTicket(address, BigInt(id))); await refresh(true); })}>Redeem</button>}</div>; })}</div><p className="quiet">Redeem marks your ticket used permanently. Only its current holder can redeem it.</p></section>}
+      </section>}<div className="redeem-list">{receipt.participants.filter(p => equal(p.owner, account)).flatMap(p => p.receives).map(id => { const t = tickets.find(t => t.tokenId === id); return <div key={id}><span className="mono">Ticket #{id}</span>{t?.status === 1 ? <span className="badge">USED</span> : <button disabled={disabled || !t || !equal(t.owner, account)} onClick={() => void action('Redeem', async address => { await track(await redeemTicket(address, BigInt(id))); await refreshWritten(); })}>Redeem</button>}</div>; })}</div><p className="quiet">Redeem marks your ticket used permanently. Only its current holder can redeem it.</p></section>}
     </main><footer className="site-footer"><span className="wordmark">RESHUFFLE ↔</span><p>Swap tickets without selling first.<br />Every condition you sign is checked on-chain.</p><span className="mono">ARC TESTNET / USDC</span></footer>
   </div>;
 }

@@ -1,0 +1,6 @@
+▲ Next.js 16.3.4
+- Local:         http://localhost:3461
+- Network:       http://192.168.73.91:3461
+✓ Ready in 216ms
+✓ Running next.config.ts took 53ms
+pool source: subgraph @ block 61651844 — 73 searchable, 0 excluded

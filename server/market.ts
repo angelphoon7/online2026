@@ -74,7 +74,9 @@ async function marketSnapshotFromRpc(fresh = false): Promise<MarketSnapshot> {
     let currentDemo = demo;
     try { currentDemo = JSON.parse(await readFile(join(process.cwd(), 'deployments/demo-ready.json'), 'utf8')); } catch { /* Bundled public manifest. */ }
     const value = JSON.parse(serialize({ blockNumber: block.number, timestamp: block.timestamp, tickets, intents,
-      settlements: settlements.reverse(), defaultHashes: currentDemo.intents.map(i => i.hash) })) as MarketSnapshot;
+      settlements: settlements.reverse(), defaultHashes: currentDemo.intents.map(i => i.hash),
+      // Intents here are read from this chain's own logs, so there is no indexer to re-hash against.
+      source: 'rpc', hashMismatched: [] })) as MarketSnapshot;
     cached = { key, blockHash: block.hash, until: Date.now() + 30000, value };
     return value;
   })().finally(() => { pending = undefined; });
