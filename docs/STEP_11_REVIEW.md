@@ -87,8 +87,10 @@ it does not close the budget-write, browser-recording or Studio full-status chec
    Step 7-G / H added `npm run agent:check:model`; its local preflight records `BLOCKED`
    because the key is missing. Automatic review also requires approval to send public
    intent/address evidence to Anthropic. No SDK fixture is presented as a live provider run.
-   The ask route has a process-local rate limit; diagnose has no equivalent rate limit and
-   the full agent request has no explicit overall deadline. Review before public hosting.
+   **Request-control gap resolved in Step 7-I:** both routes now have bounded per-client
+   quotas and one overall cancellation budget across Graph/RPC/model/search work. The
+   limiter remains instance-local; trusted-proxy and multi-instance requirements are
+   documented. [Implementation, 22 new tests and 128 passing suite checks](GRAPH_7I.md).
 5. **Step 10 evidence needs real writes and UI capture.** The rehearsal is explicitly read-only.
    Its -4/-3 USDC example is pool-specific, not a fixed benchmark. No fresh revoke/commit
    receipts, browser recording or receipt-to-index duration were produced in this review.

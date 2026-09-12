@@ -5,6 +5,7 @@ import type { Intent, ChainState } from '../solver/src/types';
 import type { Snapshot } from '@/shared/graph';
 import { chainConfig } from './chain';
 import { SEARCH_CONFIG } from './solve';
+import type { RequestBudget } from './agent/request-budget';
 
 // The solver's hypothetical mode — step 6-C of docs/RESHUFFLE_GRAPH_PLAN.md, used by the
 // agent's what_if in step 7.
@@ -63,21 +64,25 @@ export function requireCapacityBlock(capacity: Capacity, block: bigint): void {
  * Separate from the search so step 7's diagnosis can read it once and reuse it across every
  * relaxation it tries, instead of re-reading the same balances for each one.
  */
-export async function readCapacity(owners: Address[], block: bigint): Promise<Capacity> {
+export async function readCapacity(owners: Address[], block: bigint, budget?: RequestBudget): Promise<Capacity> {
+  budget?.checkpoint();
   if (typeof block !== 'bigint' || block < 0n) throw new TypeError('An explicit snapshot block is required for USDC reads.');
-  const { client, addresses, usdc } = chainConfig();
+  const { client, addresses, usdc } = chainConfig({ signal: budget?.signal });
   const usdcBalance = new Map<Address, bigint>();
   const usdcAllowance = new Map<Address, bigint>();
   try {
     for (const owner of [...new Set(owners.map((o) => o.toLowerCase() as Address))]) {
+      budget?.checkpoint();
       const [balance, allowance] = await Promise.all([
         client.readContract({ address: usdc, abi: erc20Abi, functionName: 'balanceOf', args: [owner], blockNumber: block }),
         client.readContract({ address: usdc, abi: erc20Abi, functionName: 'allowance', args: [owner, addresses.Settlement], blockNumber: block }),
       ]);
+      budget?.checkpoint();
       usdcBalance.set(owner, balance);
       usdcAllowance.set(owner, allowance);
     }
   } catch (error) {
+    budget?.checkpoint();
     throw new SnapshotCapacityReadError(block, error);
   }
   return { block, usdcBalance, usdcAllowance };
@@ -122,8 +127,10 @@ export type HypotheticalResult = {
 export async function solveHypothetical(
   snapshot: Snapshot,
   { replaceHash, intent }: Hypothetical,
-  capacity?: Capacity
+  capacity?: Capacity,
+  budget?: RequestBudget
 ): Promise<HypotheticalResult> {
+  await budget?.yield();
   const target = replaceHash.toLowerCase();
   const pool = snapshot.intents.filter((i) => i.hash.toLowerCase() !== target);
   const intents: Intent[] = [...pool, intent];
@@ -140,7 +147,8 @@ export async function solveHypothetical(
   // The one deliberate fiction, and the whole reason this result is not submittable.
   intentState.set(hypotheticalHash, 1);
 
-  const funds = capacity ?? (await readCapacity(intents.map((i) => i.owner), snapshot.block));
+  const funds = capacity ?? (await readCapacity(intents.map((i) => i.owner), snapshot.block, budget));
+  budget?.checkpoint();
   requireCapacityBlock(funds, snapshot.block);
   const { usdcBalance, usdcAllowance } = funds;
 
@@ -159,7 +167,10 @@ export async function solveHypothetical(
   // Ask the question that was actually asked: is there a reshuffle that includes THIS
   // participant? Without this the bound is spent on reshuffles between other people, and the
   // answer becomes "no settlement found" for almost everyone in a pool of any size.
-  const result = solve(intents, state, { ...SEARCH_CONFIG, mustInclude: hypotheticalHash });
+  const result = solve(intents, state, { ...SEARCH_CONFIG,
+    timeoutMs: Math.min(SEARCH_CONFIG.timeoutMs, budget?.remainingMs() ?? SEARCH_CONFIG.timeoutMs),
+    mustInclude: hypotheticalHash });
+  budget?.checkpoint();
   const runtimeMs = performance.now() - started;
 
   const chosen = result.chosen;

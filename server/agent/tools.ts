@@ -7,6 +7,7 @@ import { whatIf, WhatIfError, type WhatIfChanges } from './what-if';
 import { poolOverview } from './overview';
 import { readCapacity, type Capacity } from '../solve-hypothetical';
 import type { Address } from 'viem';
+import type { RequestBudget } from './request-budget';
 
 // Tool definitions and dispatch - step 7-F of docs/RESHUFFLE_GRAPH_PLAN.md.
 //
@@ -93,19 +94,20 @@ const asHash = (value: unknown, fallback: Hex): Hex =>
  * shared: a question that triggers diagnose_intent and then two what_ifs should not re-read
  * the same USDC balances three times.
  */
-export function dispatcher(snapshot: Snapshot, selected: Hex): Dispatcher {
+export function dispatcher(snapshot: Snapshot, selected: Hex, budget?: RequestBudget): Dispatcher {
   let capacity: Promise<Capacity> | undefined;
   let baseline: Promise<Evidence> | undefined;
 
-  const funds = () => (capacity ??= readCapacity(snapshot.intents.map((i) => i.owner as Address), snapshot.block));
+  const funds = () => (capacity ??= readCapacity(snapshot.intents.map((i) => i.owner as Address), snapshot.block, budget));
   const liveAtSnapshot = (hash: Hex) => snapshot.intents.some(i => i.hash.toLowerCase() === hash.toLowerCase());
-  const diagnosis = async (hash: Hex) => diagnose(snapshot, hash, liveAtSnapshot(hash) ? await funds() : undefined);
+  const diagnosis = async (hash: Hex) => diagnose(snapshot, hash, liveAtSnapshot(hash) ? await funds() : undefined, budget);
   const selectedDiagnosis = () => (baseline ??= diagnosis(selected));
 
   return {
     baseline: selectedDiagnosis,
 
     run: async (name, input) => {
+      budget?.checkpoint();
       const args = (input ?? {}) as Record<string, unknown>;
       // Malformed hashes fall back to the selected intent. Other valid hashes may be read
       // for inspection, but the answer guard only narrates the selected intent's results.
@@ -116,7 +118,7 @@ export function dispatcher(snapshot: Snapshot, selected: Hex): Dispatcher {
       }
       if (name === 'what_if') {
         try {
-          return await whatIf(snapshot, hash, (args.changes ?? {}) as WhatIfChanges, liveAtSnapshot(hash) ? await funds() : undefined);
+          return await whatIf(snapshot, hash, (args.changes ?? {}) as WhatIfChanges, liveAtSnapshot(hash) ? await funds() : undefined, budget);
         } catch (error) {
           if (error instanceof WhatIfError) return { error: error.message, submittable: false };
           throw error;

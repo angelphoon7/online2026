@@ -27,6 +27,14 @@ npm.cmd run start -- --port 3101
 | `GET /api/evidence/{id}` | Returns the saved evidence, including source block, considered hashes, excluded candidates, chosen proposal, search caps and simulation result. |
 | `POST /api/evidence/{id}/receipt` | Accepts `{ "transactionHash": "0x…" }`. Checks chain ID, successful receipt, exact destination/calldata, `Settled` event and SETTLED registry states before attaching confirmation. |
 
+Both Agent APIs apply bounded sliding-window quotas: ask 12/minute and diagnose 30/minute
+per client per instance. Excess requests return `429 AgentRateLimited` with `Retry-After`.
+Their overall deadlines are 60 and 30 seconds respectively, including body/Graph/RPC/model
+reads, solver work and fallback; timeout returns `504 AgentRequestTimeout`. Cancellation is
+propagated downstream. By default callers share an unidentified bucket; only enable
+`AGENT_TRUST_PROXY=true` behind an ingress that overwrites `X-Forwarded-For`. Multiple
+instances need shared rate-limit enforcement. [Step 7-I configuration and tests](../docs/GRAPH_7I.md).
+
 Only hashes are accepted as explicit solver inputs; client-supplied budgets and ownership claims cannot change signed conditions. Explicit requests support 2–4 distinct committed intents. The pool service accepts up to 256 searchable live intents, forming candidates of at most four participants and four offered/received tickets per intent. Each search has 100-candidate and 2-second limits. Assignment recursion also checks the deadline. RPC mode scans bounded log pages; Graph discovery is the demo path. There is no claim about unbounded market search.
 
 Market Graph queries apply `number_gte` to metadata, intents, tickets and settlements; an unmet

@@ -272,6 +272,9 @@ For a production server use `npm run build` and `npm start`; mount persistent st
 | `NEXT_PUBLIC_RPC_URL` | Browser chain configuration | Public RPC override; browser public reads use the same-origin transport |
 | `ANTHROPIC_API_KEY` | Agent narration only | Optional; diagnose needs no model key, ask uses a template if absent |
 | `AGENT_MODEL` | Agent narration | Defaults to `claude-sonnet-5`; verify access for the hosted account |
+| `AGENT_ASK_TIMEOUT_MS` | Agent request control | Overall ask deadline; default/max `60000`, positive integer overrides may shorten it |
+| `AGENT_DIAGNOSE_TIMEOUT_MS` | Agent request control | Overall diagnosis deadline; default/max `30000`, positive integer overrides may shorten it |
+| `AGENT_TRUST_PROXY` | Agent client identity | Default off, callers share a bucket. Set `true` only behind an ingress that overwrites `X-Forwarded-For` with the client IP |
 | `BUDGET_CAP_USDC` | Deterministic diagnosis | BUDGET relaxation ceiling, default `100`; USDC has 6 settlement decimals |
 | `JUDGE_CONTROLS_ENABLED` | Testnet judge routes | `true` enables hosted budget/revoke controls; enabled by default in development. Requires controlled participant keys |
 | `DEMO_TICKETS_ENABLED` | Testnet issuer route | Enables hosted free-ticket claims; enabled by default in development |
@@ -290,6 +293,11 @@ Claude tool selection and evidence-bound answers. Tools are `diagnose_intent`, `
 The guard requires `At Arc Testnet block #N, ` at the start and matches complete evidence
 passages, binding amounts to their direction and context. Model call IDs and token usage
 are returned for inspection. [Step 7-G / H implementation and acceptance](docs/GRAPH_7G_7H.md).
+Both Agent routes now enforce request limits: ask 12/minute with a 60-second overall
+deadline, diagnose 30/minute with a 30-second overall deadline. Quotas apply per client
+within one instance; trusted-proxy configuration is required to distinguish IPs. Rejections
+return `429` with `Retry-After`; deadlines abort downstream I/O and return
+`504 AgentRequestTimeout`. [Step 7-I behavior, deployment scope and tests](docs/GRAPH_7I.md).
 The agent module has no signing capability. Enabled testnet judge controls are a separate
 server feature that can sign for controlled participants.
 
@@ -340,6 +348,8 @@ npx tsc --noEmit
 The Step 7-A / D follow-up passed **63 Graph/agent tests** and the production build, with
 [real Graph/RPC block traces](docs/checks/graph-diagnosis-block.json).
 The Step 7-G / H follow-up passed **95 Graph/agent tests** and the production build.
+The Step 7-I follow-up adds **22 request-control tests**; the current **128-test Graph/agent
+suite** and production build pass. [Captured output](docs/checks/graph-agent-requests-tests.txt).
 `npm run agent:check:model -- --preflight` checks local key presence without network access;
 `npm run agent:check:model` runs the four live provider cases after configuration. Mocked
 SDK tests and no-model responses do not count as live provider acceptance.

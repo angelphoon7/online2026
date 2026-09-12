@@ -34,8 +34,9 @@ A fallback diagnosis belonging to another block throws `AgentEvidenceMismatch`.
 `narrate.ts` records provider message ID, request ID, returned model, stop reason and token
 usage in `modelCalls`, alongside the existing tool log. It permits four model turns, eight
 tool calls total and 4,096 output tokens per turn. Each model request has a 45-second timeout
-and no automatic retry. These are configured bounds, not performance measurements. This is
-not an overall deadline for Graph/RPC reads and solver work.
+and no automatic retry. These are configured bounds, not performance measurements. The
+later [Step 7-I follow-up](GRAPH_7I.md) adds one overall deadline across the complete
+Graph/RPC/model/search request, and applies the smaller remaining budget to each model call.
 
 The drawer labels accepted responses as evidence selected by the model. A rejected model
 response is labelled as a deterministic answer; it is not presented as successful narration.

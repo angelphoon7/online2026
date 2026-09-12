@@ -6,6 +6,7 @@ import type { Snapshot, LiveIntent, ExclusionReason } from '@/shared/graph';
 import { getIntentById } from '@/shared/graph';
 import { SEARCH_CONFIG } from '../solve';
 import { readCapacity, requireCapacityBlock, solveHypothetical, type Capacity, type HypotheticalResult } from '../solve-hypothetical';
+import type { RequestBudget } from './request-budget';
 
 // Deterministic diagnosis - step 7-D of docs/RESHUFFLE_GRAPH_PLAN.md.
 //
@@ -131,10 +132,13 @@ function predicateState(snapshot: Snapshot): ChainState {
  * downwards, so it stops at the first size that works and reports what is achievable rather
  * than only whether the full count is.
  */
-function largestAcceptableGroup(intent: Intent, candidates: bigint[], state: ChainState): number {
+async function largestAcceptableGroup(intent: Intent, candidates: bigint[], state: ChainState, budget?: RequestBudget): Promise<number> {
   const want = Math.min(intent.exactCount, candidates.length);
+  let tried = 0;
   for (let size = want; size >= 1; size--) {
     for (const bundle of combinations(candidates, size)) {
+      budget?.checkpoint();
+      if (++tried % 256 === 0) await budget?.yield();
       // exactCount is part of V5, so ask about a variant wanting exactly this many.
       if (!checkReceivedBundle({ ...intent, exactCount: size }, bundle, state)) return size;
     }
@@ -156,7 +160,8 @@ function offeredByOthers(snapshot: Snapshot, owner: Address): bigint[] {
   return ids;
 }
 
-function supplyFunnel(intent: LiveIntent, snapshot: Snapshot, state: ChainState): Evidence['supply'] {
+async function supplyFunnel(intent: LiveIntent, snapshot: Snapshot, state: ChainState, budget?: RequestBudget): Promise<Evidence['supply']> {
+  budget?.checkpoint();
   const start = offeredByOthers(snapshot, intent.owner);
   const stages: FunnelStage[] = [{ stage: 'offeredByOthers', remaining: start.length }];
 
@@ -174,7 +179,7 @@ function supplyFunnel(intent: LiveIntent, snapshot: Snapshot, state: ChainState)
   // group search rather than another filter.
   const truncated = pool.length > GROUP_SEARCH_CAP;
   const searched = truncated ? pool.slice(0, GROUP_SEARCH_CAP) : pool;
-  const largestGroup = largestAcceptableGroup(intent, searched, state);
+  const largestGroup = await largestAcceptableGroup(intent, searched, state, budget);
   stages.push({ stage: 'cohesiveGroup', remaining: largestGroup });
 
   const firstZero = stages.find((s) => s.remaining === 0)?.stage ?? null;
@@ -240,7 +245,8 @@ const asRelaxation = (change: string, result: HypotheticalResult): Relaxation =>
  *
  * `capacity` is optional so a caller running several diagnoses can read USDC balances once.
  */
-export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: Capacity): Promise<Evidence> {
+export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: Capacity, budget?: RequestBudget): Promise<Evidence> {
+  budget?.checkpoint();
   if (capacity) requireCapacityBlock(capacity, snapshot.block);
   const started = performance.now();
   const target = lower(intentHash);
@@ -253,10 +259,10 @@ export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: C
     bounds,
     counterpartyTx: {} as Record<string, string>,
   };
-  const done = (evidence: Omit<Evidence, 'runtimeMs'>): Evidence => ({
-    ...evidence,
-    runtimeMs: performance.now() - started,
-  });
+  const done = (evidence: Omit<Evidence, 'runtimeMs'>): Evidence => {
+    budget?.checkpoint();
+    return { ...evidence, runtimeMs: performance.now() - started };
+  };
 
   // 1. Locate. An excluded or closed intent is already a complete answer, and a better one
   //    than any counterfactual: it names the check that removed it.
@@ -269,7 +275,8 @@ export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: C
     // Not live and not excluded: it was revoked, already settled, or never committed here.
     // Exact snapshot block, not a freshness floor: a later revoke is not true at this block.
     // Failed historical reads propagate to the API; they must not become UNKNOWN or latest.
-    const found = await getIntentById(intentHash, snapshot);
+    const found = await getIntentById(intentHash, snapshot, { signal: budget?.signal });
+    budget?.checkpoint();
     if (found && (found.state === 'REVOKED' || found.state === 'SETTLED')) {
       return done({
         ...base,
@@ -287,10 +294,11 @@ export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: C
   // of validity, so a relaxation that ignored it could promise a settlement the contract
   // would reject.
   const owners = snapshot.intents.map((i) => i.owner as Address);
-  const funds = capacity ?? (await readCapacity(owners, snapshot.block));
+  const funds = capacity ?? (await readCapacity(owners, snapshot.block, budget));
+  budget?.checkpoint();
   const unchanged: Intent = { ...intent };
   const hypothetical = (variation: Partial<Intent>) =>
-    solveHypothetical(snapshot, { replaceHash: intent.hash, intent: { ...unchanged, ...variation } }, funds);
+    solveHypothetical(snapshot, { replaceHash: intent.hash, intent: { ...unchanged, ...variation } }, funds, budget);
 
   // 2. Baseline: the pool exactly as committed. Running it through the same path as the
   //    relaxations means the comparison is apples to apples.
@@ -311,7 +319,7 @@ export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: C
 
   const state = predicateState(snapshot);
   // 3 and 4. Necessary conditions, in both directions: what you want, and what you offer.
-  const supply = intent.exactCount > 0 ? supplyFunnel(intent, snapshot, state) : undefined;
+  const supply = intent.exactCount > 0 ? await supplyFunnel(intent, snapshot, state, budget) : undefined;
   const demand = intent.offered.length > 0 ? demandCheck(intent, snapshot) : undefined;
 
   // 5. Single-condition relaxations. One change at a time, each re-run through the solver.

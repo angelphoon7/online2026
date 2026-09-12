@@ -5,9 +5,12 @@ import { ask, agentConfigured, AgentNotConfigured } from '@/server/agent/narrate
 import { diagnose } from '@/server/agent/diagnose';
 import { renderEvidence } from '@/server/agent/template';
 import type { Hex } from 'viem';
+import { readAgentBody, withAgentRequest } from '@/server/agent/request-control';
+import type { RequestBudget } from '@/server/agent/request-budget';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 65;
 
 // POST /api/agent/ask  -  plan 7-I.
 //
@@ -21,32 +24,16 @@ export const dynamic = 'force-dynamic';
 // read-only either way: it holds no key that can sign or submit anything.
 
 const MAX_QUESTION = 500;
-/** Coarse per-IP limit. The LLM call costs money; a page bug should not spend it in a loop. */
-const WINDOW_MS = 60_000;
-const MAX_PER_WINDOW = 12;
-const seen = new Map<string, number[]>();
-
-function rateLimited(key: string): boolean {
-  const now = Date.now();
-  const hits = (seen.get(key) ?? []).filter((at) => now - at < WINDOW_MS);
-  hits.push(now);
-  seen.set(key, hits);
-  if (seen.size > 500) for (const [k, v] of seen) if (!v.some((at) => now - at < WINDOW_MS)) seen.delete(k);
-  return hits.length > MAX_PER_WINDOW;
+export async function POST(request: Request) {
+  return withAgentRequest(request, 'ask', budget => handleAsk(request, budget));
 }
 
-export async function POST(request: Request) {
+async function handleAsk(request: Request, budget: RequestBudget) {
   if (request.headers.get('origin') && request.headers.get('origin') !== new URL(request.url).origin) {
     return Response.json({ error: 'Cross-origin requests are not accepted.' }, { status: 403 });
   }
 
-  const client = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'local';
-  if (rateLimited(client)) {
-    return Response.json({ error: 'Too many questions in a short window. Wait a moment.' }, { status: 429 });
-  }
-
-  const text = await request.text();
-  if (text.length > 4096) return Response.json({ error: 'Request too large' }, { status: 413 });
+  const text = await readAgentBody(request, budget);
 
   let intentHash: Hex;
   let question: string;
@@ -66,12 +53,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const snapshot = await getPoolSnapshot({ minBlock });
+    const snapshot = await getPoolSnapshot({ minBlock, signal: budget.signal });
+    budget.checkpoint();
 
     if (!agentConfigured()) {
       // No key: answer deterministically and say so, rather than returning an error page for
       // a question the evidence can already answer.
-      const evidence = await diagnose(snapshot, intentHash);
+      const evidence = await diagnose(snapshot, intentHash, undefined, budget);
       return Response.json(
         {
           answer: renderEvidence(evidence),
@@ -85,8 +73,9 @@ export async function POST(request: Request) {
       );
     }
 
-    return Response.json(await ask(snapshot, intentHash, question), { headers: { 'Cache-Control': 'no-store' } });
+    return Response.json(await ask(snapshot, intentHash, question, budget), { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
+    budget.checkpoint();
     if (error instanceof SubgraphLagError) {
       return Response.json(
         { error: 'The indexer has not reached the block of your last transaction yet.', indexedBlock: error.indexedBlock?.toString() ?? null },

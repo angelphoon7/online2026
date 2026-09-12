@@ -4,6 +4,7 @@ import type { Intent } from '../../solver/src/types';
 import type { Snapshot } from '@/shared/graph';
 import { solveHypothetical, type Capacity } from '../solve-hypothetical';
 import { SEARCH_CONFIG } from '../solve';
+import type { RequestBudget } from './request-budget';
 
 // what_if - step 7-E of docs/RESHUFFLE_GRAPH_PLAN.md.
 //
@@ -94,8 +95,10 @@ export async function whatIf(
   snapshot: Snapshot,
   intentHash: Hex,
   changes: WhatIfChanges,
-  capacity?: Capacity
+  capacity?: Capacity,
+  budget?: RequestBudget
 ): Promise<WhatIfResult> {
+  budget?.checkpoint();
   const target = intentHash.toLowerCase();
   const intent = snapshot.intents.find((i) => i.hash.toLowerCase() === target);
   const shell = {
@@ -110,7 +113,7 @@ export async function whatIf(
   }
 
   const varied = applyChanges({ ...intent }, changes);
-  const result = await solveHypothetical(snapshot, { replaceHash: intent.hash, intent: varied }, capacity);
+  const result = await solveHypothetical(snapshot, { replaceHash: intent.hash, intent: varied }, capacity, budget);
 
   return {
     ...shell,

@@ -6,6 +6,7 @@ import { TOOLS, dispatcher } from './tools';
 import { guard, bigintSafe, type GuardedAnswer, type ToolLogEntry } from './guard';
 import { poolOverview } from './overview';
 import { answerOptions } from './answer-options';
+import type { RequestBudget } from './request-budget';
 
 // Narration - step 7-G of docs/RESHUFFLE_GRAPH_PLAN.md.
 //
@@ -92,11 +93,12 @@ export type AgentAnswer = GuardedAnswer & { model: string; turns: number; modelC
  * The snapshot is taken once by the caller and every tool reads that same one, so the block
  * number in the answer and the evidence describe the same moment.
  */
-export async function ask(snapshot: Snapshot, intentHash: Hex, question: string): Promise<AgentAnswer> {
+export async function ask(snapshot: Snapshot, intentHash: Hex, question: string, budget?: RequestBudget): Promise<AgentAnswer> {
+  budget?.checkpoint();
   if (!agentConfigured()) throw new AgentNotConfigured();
 
   const client = new Anthropic({ timeout: 45_000, maxRetries: 0 });
-  const tools = dispatcher(snapshot, intentHash);
+  const tools = dispatcher(snapshot, intentHash, budget);
   const log: ToolLogEntry[] = [];
   const block = snapshot.block.toString();
 
@@ -112,6 +114,7 @@ export async function ask(snapshot: Snapshot, intentHash: Hex, question: string)
   const modelCalls: ModelCall[] = [];
 
   while (turns < MAX_TURNS) {
+    budget?.checkpoint();
     turns++;
     const response = await client.messages.create({
       model: MODEL,
@@ -121,7 +124,10 @@ export async function ask(snapshot: Snapshot, intentHash: Hex, question: string)
       system: [{ type: 'text', text: `${SYSTEM}\n\n${classVocabulary(snapshot)}`, cache_control: { type: 'ephemeral' } }],
       tools: TOOLS,
       messages,
-    });
+    // The shared signal supplies the remaining overall deadline; a separate rounded timer
+    // could expire just before it and misclassify the request as an upstream failure.
+    }, { signal: budget?.signal, timeout: 45_000 });
+    budget?.checkpoint();
     modelCalls.push({
       messageId: response.id, requestId: response._request_id ?? null, model: response.model,
       stopReason: response.stop_reason, inputTokens: response.usage.input_tokens,
@@ -147,6 +153,7 @@ export async function ask(snapshot: Snapshot, intentHash: Hex, question: string)
     for (const content of response.content) {
       if (content.type !== 'tool_use') continue;
       const output = await tools.run(content.name, content.input);
+      budget?.checkpoint();
       const entry: ToolLogEntry = { tool: content.name, input: content.input, output, source: 'model' };
       log.push(entry);
       results.push({
@@ -161,6 +168,8 @@ export async function ask(snapshot: Snapshot, intentHash: Hex, question: string)
 
   // The guard needs something deterministic to fall back to, and the selected intent's own
   // diagnosis is it - computed here if the model never asked for it.
+  budget?.checkpoint();
   const fallback = await tools.baseline();
+  budget?.checkpoint();
   return { ...guard(answer, log, block, fallback), model: MODEL, turns, modelCalls, narration: 'evidence-passages-v1' };
 }
