@@ -101,7 +101,9 @@ input and verified through RPC. They are not indexed in a `SettlementLeg` entity
    altered fields as `HASH_MISMATCH`. The registry key is the bare struct hash; the EIP-712
    domain (`chainId` and `verifyingContract`) authenticates the signature at commit.
 2. **Freshness floor:** reads following a transaction use `block: { number_gte: receiptBlock }`.
-   The UI waits for indexing rather than substituting an older pool. Indexing errors are surfaced.
+   The receipt raises a shared floor immediately, including for periodic refresh and the Agent
+   drawer. Timeouts retain **Indexing block #M** and offer retry; old responses cannot replace
+   newer state. The floor survives a same-tab reload. [Step 6-B / 8 behavior and tests](docs/GRAPH_6B_8.md).
 3. **Execution checks:** indexed discovery is followed by chain reads and `eth_call` simulation.
    Settlement checks V0–V8 again in the real transaction. Simulation does not reserve state;
    a later withdrawal can still make a proposal revert and cost its proposer gas.

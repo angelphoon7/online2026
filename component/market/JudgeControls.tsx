@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import type { Address, Hex } from 'viem';
 import { EXPLORER } from '@/lib/ui-copy';
+import { MarketFreshness, requireSnapshotBlock } from '@/lib/market-freshness';
 
 // Judge controls - plan 6-D, and beat 2 of the run of show.
 //
@@ -27,6 +28,7 @@ export type BudgetChange = { revokeTx: Hex; commitTx: Hex; commitBlock: string; 
 export type Revocation = { revokeTx: Hex; revokeBlock: string; intentHash: Hex };
 
 type Props = {
+  freshness: MarketFreshness;
   busy: boolean;
   /** Market's participant labelling, so "Wallet 2" means the same thing in both places. */
   label: (owner: string) => string;
@@ -37,7 +39,8 @@ type Props = {
 const signedLimit = (usdc: number) =>
   usdc > 0 ? `pays up to ${usdc} USDC` : usdc < 0 ? `must receive at least ${-usdc} USDC` : 'pays nothing';
 
-export default function JudgeControls({ busy, label, onBudget, onRevoke }: Props) {
+export default function JudgeControls({ busy, label, onBudget, onRevoke, freshness }: Props) {
+  const { floor, indexingBlock } = useSyncExternalStore(freshness.subscribe, freshness.getSnapshot, freshness.getServerSnapshot);
   const [pool, setPool] = useState<JudgeIntent[] | null>(null);
   const [enabled, setEnabled] = useState(false);
   const [hash, setHash] = useState<Hex | ''>('');
@@ -50,10 +53,14 @@ export default function JudgeControls({ busy, label, onBudget, onRevoke }: Props
   const [running, setRunning] = useState('');
 
   const load = useCallback(async (select?: Hex) => {
+    const ticket = freshness.getSnapshot();
+    if (ticket.indexingBlock !== null) { if (select) setHash(select); return; }
     try {
-      const response = await fetch('/api/demo/budget', { cache: 'no-store' });
+      const response = await fetch(`/api/demo/budget?minBlock=${ticket.floor}`, { cache: 'no-store' });
       const data = await response.json();
+      if (!freshness.current(ticket.revision)) return;
       if (!response.ok) throw new Error(data.error ?? 'Judge controls unavailable');
+      if (data.enabled) requireSnapshotBlock(data.snapshotBlock, ticket.floor);
       setEnabled(!!data.enabled);
       setPool(data.intents ?? []);
       // Keep the current selection while it is still live; otherwise follow the hash a change
@@ -64,13 +71,14 @@ export default function JudgeControls({ busy, label, onBudget, onRevoke }: Props
         return live ? (next as Hex) : (data.intents?.[0]?.hash ?? '');
       });
     } catch (e) {
+      if (!freshness.current(ticket.revision)) return;
       setEnabled(false);
       setPool([]);
       setError(e instanceof Error ? e.message : 'Judge controls unavailable');
     }
-  }, []);
+  }, [freshness]);
 
-  useEffect(() => { void Promise.resolve().then(() => load()); }, [load]);
+  useEffect(() => { if (indexingBlock === null) void Promise.resolve().then(() => load()); }, [load, floor, indexingBlock]);
 
   const selected = pool?.find(i => i.hash.toLowerCase() === String(hash).toLowerCase());
   const budget = edited && selected && edited.hash === selected.hash ? edited.value : String(selected?.maxNetPayUsdc ?? '');

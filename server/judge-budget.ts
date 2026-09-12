@@ -28,6 +28,7 @@ import { DEPLOYMENT } from '@/lib/deployment';
 // Keys: demo participant keys live in .env.seed, server-side only. They never reach the bundle.
 
 export class JudgeControlError extends Error {
+  confirmed?: { blockNumber: string; hashes: Hex[] };
   constructor(message: string, public status = 400) {
     super(message);
     this.name = 'JudgeControlError';
@@ -225,9 +226,8 @@ export async function applyBudget(intentHash: Hex, maxNetPay: bigint): Promise<B
   const next: Intent = { ...current, maxNetPay, nonce };
   const newHash = hashIntent(next);
 
-  // Revoke first. If the commit then fails, the participant is left with no live intent rather
-  // than two — which is recoverable by re-running this, and never double-commits the same
-  // tickets under two live hashes.
+  // Revoke first. A later failure still returns this confirmed receipt so the UI's floor
+  // includes the revocation. Restoring an intent then requires a new valid commitment.
   const revokeTx = await wallet.writeContract({
     address: addresses.IntentRegistry,
     abi: abi('IntentRegistry'),
@@ -240,56 +240,62 @@ export async function applyBudget(intentHash: Hex, maxNetPay: bigint): Promise<B
     throw new JudgeControlError(`Revoke reverted (${revokeTx}); nothing was committed.`, 502);
   }
 
-  // The owner signs; commit() is permissionless, so the relay could be anyone.
-  const signature = await account.signTypedData({
-    domain: {
-      name: 'RESHUFFLE',
-      version: '1',
-      chainId: DEPLOYMENT.chainId,
-      verifyingContract: addresses.IntentRegistry,
-    },
-    types: EIP712_TYPES,
-    primaryType: 'Intent',
-    message: {
-      owner: next.owner,
-      offered: next.offered,
-      eventId: next.eventId,
-      sessionMask: next.sessionMask,
-      sectionMask: next.sectionMask,
-      exactCount: next.exactCount,
-      mustShareSession: next.mustShareSession,
-      mustShareSection: next.mustShareSection,
-      mustBeAdjacent: next.mustBeAdjacent,
-      maxNetPay: next.maxNetPay,
-      deadline: next.deadline,
-      nonce: next.nonce,
-    },
-  });
+  try {
+    // The owner signs; commit() is permissionless, so the relay could be anyone.
+    const signature = await account.signTypedData({
+      domain: {
+        name: 'RESHUFFLE',
+        version: '1',
+        chainId: DEPLOYMENT.chainId,
+        verifyingContract: addresses.IntentRegistry,
+      },
+      types: EIP712_TYPES,
+      primaryType: 'Intent',
+      message: {
+        owner: next.owner,
+        offered: next.offered,
+        eventId: next.eventId,
+        sessionMask: next.sessionMask,
+        sectionMask: next.sectionMask,
+        exactCount: next.exactCount,
+        mustShareSession: next.mustShareSession,
+        mustShareSection: next.mustShareSection,
+        mustBeAdjacent: next.mustBeAdjacent,
+        maxNetPay: next.maxNetPay,
+        deadline: next.deadline,
+        nonce: next.nonce,
+      },
+    });
 
-  const commitTx = await wallet.writeContract({
-    address: addresses.IntentRegistry,
-    abi: abi('IntentRegistry'),
-    functionName: 'commit',
-    args: [next, signature],
-    gas: 400000n,
-  });
-  const commitReceipt = await client.waitForTransactionReceipt({ hash: commitTx });
-  if (commitReceipt.status !== 'success') {
-    throw new JudgeControlError(
-      `Commit reverted (${commitTx}). The old intent is revoked; re-run to restore a live intent.`,
-      502
-    );
+    const commitTx = await wallet.writeContract({
+      address: addresses.IntentRegistry,
+      abi: abi('IntentRegistry'),
+      functionName: 'commit',
+      args: [next, signature],
+      gas: 400000n,
+    });
+    const commitReceipt = await client.waitForTransactionReceipt({ hash: commitTx });
+    if (commitReceipt.status !== 'success') {
+      throw new JudgeControlError(
+        `Commit reverted (${commitTx}). The old intent is revoked; create a new intent to restore a live request.`,
+        502
+      );
+    }
+
+    return {
+      revokeTx,
+      commitTx,
+      commitBlock: commitReceipt.blockNumber.toString(),
+      newHash,
+      oldHash: intentHash,
+      owner,
+      previousMaxNetPay: current.maxNetPay.toString(),
+      maxNetPay: maxNetPay.toString(),
+      nonce: nonce.toString(),
+    };
+  } catch (error) {
+    const failure = error instanceof JudgeControlError ? error : new JudgeControlError('The old intent was revoked. The replacement commitment was not confirmed; inspect its transaction status before creating another intent.', 502);
+    failure.confirmed = { blockNumber: revokeReceipt.blockNumber.toString(), hashes: [revokeTx] };
+    throw failure;
   }
-
-  return {
-    revokeTx,
-    commitTx,
-    commitBlock: commitReceipt.blockNumber.toString(),
-    newHash,
-    oldHash: intentHash,
-    owner,
-    previousMaxNetPay: current.maxNetPay.toString(),
-    maxNetPay: maxNetPay.toString(),
-    nonce: nonce.toString(),
-  };
 }

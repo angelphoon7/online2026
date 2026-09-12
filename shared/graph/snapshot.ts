@@ -21,7 +21,7 @@
 // proposal is submitted (server/solve.ts), which is what makes index lag cause a failed
 // simulation rather than an invalid settlement.
 
-import { gql, SubgraphIndexingError, type GqlOptions } from './client';
+import { gql, SubgraphIndexingError, SubgraphLagError, type GqlOptions } from './client';
 import { POOL_SNAPSHOT, INTENT_BY_ID } from './queries';
 import { fromGraph, hashIntent, sameAddress, type GraphIntent } from '../intent';
 import type { Intent, TicketMeta, Hex, Address } from '../intent';
@@ -112,6 +112,7 @@ export async function getPoolSnapshot(options: SnapshotOptions = {}): Promise<Sn
   if (data._meta.hasIndexingErrors) throw new SubgraphIndexingError();
 
   const block = BigInt(data._meta.block.number);
+  if (block < minBlock) throw new SubgraphLagError(`SubgraphLagError: indexed ${block}, required ${minBlock}`, block);
   const timestamp = BigInt(data._meta.block.timestamp);
 
   const ticketMeta = new Map<bigint, TicketMeta>();

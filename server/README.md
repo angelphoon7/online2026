@@ -29,6 +29,11 @@ npm.cmd run start -- --port 3101
 
 Only hashes are accepted as explicit solver inputs; client-supplied budgets and ownership claims cannot change signed conditions. Explicit requests support 2–4 distinct committed intents. The pool service accepts up to 256 searchable live intents, forming candidates of at most four participants and four offered/received tickets per intent. Each search has 100-candidate and 2-second limits. Assignment recursion also checks the deadline. RPC mode scans bounded log pages; Graph discovery is the demo path. There is no claim about unbounded market search.
 
+Market Graph queries apply `number_gte` to metadata, intents, tickets and settlements; an unmet
+floor returns HTTP 409. Judge-list reads also accept `minBlock`. A budget replacement that
+fails after revocation returns the confirmed revoke block/hash in `confirmed`, so the browser
+can retain the receipt floor even on an error response. [Post-write UI and drawer checks](../docs/GRAPH_6B_8.md).
+
 Both solver routes return top-level `snapshotBlock`, `bounds`, ranked `candidates` and `excluded`,
 alongside the existing evidence fields. Only the chosen `proposal` has RPC simulation evidence
 and, on success, transaction calldata. `snapshotBlock` is null in RPC mode. An unmet Graph

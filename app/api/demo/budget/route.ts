@@ -1,6 +1,8 @@
 import { applyBudget, judgeControlsEnabled, participantKeys, JudgeControlError } from '@/server/judge-budget';
 import { graphPool } from '@/server/solve-graph';
 import type { Hex } from 'viem';
+import { parseMinBlock } from '@/server/solve';
+import { SubgraphLagError } from '@/shared/graph';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,12 +13,13 @@ export const dynamic = 'force-dynamic';
 // POST revokes one and commits the same conditions with a different maxNetPay, on-chain, and
 //      returns commitBlock so the caller can waitForIndexed before re-reading the pool.
 
-export async function GET() {
+export async function GET(request: Request) {
   if (!judgeControlsEnabled()) {
     return Response.json({ enabled: false, intents: [] }, { headers: { 'Cache-Control': 'no-store' } });
   }
   try {
-    const { committed, snapshot } = await graphPool();
+    const minBlock = parseMinBlock({ minBlock: new URL(request.url).searchParams.get('minBlock') });
+    const { committed, snapshot } = await graphPool(minBlock);
     // Only list what this server can actually change — an intent whose key we do not hold
     // would fail at POST, and offering it would be a control that does not work.
     const holders = participantKeys();
@@ -35,6 +38,7 @@ export async function GET() {
       { headers: { 'Cache-Control': 'no-store' } }
     );
   } catch (error) {
+    if (error instanceof SubgraphLagError) return Response.json({ error: 'SubgraphLagError: waiting for the updated judge pool.' }, { status: 409 });
     return Response.json({ error: (error as Error).message }, { status: 503 });
   }
 }
@@ -74,7 +78,7 @@ export async function POST(request: Request) {
     const message =
       error instanceof JudgeControlError
         ? error.message
-        : 'The budget change failed. Check the server log; no partial state is reported here.';
-    return Response.json({ error: message }, { status, headers: { 'Cache-Control': 'no-store' } });
+        : 'The budget change failed. Check the server log and transaction status before retrying.';
+    return Response.json({ error: message, ...(error instanceof JudgeControlError && error.confirmed ? { confirmed: error.confirmed } : {}) }, { status, headers: { 'Cache-Control': 'no-store' } });
   }
 }

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 import { verifyMessage, type Hex, type Address } from 'viem';
 import deployment from '@/deployments/arc-testnet.json';
 export const runtime = 'nodejs';
@@ -16,7 +17,11 @@ export async function GET(request: Request) {
   if (challenges.size > 20) challenges.clear();
   const message = `RESHUFFLE: prepare the Arc Testnet demo using the local operator script. This can spend test USDC and revoke/recommit demo intents.\nSettlement: ${deployment.contracts.Settlement}\nChallenge: ${randomUUID()}`;
   challenges.set(message, Date.now() + 120000);
-  return Response.json({ enabled: true, state, operator: deployment.deployer, message }, { headers: { 'Cache-Control': 'no-store' } });
+  let verifiedBlock: string | undefined;
+  if (state === 'complete') {
+    try { const evidence = JSON.parse(await readFile('deployments/arc-seed-evidence.json', 'utf8')); if (/^\d+$/.test(String(evidence.blockNumber))) verifiedBlock = String(evidence.blockNumber); } catch {}
+  }
+  return Response.json({ enabled: true, state, operator: deployment.deployer, message, verifiedBlock }, { headers: { 'Cache-Control': 'no-store' } });
 }
 export async function POST(request: Request) {
   if (!local(request) || request.headers.get('origin') !== new URL(request.url).origin) return Response.json({ error: 'Reset is available only from the local development app.' }, { status: 403 });

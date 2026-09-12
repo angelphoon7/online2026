@@ -1,6 +1,6 @@
 import 'server-only';
 import type { Address, Hex } from 'viem';
-import { gql } from '@/shared/graph/client';
+import { gql, SubgraphLagError, SubgraphIndexingError } from '@/shared/graph/client';
 import { hashIntent, fromGraph, type GraphIntent } from '@/shared/intent';
 import type { MarketSnapshot, WireIntent, ChainTicket } from '@/lib/market-types';
 import demo from '@/deployments/demo-ready.json';
@@ -38,15 +38,15 @@ const STATE_NUMBER = { LIVE: 1, REVOKED: 2, SETTLED: 3 } as const;
  * tickets and settlement history too.
  */
 const MARKET = /* GraphQL */ `
-  query Market($first: Int!) {
-    _meta {
+  query Market($first: Int!, $minBlock: Int!) {
+    _meta(block: { number_gte: $minBlock }) {
       block {
         number
         timestamp
       }
       hasIndexingErrors
     }
-    intents(first: $first, orderBy: committedAtBlock, orderDirection: asc) {
+    intents(first: $first, orderBy: committedAtBlock, orderDirection: asc, block: { number_gte: $minBlock }) {
       id
       owner
       eventId
@@ -63,7 +63,7 @@ const MARKET = /* GraphQL */ `
       state
       committedTx
     }
-    tickets(first: $first, orderBy: tokenId, orderDirection: asc) {
+    tickets(first: $first, orderBy: tokenId, orderDirection: asc, block: { number_gte: $minBlock }) {
       id
       eventId
       sessionId
@@ -74,7 +74,7 @@ const MARKET = /* GraphQL */ `
       depositor
       redeemed
     }
-    settlements(first: $first, orderBy: blockNumber, orderDirection: desc) {
+    settlements(first: $first, orderBy: blockNumber, orderDirection: desc, block: { number_gte: $minBlock }) {
       txHash
       blockNumber
       participantCount
@@ -100,10 +100,10 @@ type MarketResponse = {
 };
 
 export async function marketSnapshotFromGraph(minBlock = 0n): Promise<MarketSnapshot> {
-  const data = await gql<MarketResponse>(MARKET, { first: PAGE });
+  const data = await gql<MarketResponse>(MARKET, { first: PAGE, minBlock: Number(minBlock) });
 
   if (data._meta.hasIndexingErrors) {
-    throw new Error('Subgraph reports indexing errors; market data is not trustworthy.');
+    throw new SubgraphIndexingError();
   }
   for (const [name, list] of [
     ['intents', data.intents],
@@ -118,10 +118,9 @@ export async function marketSnapshotFromGraph(minBlock = 0n): Promise<MarketSnap
   const blockNumber = BigInt(data._meta.block.number);
   const timestamp = BigInt(data._meta.block.timestamp);
 
-  // Freshness floor. The query above is unfiltered so a caller asking for a block the indexer
-  // has not reached gets a clear error rather than a quietly older market.
+  // Defense in depth if a provider fails to enforce the query's freshness floor.
   if (minBlock > 0n && blockNumber < minBlock) {
-    throw new Error(`SubgraphLag: indexed ${blockNumber}, needed ${minBlock}`);
+    throw new SubgraphLagError(`SubgraphLag: indexed ${blockNumber}, needed ${minBlock}`, blockNumber);
   }
 
   const tickets: ChainTicket[] = data.tickets.map((t) => ({

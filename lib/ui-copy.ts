@@ -51,3 +51,6 @@ export function intentSentence(i: IntentParams) {
   const review = intentReview(i);
   return `${review.sentence} ${review.metadata}`;
 }
+export const indexingMessage = (block: bigint) => `Indexing block #${block}…`;
+export const INDEXING_PENDING = 'Transaction confirmed. Waiting for the updated pool before matching or answering.';
+export const INDEXING_RETRY = 'Retry indexing';

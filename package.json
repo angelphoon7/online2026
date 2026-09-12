@@ -25,6 +25,7 @@
     "subgraph:lag:tx": "node scripts/measure-subgraph-transaction.mjs",
     "graph:solve:check": "node scripts/check-graph-solver.mjs",
     "test:graph-acceptance": "node --test scripts/test-graph-acceptance.mjs",
+    "test:browser": "playwright test",
     "mainnet:check": "node scripts/mainnet.mjs check",
     "mainnet:plan": "node scripts/mainnet.mjs plan",
     "mainnet:deploy": "node scripts/mainnet.mjs deploy",
@@ -59,6 +60,7 @@
     "viem": "^2.56.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

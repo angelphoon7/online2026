@@ -58,6 +58,11 @@ historical gas-report measurements.
 
 ## Open findings
 
+Further follow-up: [Step 6-B / 8](GRAPH_6B_8.md) fixes receipt floors, stale market/agent
+responses and retry behavior. Its 47 assertion-based tests and two mocked-browser tests pass;
+the wait tests now assert named outcomes. The historical test qualifications above describe
+the earlier run. Separate Step 7 and live recording findings remain as noted below.
+
 Follow-up on 12 September: [Step 4-A / 6-C](GRAPH_4A_6C.md) now records a real transfer's
 7.294-second receipt-to-index observation and successful HTTP Graph solver responses with
 matching source logs. This closes the missing transaction-latency / solver-run evidence;

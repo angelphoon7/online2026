@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { Hex } from 'viem';
-import { EXPLORER } from '@/lib/ui-copy';
+import { EXPLORER, indexingMessage, INDEXING_PENDING, INDEXING_RETRY } from '@/lib/ui-copy';
+import { MarketFreshness, requireSnapshotBlock } from '@/lib/market-freshness';
 
 // The Agent drawer - step 8 of docs/RESHUFFLE_GRAPH_PLAN.md.
 //
@@ -66,8 +67,7 @@ type Props = {
   intentHash: Hex | null;
   /** Chain head from RPC, so lag is displayed rather than inferred. */
   chainBlock: string | null;
-  /** Non-null while a transaction is being indexed; asking is disabled until it clears. */
-  indexingBlock: bigint | null;
+  freshness: MarketFreshness;
   label: (owner: string) => string;
 };
 
@@ -105,60 +105,75 @@ const changeLabel = (change: string) =>
   CHANGE_LABEL[change] ??
   change.replace(/^addSection=(\d+)$/, 'Also accept section $1').replace(/^addSession=(\d+)$/, 'Also accept session $1');
 
-export default function AgentDrawer({ open, onClose, intentHash, chainBlock, indexingBlock, label }: Props) {
+export default function AgentDrawer({ open, onClose, intentHash, chainBlock, freshness, label }: Props) {
+  const { floor, revision, indexingBlock, error: indexingError } = useSyncExternalStore(freshness.subscribe, freshness.getSnapshot, freshness.getServerSnapshot);
+  const active = useRef<AbortController | null>(null);
   const [question, setQuestion] = useState('');
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   // Everything the drawer shows is tagged with the intent it describes and rendered only when
   // the tag still matches. A judge changing a budget produces a NEW hash, and an answer about
   // the revoked one must disappear the moment the drawer moves - deriving that from the tag
   // is what guarantees it, rather than remembering to clear three pieces of state.
-  const [answer, setAnswer] = useState<{ hash: Hex; data: AskResponse } | null>(null);
-  const [held, setHeld] = useState<{ hash: Hex; data: Evidence } | null>(null);
-  const [phase, setPhase] = useState<{ hash: Hex; value: 'asking' | 'answered' | 'error'; error?: string } | null>(null);
+  const [answer, setAnswer] = useState<{ hash: Hex; revision: number; data: AskResponse } | null>(null);
+  const [held, setHeld] = useState<{ hash: Hex; revision: number; data: Evidence } | null>(null);
+  const [phase, setPhase] = useState<{ hash: Hex; revision: number; value: 'idle' | 'asking' | 'answered' | 'error'; error?: string } | null>(null);
 
-  const forThis = <T,>(tagged: { hash: Hex; data: T } | null) =>
-    tagged && intentHash && tagged.hash.toLowerCase() === intentHash.toLowerCase() ? tagged.data : null;
+  const forThis = <T extends { block: string },>(tagged: { hash: Hex; revision: number; data: T } | null) =>
+    tagged && tagged.revision === revision && indexingBlock === null && BigInt(tagged.data.block) >= floor && intentHash && tagged.hash.toLowerCase() === intentHash.toLowerCase() ? tagged.data : null;
   const shown = forThis(answer);
   const evidence = forThis(held);
-  const current = phase && intentHash && phase.hash.toLowerCase() === intentHash.toLowerCase() ? phase : null;
+  const current = phase && phase.revision === revision && indexingBlock === null && intentHash && phase.hash.toLowerCase() === intentHash.toLowerCase() ? phase : null;
   const state = current?.value ?? 'idle';
   const error = current?.error ?? '';
 
   // The evidence is fetched without the model, from the same endpoint a judge can call
   // directly, so the block in the header is real before any question is asked.
-  const loadEvidence = useCallback(async (hash: Hex) => {
-    try {
-      const response = await fetch(`/api/agent/diagnose/${hash}`, { cache: 'no-store' });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error ?? 'Diagnosis unavailable');
-      setHeld({ hash, data: body as Evidence });
-    } catch (e) {
-      setPhase({ hash, value: 'error', error: e instanceof Error ? e.message : 'Diagnosis unavailable' });
-    }
-  }, []);
-
   useEffect(() => {
-    if (!open || !intentHash) return;
-    void Promise.resolve().then(() => loadEvidence(intentHash));
-  }, [open, intentHash, loadEvidence]);
+    active.current?.abort();
+    if (!open || !intentHash || indexingBlock !== null) return;
+    const hash = intentHash;
+    const controller = new AbortController();
+    active.current = controller;
+    void (async () => {
+      try {
+        const response = await fetch(`/api/agent/diagnose/${hash}?minBlock=${floor}`, { cache: 'no-store', signal: controller.signal });
+        const body = await response.json();
+        if (controller.signal.aborted || active.current !== controller || !freshness.current(revision)) return;
+        if (!response.ok) throw new Error(body.error ?? 'Diagnosis unavailable');
+        requireSnapshotBlock(body.block, floor);
+        if (!freshness.canAnswer(revision, body.block)) return;
+        setHeld({ hash, revision, data: body as Evidence });
+        setPhase({ hash, revision, value: 'idle' });
+      } catch (e) {
+        if (!controller.signal.aborted && active.current === controller && freshness.current(revision)) setPhase({ hash, revision, value: 'error', error: e instanceof Error ? e.message : 'Diagnosis unavailable' });
+      }
+    })();
+    return () => { controller.abort(); active.current?.abort(); };
+  }, [open, intentHash, floor, revision, indexingBlock, freshness]);
 
   if (!open) return null;
 
   const indexing = indexingBlock !== null;
-  const block = evidence?.block ?? shown?.block ?? null;
+  const block = shown?.block ?? evidence?.block ?? null;
   const lag = block && chainBlock ? Number(BigInt(chainBlock) - BigInt(block)) : null;
 
   const ask = async (text: string) => {
-    if (!intentHash || !text.trim()) return;
+    if (!intentHash || !text.trim() || freshness.getSnapshot().indexingBlock !== null) return;
     const hash = intentHash;
-    setPhase({ hash, value: 'asking' }); setAnswer(null);
+    const required = block && BigInt(block) > floor ? BigInt(block) : floor;
+    active.current?.abort();
+    const controller = new AbortController();
+    active.current = controller;
+    setPhase({ hash, revision, value: 'asking' }); setAnswer(null);
     try {
       const response = await fetch('/api/agent/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ intentHash, question: text.trim() }),
+        body: JSON.stringify({ intentHash, question: text.trim(), minBlock: required.toString() }),
+        signal: controller.signal,
       });
       const body = await response.json();
+      if (controller.signal.aborted || active.current !== controller || !freshness.current(revision)) return;
       if (!response.ok) {
         throw new Error(
           response.status === 409
@@ -166,14 +181,17 @@ export default function AgentDrawer({ open, onClose, intentHash, chainBlock, ind
             : (body.error ?? 'The agent could not answer')
         );
       }
-      setAnswer({ hash, data: body as AskResponse });
-      setPhase({ hash, value: 'answered' });
+      requireSnapshotBlock(body.block, required);
+      if (!freshness.canAnswer(revision, body.block)) return;
       // The answer's own tool results are the authoritative evidence for it; prefer them over
       // the diagnosis fetched before the question was asked.
       const diagnosis = (body as AskResponse).evidence.find((entry) => entry.tool === 'diagnose_intent');
-      if (diagnosis) setHeld({ hash, data: diagnosis.output as Evidence });
+      if (diagnosis && (diagnosis.output as Evidence).block !== body.block) throw new Error('Answer and evidence refer to different blocks. Retry the question.');
+      setAnswer({ hash, revision, data: body as AskResponse });
+      setPhase({ hash, revision, value: 'answered' });
+      setHeld(diagnosis ? { hash, revision, data: diagnosis.output as Evidence } : null);
     } catch (e) {
-      setPhase({ hash, value: 'error', error: e instanceof Error ? e.message : 'The agent could not answer' });
+      if (!controller.signal.aborted && active.current === controller && freshness.current(revision)) setPhase({ hash, revision, value: 'error', error: e instanceof Error ? e.message : 'The agent could not answer' });
     }
   };
 
@@ -182,7 +200,7 @@ export default function AgentDrawer({ open, onClose, intentHash, chainBlock, ind
       <div>
         <p className="mono agent-live">
           {indexing
-            ? `INDEXING BLOCK ${indexingBlock}…`
+            ? indexingMessage(indexingBlock)
             : block
               ? `LIVE · ARC TESTNET BLOCK #${block} · VIA THE GRAPH`
               : 'READING THE POOL'}
@@ -221,7 +239,7 @@ export default function AgentDrawer({ open, onClose, intentHash, chainBlock, ind
         </button>
       </form>
 
-      {indexing && <p className="quiet" role="status">Waiting for the indexer to reach block {String(indexingBlock)} before answering, so the answer is not about an older pool.</p>}
+      {indexing && <><p className="quiet" role="status">{INDEXING_PENDING}</p>{indexingError && <p role="alert">{indexingError}</p>}<button className="secondary" onClick={() => void freshness.refresh(true)}>{INDEXING_RETRY}</button></>}
       {error && <p role="alert">{error}</p>}
 
       {shown && <div className="agent-answer"><p>{shown.answer}</p>

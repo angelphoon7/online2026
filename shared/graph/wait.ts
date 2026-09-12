@@ -42,7 +42,7 @@ export async function getMeta(options: GqlOptions = {}): Promise<Meta> {
 }
 
 export type WaitOptions = GqlOptions & {
-  /** Give up after this long. Default 90s; typical wait is ~2s (measured median 4 blocks). */
+  /** Give up after this long, including network requests. Default 90s. */
   timeoutMs?: number;
   /** First poll delay; grows by 1.5x to maxDelayMs. */
   initialDelayMs?: number;
@@ -64,25 +64,33 @@ export async function waitForIndexed(target: bigint, options: WaitOptions = {}):
   let delay = options.initialDelayMs ?? 800;
 
   const started = Date.now();
+  const deadline = AbortSignal.timeout(timeoutMs);
+  const signal = options.signal ? AbortSignal.any([options.signal, deadline]) : deadline;
+  let indexed = 0n;
+  try {
+    for (;;) {
+      signal.throwIfAborted();
+      const meta = await getMeta({ ...options, signal });
+      signal.throwIfAborted();
+      // A mapping failure will not resolve by waiting; fail now rather than at the timeout.
+      if (meta.hasIndexingErrors) throw new SubgraphIndexingError();
 
-  for (;;) {
-    const meta = await getMeta(options);
-    // A mapping failure will not resolve by waiting; fail now rather than at the timeout.
-    if (meta.hasIndexingErrors) throw new SubgraphIndexingError();
+      indexed = BigInt(meta.block.number);
+      options.onProgress?.(indexed, target);
+      if (indexed >= target) return indexed;
 
-    const indexed = BigInt(meta.block.number);
-    options.onProgress?.(indexed, target);
-    // Usually true on the first poll — graph-node is typically a couple of blocks behind, and
-    // the round trip alone often covers that.
-    if (indexed >= target) return indexed;
+      const waited = Date.now() - started;
+      if (waited > timeoutMs) throw new SubgraphLagTimeout(target, indexed, waited);
 
-    const waited = Date.now() - started;
-    if (waited > timeoutMs) throw new SubgraphLagTimeout(target, indexed, waited);
-
-    // Do not overshoot the deadline just to complete one more sleep.
-    const remaining = timeoutMs - waited;
-    await sleep(Math.min(delay, remaining + 50), options.signal);
-    delay = Math.min(Math.round(delay * 1.5), maxDelayMs);
+      // Do not overshoot the deadline just to complete one more sleep.
+      const remaining = timeoutMs - waited;
+      await sleep(Math.min(delay, remaining), signal);
+      delay = Math.min(Math.round(delay * 1.5), maxDelayMs);
+    }
+  } catch (error) {
+    if (options.signal?.aborted) throw options.signal.reason;
+    if (deadline.aborted) throw new SubgraphLagTimeout(target, indexed, Date.now() - started);
+    throw error;
   }
 }
 
