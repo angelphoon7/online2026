@@ -25,7 +25,7 @@ export async function readEvidence(id: string) {
   if (!/^[0-9a-f-]{36}$/.test(id)) return null;
   const saved = await durableStore().get(`evidence:${id}`);
   if (saved !== null) return JSON.parse(saved);
-  // Preserve access to pre-migration local evidence; production never falls back to local files.
+  // Preserve pre-migration evidence for the file backend; Redis never falls back to local files.
   if (storageMode() !== 'file') return null;
   try { return JSON.parse(await readFile(join(directory, `${id}.json`), 'utf8')); }
   catch (error) {

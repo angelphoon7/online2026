@@ -1,4 +1,5 @@
 import { solveLivePool } from '@/server/solve-pool';
+import { graphReadError } from '@/server/graph-read-error';
 import { parseMinBlock } from '@/server/solve';
 
 export const runtime = 'nodejs';
@@ -17,6 +18,7 @@ export async function POST(request: Request) {
   try {
     return Response.json(await solveLivePool(minBlock), { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
+    const pageError = graphReadError(error); if (pageError) return pageError;
     const message = error instanceof Error ? error.message : '';
     if (error instanceof Error && error.name === 'SubgraphLagError') {
       return Response.json({ error: 'The indexer has not reached the block of your last transaction. Retry shortly.' }, { status: 409 });

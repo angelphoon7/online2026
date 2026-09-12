@@ -8,7 +8,7 @@ all additional state used by its diagnosis and hypothetical trials is read at **
 
 | Data | How its block is bound |
 |---|---|
-| Pool, ticket metadata, custody, timestamp | One `getPoolSnapshot(minBlock)` response, with its `_meta.block.number = N` |
+| Pool, ticket metadata, custody, timestamp | One `getPoolSnapshot(minBlock)` result; all pages are pinned to N and checked against the first page's metadata ([pagination](GRAPH_PAGINATION.md)) |
 | USDC balances | `balanceOf(owner)` with viem `blockNumber: N` |
 | USDC allowances | `allowance(owner, Settlement)` with viem `blockNumber: N` |
 | A commitment outside the live pool | `INTENT_BY_ID` with `intent(block: { number: N })` and `_meta(block: { number: N })` |

@@ -64,9 +64,9 @@ test('market Graph query floors all roots and rejects a stale successful respons
   const before = process.env.SUBGRAPH_URL; process.env.SUBGRAPH_URL = 'https://fixture.invalid';
   t.after(() => { if (before === undefined) delete process.env.SUBGRAPH_URL; else process.env.SUBGRAPH_URL = before; });
   t.mock.method(globalThis, 'fetch', async (_url: string, init: RequestInit) => {
-    const request = JSON.parse(init.body as string); assert.equal(request.variables.minBlock, 10);
-    assert.equal((request.query.match(/number_gte: \$minBlock/g) ?? []).length, 4);
-    return Response.json({ data: { _meta: { hasIndexingErrors: false, block: { number: 9, timestamp: '1789232809' } }, intents: [], tickets: [], settlements: [] } });
+    const request = JSON.parse(init.body as string); assert.deepEqual(request.variables.at, { number_gte: 10 });
+    assert.equal((request.query.match(/block: \$at/g) ?? []).length, 4);
+    return Response.json({ data: { _meta: { deployment: 'QmFixture', hasIndexingErrors: false, block: { number: 9, timestamp: '1789232809' } }, intents: [], tickets: [], settlements: [] } });
   });
   await assert.rejects(marketSnapshotFromGraph(10n), { name: 'SubgraphLagError' });
 });

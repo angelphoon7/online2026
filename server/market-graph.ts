@@ -1,6 +1,6 @@
 import 'server-only';
 import type { Address, Hex } from 'viem';
-import { gql, SubgraphLagError, SubgraphIndexingError } from '@/shared/graph/client';
+import { readGraphPages, type GraphPageMeta, type GraphPageOptions } from '@/shared/graph/pages';
 import { hashIntent, fromGraph, type GraphIntent } from '@/shared/intent';
 import type { MarketSnapshot, WireIntent, ChainTicket } from '@/lib/market-types';
 import demo from '@/deployments/demo-ready.json';
@@ -24,10 +24,6 @@ import { join } from 'node:path';
 
 const ZERO = '0x0000000000000000000000000000000000000000' as Address;
 
-// graph-node caps `first` at 1000. The demo pool is far below that; if it is ever reached we
-// must not silently serve a truncated market, so it is reported rather than clipped.
-const PAGE = 1000;
-
 const STATE_NUMBER = { LIVE: 1, REVOKED: 2, SETTLED: 3 } as const;
 
 /**
@@ -37,16 +33,18 @@ const STATE_NUMBER = { LIVE: 1, REVOKED: 2, SETTLED: 3 } as const;
  * tickets because it feeds the solver. The UI shows revoked and settled intents, redeemed
  * tickets and settlement history too.
  */
-const MARKET = /* GraphQL */ `
-  query Market($first: Int!, $minBlock: Int!) {
-    _meta(block: { number_gte: $minBlock }) {
+export const MARKET = /* GraphQL */ `
+  query Market($first: Int!, $at: Block_height!, $intentsAfter: Bytes!, $ticketsAfter: String!, $settlementsAfter: Bytes!, $with_intents: Boolean!, $with_tickets: Boolean!, $with_settlements: Boolean!) {
+    _meta(block: $at) {
       block {
         number
         timestamp
+        hash
       }
       hasIndexingErrors
+      deployment
     }
-    intents(first: $first, orderBy: committedAtBlock, orderDirection: asc, block: { number_gte: $minBlock }) {
+    intents(first: $first, where: { id_gt: $intentsAfter }, orderBy: id, orderDirection: asc, block: $at) @include(if: $with_intents) {
       id
       owner
       eventId
@@ -62,8 +60,9 @@ const MARKET = /* GraphQL */ `
       nonce
       state
       committedTx
+      committedAtBlock
     }
-    tickets(first: $first, orderBy: tokenId, orderDirection: asc, block: { number_gte: $minBlock }) {
+    tickets(first: $first, where: { id_gt: $ticketsAfter }, orderBy: id, orderDirection: asc, block: $at) @include(if: $with_tickets) {
       id
       eventId
       sessionId
@@ -74,7 +73,8 @@ const MARKET = /* GraphQL */ `
       depositor
       redeemed
     }
-    settlements(first: $first, orderBy: blockNumber, orderDirection: desc, block: { number_gte: $minBlock }) {
+    settlements(first: $first, where: { id_gt: $settlementsAfter }, orderBy: id, orderDirection: asc, block: $at) @include(if: $with_settlements) {
+      id
       txHash
       blockNumber
       participantCount
@@ -83,8 +83,8 @@ const MARKET = /* GraphQL */ `
 `;
 
 type MarketResponse = {
-  _meta: { block: { number: number; timestamp: string }; hasIndexingErrors: boolean };
-  intents: (GraphIntent & { state: keyof typeof STATE_NUMBER; committedTx: string })[];
+  _meta: GraphPageMeta;
+  intents: (GraphIntent & { state: keyof typeof STATE_NUMBER; committedTx: string; committedAtBlock: string })[];
   tickets: {
     id: string;
     eventId: number;
@@ -96,32 +96,21 @@ type MarketResponse = {
     depositor: string | null;
     redeemed: boolean;
   }[];
-  settlements: { txHash: string; blockNumber: string; participantCount: string }[];
+  settlements: { id: string; txHash: string; blockNumber: string; participantCount: string }[];
 };
 
-export async function marketSnapshotFromGraph(minBlock = 0n): Promise<MarketSnapshot> {
-  const data = await gql<MarketResponse>(MARKET, { first: PAGE, minBlock: Number(minBlock) });
-
-  if (data._meta.hasIndexingErrors) {
-    throw new SubgraphIndexingError();
-  }
-  for (const [name, list] of [
-    ['intents', data.intents],
-    ['tickets', data.tickets],
-    ['settlements', data.settlements],
-  ] as const) {
-    if (list.length >= PAGE) {
-      throw new Error(`Subgraph ${name} hit the ${PAGE}-record page limit; pagination is required before this pool size.`);
-    }
-  }
+export async function marketSnapshotFromGraph(minBlock = 0n, options: Omit<GraphPageOptions, 'minBlock'> = {}): Promise<MarketSnapshot> {
+  const data = await readGraphPages<MarketResponse>(MARKET, { intents: '0x', tickets: '', settlements: '0x' }, { ...options, minBlock });
 
   const blockNumber = BigInt(data._meta.block.number);
   const timestamp = BigInt(data._meta.block.timestamp);
 
-  // Defense in depth if a provider fails to enforce the query's freshness floor.
-  if (minBlock > 0n && blockNumber < minBlock) {
-    throw new SubgraphLagError(`SubgraphLag: indexed ${blockNumber}, needed ${minBlock}`, blockNumber);
-  }
+  // Cursor order is lexical id order. Restore presentation order after all pages finish.
+  data.tickets.sort((a, b) => BigInt(a.id) < BigInt(b.id) ? -1 : BigInt(a.id) > BigInt(b.id) ? 1 : 0);
+  data.intents.sort((a, b) => BigInt(a.committedAtBlock) < BigInt(b.committedAtBlock) ? -1
+    : BigInt(a.committedAtBlock) > BigInt(b.committedAtBlock) ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  data.settlements.sort((a, b) => BigInt(a.blockNumber) > BigInt(b.blockNumber) ? -1
+    : BigInt(a.blockNumber) < BigInt(b.blockNumber) ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
   const tickets: ChainTicket[] = data.tickets.map((t) => ({
     tokenId: t.id,

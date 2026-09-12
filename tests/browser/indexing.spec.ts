@@ -19,8 +19,8 @@ const toolAnswer = (evidence: unknown[]) => ({ block: '100', model: 'fixture', g
   answer: 'At Arc Testnet block #100: tool evidence for this question.', evidence });
 
 async function fixture(page: Page, partial = false) {
-  const control = { block: 100, graphBlock: 100, graphError: false, changed: false, staleMarket: false, holdMarket: false, holdAsk: false, oldMarket: null as Route | null, oldAsk: null as Route | null, reads: [] as string[] };
-  const market = (block = control.block) => ({ blockNumber: String(block), timestamp: '1789232809', source: 'graph', tickets: [], intents: [intent(A, owner('1'), control.changed ? 2 : 1), intent(B, owner('2')), ...(control.changed && !partial ? [intent(NEW, owner('1'))] : [])], settlements: [], defaultHashes: [], hashMismatched: [] });
+  const control = { block: 100, graphBlock: 100, graphError: false, changed: false, staleMarket: false, holdMarket: false, holdAsk: false, extraIntents: [] as ReturnType<typeof intent>[], oldMarket: null as Route | null, oldAsk: null as Route | null, reads: [] as string[] };
+  const market = (block = control.block) => ({ blockNumber: String(block), timestamp: '1789232809', source: 'graph', tickets: [], intents: [intent(A, owner('1'), control.changed ? 2 : 1), intent(B, owner('2')), ...(control.changed && !partial ? [intent(NEW, owner('1'))] : []), ...control.extraIntents], settlements: [], defaultHashes: [], hashMismatched: [] });
   await page.route('**/api/**', async route => {
     const request = route.request(), url = new URL(request.url()), path = url.pathname;
     control.reads.push(`${request.method()} ${path}${url.search}`);
@@ -32,7 +32,6 @@ async function fixture(page: Page, partial = false) {
     if (path === '/api/demo/reset') return json({ enabled: false, state: 'idle' });
     // Judge controls now read access before listing intents; this suite mocks an existing
     // authorized fixture session and never signs in to the actual server.
-    if (path === '/api/demo/session') return json({ enabled: true, configured: true, authenticated: true });
     if (path === '/api/demo/session') return json({ enabled: true, configured: true, authenticated: true });
     if (path === '/api/demo/scenarios') return json({ batch: 'fixture', snapshotBlock: String(control.block), lagSeconds: 0, groups: [] });
     if (path === '/api/demo/budget') {
@@ -245,6 +244,49 @@ for (const [tool, output] of [
   await expect(drawer.locator('.agent-evidence')).toHaveCount(0);
 });
 
+test('judge sign-in unlocks controls and signing out hides editable intents', async ({ page }) => {
+  await fixture(page);
+  let authenticated = false;
+  await page.route('**/api/demo/session', async route => {
+    if (route.request().method() === 'POST') {
+      if (route.request().postDataJSON().code !== 'fixture-code') return route.fulfill({ status: 401, json: { error: 'Incorrect judge access code.' } });
+      authenticated = true;
+    }
+    if (route.request().method() === 'DELETE') authenticated = false;
+    return route.fulfill({ json: { enabled: true, configured: true, authenticated } });
+  });
+  await page.reload();
+  await page.getByText('Judge controls / access', { exact: true }).click();
+  await page.getByLabel('Judge access code', { exact: true }).fill('wrong');
+  await page.getByRole('button', { name: 'Unlock judge controls' }).click();
+  await expect(page.getByText('Incorrect judge access code.')).toBeVisible();
+  await expect(page.getByLabel('Participant intent', { exact: true })).toHaveCount(0);
+  await page.getByLabel('Judge access code', { exact: true }).fill('fixture-code');
+  await page.getByRole('button', { name: 'Unlock judge controls' }).click();
+  await expect(page.getByLabel('Participant intent', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Lock judge controls', exact: true }).click();
+  await expect(page.getByLabel('Judge access code', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Participant intent', { exact: true })).toHaveCount(0);
+});
+
+test('judging guide sends the exact selected pair or triple and disables unavailable groups', async ({ page }) => {
+  await fixture(page);
+  await page.route('**/api/demo/scenarios*', route => route.fulfill({ json: { batch: 'fixture', snapshotBlock: '100', lagSeconds: 0, groups: [
+    { name: 'single-date', hashes: [A, B, NEW], available: true, issues: [], counts: [1, 1, 1], expiresAt: '2000000000' },
+    { name: 'expired-group', hashes: [A, B, NEW], available: false, issues: [{ reason: 'EXPIRED' }], counts: [3, 3, 3], expiresAt: null },
+  ] } }));
+  await page.reload();
+  await page.getByText('Start here / judge the live demo', { exact: true }).click();
+  const guide = page.locator('.judging-guide'), group = guide.locator('.judge-result').filter({ hasText: 'single date' });
+  await expect(guide.getByRole('link', { name: 'Circle faucet' })).toHaveAttribute('href', 'https://faucet.circle.com/');
+  for (const [name, hashes] of [['Check A + B', [A, B]], ['Check A + C', [A, NEW]], ['Check B + C', [B, NEW]], ['Check A + B + C', [A, B, NEW]]] as const) {
+    const received = page.waitForRequest(r => new URL(r.url()).pathname === '/api/solve');
+    await group.getByRole('button', { name, exact: true }).click();
+    expect((await received).postDataJSON().intentHashes).toEqual(hashes);
+  }
+  await expect(guide.locator('.judge-result').filter({ hasText: 'expired group' }).getByRole('button', { name: 'Check A + B + C', exact: true })).toBeDisabled();
+});
+
 test('direct diagnosis for another intent shows an error and no evidence', async ({ page }) => {
   await fixture(page);
   await page.route('**/api/agent/diagnose/**', route => route.fulfill({ json: { ...diagnosis(B, 100), status: 'EXCLUDED', exclusion: { reason: 'EXPIRED' } } }));
@@ -253,4 +295,23 @@ test('direct diagnosis for another intent shows an error and no evidence', async
   await expect(drawer.getByRole('alert')).toHaveText('The evidence does not match the selected intent and answer block. Retry the question.');
   await expect(drawer.locator('.agent-evidence')).toHaveCount(0);
   await expect(drawer.getByText(/expired/i)).toHaveCount(0);
+});
+
+test('a market above 1000 intents exposes its final request and opens that exact diagnosis', async ({ page }) => {
+  const { control } = await fixture(page);
+  control.extraIntents = Array.from({ length: 1001 }, (_, n) => intent(`0x${(n + 1).toString(16).padStart(64, '0')}`, owner('3')));
+  const last = control.extraIntents.at(-1)!;
+  await page.getByRole('button', { name: /Refresh public state/ }).click();
+  const openPool = page.getByRole('button', { name: 'Intent pool (1003)', exact: true });
+  await expect(openPool).toBeVisible();
+  await openPool.click();
+  await expect(page.locator('.pool-list .pool-row')).toHaveCount(1003);
+  const row = page.locator('.pool-list .pool-row').last();
+  await expect(row.getByText('/ Request 1003', { exact: true })).toBeVisible();
+  await row.getByRole('button', { name: 'Why no match?', exact: true }).click();
+  const drawer = page.getByRole('dialog', { name: 'Settlement agent' });
+  await expect(drawer.getByText(/BLOCK #100/)).toBeVisible();
+  await expect.poll(() => control.reads.some(call => call.includes(`/diagnose/${last.hash}?minBlock=`))).toBe(true);
+  await drawer.getByText('Evidence', { exact: true }).click();
+  await expect(drawer.getByText(`Intent ${last.hash} · settleable`, { exact: true })).toBeVisible();
 });

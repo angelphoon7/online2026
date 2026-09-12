@@ -48,12 +48,15 @@ export async function issueDemoTickets(recipient: Address) {
   const id = `claim:${addresses.TicketNFT.toLowerCase()}:${key}`;
   return signingJob<Claim, { tokenIds: string[]; hashes: Hex[] }>(`${network.id}:${account.address}`, id, async () => {
     // Local claims made before shared storage remain resumable, including signed pending mints.
-    const old = storageMode() === 'file' ? (await loadJournal()).claims[key] : undefined;
+    const legacy = storageMode() === 'file' ? await loadJournal() : { claims: {} };
+    const old = legacy.claims[key];
     if (old) return old;
     const nextId = await client.readContract({ address: addresses.TicketNFT, abi: abi('TicketNFT'), functionName: 'nextTokenId' }) as bigint;
     if (nextId > 998n) throw new DemoTicketError('The demo ticket discovery limit has been reached.');
-    if (!await consumeQuota(`claims:${addresses.TicketNFT.toLowerCase()}`, 20, 86_400_000)) throw new DemoTicketError('The demo ticket allowance for today has been used. Try tomorrow.', 429);
-    return { date: new Date().toISOString().slice(0, 10), session: Number(nextId / 2n % 2n), row: 1000 + Number(nextId), mints: [] };
+    const date = new Date().toISOString().slice(0, 10);
+    const legacyToday = Object.values(legacy.claims).filter(c => c.date === date).length;
+    if (!await consumeQuota(`claims:${addresses.TicketNFT.toLowerCase()}`, Math.max(0, 20 - legacyToday), 86_400_000)) throw new DemoTicketError('The demo ticket allowance for today has been used. Try tomorrow.', 429);
+    return { date, session: Number(nextId / 2n % 2n), row: 1000 + Number(nextId), mints: [] };
   }, async (claim, transaction) => {
     const wallet = createWalletClient({ account, chain: network, transport: http(process.env.ARC_RPC!, { retryCount: 0 }) });
     const tokenIds: string[] = [], hashes: Hex[] = [];

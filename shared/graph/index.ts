@@ -10,6 +10,8 @@
 
 export { gql, subgraphEndpoint, GraphError, SubgraphLagError, SubgraphIndexingError, SubgraphHistoryUnavailable } from './client';
 export type { GqlOptions } from './client';
+export { readGraphPages, SubgraphPaginationError, SubgraphSnapshotChanged, SubgraphPageLimit, SubgraphReadTimeout } from './pages';
+export type { GraphPageOptions, GraphPageMeta } from './pages';
 
 export { POOL_SNAPSHOT, META, INTENT_BY_ID } from './queries';
 

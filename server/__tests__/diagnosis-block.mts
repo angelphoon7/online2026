@@ -51,8 +51,8 @@ function transport(t: TestContext, snap: Snapshot, options: Options = {}) {
     }
     return reply({ data: {
       _meta: { block: { number: Number(snap.block), timestamp: String(snap.timestamp) }, deployment: snap.deployment, hasIndexingErrors: false },
-      intents: snap.intents.map(i => ({ ...i, id: i.hash, committedAtBlock: String(i.committedAtBlock), offered: i.offered.map(String), offeredTickets: i.offered.map(id => ({ id: String(id), escrowed: true, depositor: i.owner, redeemed: false })) })),
-      tickets: [...snap.ticketMeta].map(([id, m]) => ({ id: String(id), ...m, depositor: snap.depositor.get(id), redeemed: false })),
+      intents: snap.intents.map(i => ({ ...i, id: i.hash, committedAtBlock: String(i.committedAtBlock), offered: i.offered.map(String), offeredTickets: i.offered.map(id => ({ id: String(id), escrowed: true, depositor: i.owner, redeemed: false })) })).sort((a, b) => a.id < b.id ? -1 : 1),
+      tickets: [...snap.ticketMeta].map(([id, m]) => ({ id: String(id), ...m, depositor: snap.depositor.get(id), redeemed: false })).sort((a, b) => a.id < b.id ? -1 : 1),
     } });
   });
   return calls;

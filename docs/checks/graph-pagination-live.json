@@ -1,0 +1,139 @@
+{
+  "checkedAt": "2026-09-12T21:50:01.628Z",
+  "pageSize": 50,
+  "transactionsSent": 0,
+  "modelRequests": 0,
+  "status": "PASS",
+  "pool": {
+    "block": "61795322",
+    "liveIntents": 134,
+    "excluded": 0,
+    "tickets": 250
+  },
+  "market": {
+    "block": "61795322",
+    "intents": 183,
+    "tickets": 284,
+    "settlements": 15,
+    "hashMismatches": 0
+  },
+  "multiPageObserved": true,
+  "pages": [
+    {
+      "query": "pool",
+      "block": 61795322,
+      "hash": "0x1bc3a74b63acc1b26d63a76740e4654e59c6373ca8e6e2ceb17ffc1ef19db044",
+      "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL",
+      "counts": {
+        "intents": 50,
+        "tickets": 50
+      }
+    },
+    {
+      "query": "pool",
+      "block": 61795322,
+      "hash": "0x1bc3a74b63acc1b26d63a76740e4654e59c6373ca8e6e2ceb17ffc1ef19db044",
+      "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL",
+      "counts": {
+        "intents": 50,
+        "tickets": 50
+      }
+    },
+    {
+      "query": "pool",
+      "block": 61795322,
+      "hash": "0x1bc3a74b63acc1b26d63a76740e4654e59c6373ca8e6e2ceb17ffc1ef19db044",
+      "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL",
+      "counts": {
+        "intents": 34,
+        "tickets": 50
+      }
+    },
+    {
+      "query": "pool",
+      "block": 61795322,
+      "hash": "0x1bc3a74b63acc1b26d63a76740e4654e59c6373ca8e6e2ceb17ffc1ef19db044",
+      "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL",
+      "counts": {
+        "tickets": 50
+      }
+    },
+    {
+      "query": "pool",
+      "block": 61795322,
+      "hash": "0x1bc3a74b63acc1b26d63a76740e4654e59c6373ca8e6e2ceb17ffc1ef19db044",
+      "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL",
+      "counts": {
+        "tickets": 50
+      }
+    },
+    {
+      "query": "pool",
+      "block": 61795322,
+      "hash": "0x1bc3a74b63acc1b26d63a76740e4654e59c6373ca8e6e2ceb17ffc1ef19db044",
+      "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL",
+      "counts": {
+        "tickets": 0
+      }
+    },
+    {
+      "query": "market",
+      "block": 61795322,
+      "hash": "0x1bc3a74b63acc1b26d63a76740e4654e59c6373ca8e6e2ceb17ffc1ef19db044",
+      "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL",
+      "counts": {
+        "intents": 50,
+        "tickets": 50,
+        "settlements": 15
+      }
+    },
+    {
+      "query": "market",
+      "block": 61795322,
+      "hash": "0x1bc3a74b63acc1b26d63a76740e4654e59c6373ca8e6e2ceb17ffc1ef19db044",
+      "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL",
+      "counts": {
+        "intents": 50,
+        "tickets": 50
+      }
+    },
+    {
+      "query": "market",
+      "block": 61795322,
+      "hash": "0x1bc3a74b63acc1b26d63a76740e4654e59c6373ca8e6e2ceb17ffc1ef19db044",
+      "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL",
+      "counts": {
+        "intents": 50,
+        "tickets": 50
+      }
+    },
+    {
+      "query": "market",
+      "block": 61795322,
+      "hash": "0x1bc3a74b63acc1b26d63a76740e4654e59c6373ca8e6e2ceb17ffc1ef19db044",
+      "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL",
+      "counts": {
+        "intents": 33,
+        "tickets": 50
+      }
+    },
+    {
+      "query": "market",
+      "block": 61795322,
+      "hash": "0x1bc3a74b63acc1b26d63a76740e4654e59c6373ca8e6e2ceb17ffc1ef19db044",
+      "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL",
+      "counts": {
+        "tickets": 50
+      }
+    },
+    {
+      "query": "market",
+      "block": 61795322,
+      "hash": "0x1bc3a74b63acc1b26d63a76740e4654e59c6373ca8e6e2ceb17ffc1ef19db044",
+      "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL",
+      "counts": {
+        "tickets": 34
+      }
+    }
+  ]
+}

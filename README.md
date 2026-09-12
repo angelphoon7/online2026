@@ -24,6 +24,7 @@ You never give up your tickets unless the whole replacement arrives.
 
 ## Contents
 
+- [Judge access and hosting readiness](#judge-access-and-hosting-readiness)
 - [Ready-to-settle demo](#ready-to-settle-demo)
 - [The Graph: setup, live endpoint and agent](#the-graph)
 - [AI usage and planning artifacts](#ai-usage)
@@ -41,6 +42,46 @@ You never give up your tickets unless the whole replacement arrives.
 - [Repository](#repository)
 
 ---
+
+## Judge access and hosting readiness
+
+**The backend now supports shared evidence, wallet-claim records and resumable signing jobs.**
+Hosted judge controls require an access code and an explicit list of editable demo intent
+hashes. The workspace's **Start here / judge the live demo** guide selects A+B, A+C, B+C or
+all three users from each prepared group and displays live availability and expiry.
+
+Judges need only the public URL to read live Graph data, run matching and inspect evidence.
+Give them the judging access code privately to change prepared budgets or revoke requests;
+keep all wallet keys and server credentials private. To settle or create their own request,
+they connect their own wallet on Arc Testnet and obtain test USDC from the
+[Circle faucet](https://faucet.circle.com/). No separate account registration is required.
+
+```sh
+npm run judge:setup
+npm run dev
+```
+
+Setup adds missing private access settings to ignored `.env.local` and preserves existing
+settings. Hosting still requires a running Next.js backend and persistent storage: use
+`STORAGE_BACKEND=redis` with `REDIS_REST_URL` / `REDIS_REST_TOKEN`, or explicitly configure
+one backend with a persistent volume. Ordinary production local-file storage fails closed.
+There is no Vercel deployment or provisioned database included in this change.
+
+Before sharing the public URL, migrate existing local claims/evidence with
+`npm run storage:migrate`, publish fresh prepared groups with `npm run demo:catalog`, and
+run `npm run judge:check -- https://your-public-app.example`. The check asserts live pair
+rejections, three-user simulation, evidence retrieval and anonymous access denial without
+broadcasting a settlement. Repeat from another computer with the laptop off and after a
+host restart; those external checks require the hosted service to exist first.
+
+[Setup, secrets, migration, replenishment and recovery](docs/JUDGING_SETUP.md) ·
+[Environment template](.env.example) · [Backend routes](server/README.md).
+
+September 12 validation: production build and type check passed; 228 server/Graph tests and
+11 browser tests passed. Live checks verified 12 pair rejections and four three-user
+simulations, with all 16 evidence records unchanged after restarting the local production
+server. No settlement was broadcast. [Readiness evidence and verification limits](docs/checks/judging-readiness.json).
+Hosted Redis and the external laptop-off check remain unverified until the services are configured.
 
 ## Ready-to-settle demo
 
@@ -72,7 +113,12 @@ For three distinct users whose selected requests require a circle, use the
 [one- and three-ticket circle groups](docs/CIRCLE_DEMO.md). Each group has verified pair
 rejections and a successful three-user simulation; settlement remains for the live demo.
 
-For asynchronous judging, host the Next.js frontend **and backend** and share its `/demo` URL. Seed before publishing the public manifest. A shared on-chain round can be consumed once; reseed and redeploy the updated manifest for the next round on hosts with immutable files. See [setup, recovery and hosting details](docs/DEMO_SETUP.md).
+For asynchronous judging, host the Next.js frontend **and backend** and share its `/` URL.
+A shared on-chain round can be consumed once. Fresh circle groups can be published to the
+shared catalog without redeploying the frontend; changed event dates still require a new
+build and fresh signed intents. See [judging setup and recovery](docs/JUDGING_SETUP.md).
+The older dedicated `/demo` scene still uses its bundled manifest and
+[scene-specific setup](docs/DEMO_SETUP.md).
 
 ## The Graph
 
@@ -254,8 +300,8 @@ state returns an error instead of substituting newer data. [Step 7-A / D impleme
 and live checks](docs/GRAPH_7A_7D.md).
 The built app returned HTTP 200 with `SETTLEABLE` at block 61756153 in the current
 [live diagnosis check](docs/checks/step-11-diagnose.json), without invoking a model or signing.
-For a production server use `npm run build` and `npm start`; mount persistent storage for
-`.data/evidence`. [Backend routes and permissions](server/README.md).
+For a production server use `npm run build` and `npm start`; configure shared Redis REST
+storage or an explicitly enabled persistent volume. [Hosting and data migration](docs/JUDGING_SETUP.md).
 
 ### Environment variables
 
@@ -277,6 +323,12 @@ For a production server use `npm run build` and `npm start`; mount persistent st
 | `AGENT_TRUST_PROXY` | Agent client identity | Default off, callers share a bucket. Set `true` only behind an ingress that overwrites `X-Forwarded-For` with the client IP |
 | `BUDGET_CAP_USDC` | Deterministic diagnosis | BUDGET relaxation ceiling, default `100`; USDC has 6 settlement decimals |
 | `JUDGE_CONTROLS_ENABLED` | Testnet judge routes | `true` enables hosted budget/revoke controls; enabled by default in development. Requires controlled participant keys |
+| `JUDGE_ACCESS_CODE` | Judge session route | Private access code of at least 24 characters; setup generates one. Sessions expire after one hour |
+| `JUDGE_ALLOWED_INTENT_HASHES` | Judge authorization | Comma-separated exact editable intent hashes; recorded budget replacements inherit their root's permission |
+| `STORAGE_BACKEND` | Evidence, claims, sessions, signing jobs and demo catalog | `redis` for hosted instances; `file` for development or an explicit persistent-volume backend |
+| `REDIS_REST_URL`, `REDIS_REST_TOKEN` | Server storage | HTTPS Redis REST endpoint and private bearer token; never exposed to the browser |
+| `STORAGE_NAMESPACE` | Server storage | Stable namespace across releases; default `reshuffle-arc-testnet` |
+| `STORAGE_DIRECTORY`, `ALLOW_PERSISTENT_FILE_STORAGE` | File backend only | Explicit persistent directory and `true` opt-in for a production Node host; file storage is rejected on Vercel |
 | `DEMO_TICKETS_ENABLED` | Testnet issuer route | Enables hosted free-ticket claims; enabled by default in development |
 | `DEMO_ISSUER_PRIVATE_KEY`, `PRIVATE_KEY`, `SEED_*_PRIVATE_KEY` | Optional issuer/judge/local transaction tooling | Signing credentials, never public. Seed keys are read from `.env.seed`; none is required for ordinary public reads or diagnosis |
 
@@ -331,8 +383,10 @@ not measured performance claims. [Recording guide](docs/DEMO_GRAPH.md).
   depends on RPC/Graph retention: a pruned Graph block returns `SubgraphHistoryUnavailable`
   (503), and a failed historical USDC read returns `SnapshotCapacityReadError` (503).
   Retry starts a new diagnosis; missing history is never replaced with `latest`.
-- Snapshot lists are capped at 1,000 with no pagination yet. Large markets need pagination
-  before the entire pool can be claimed as searched.
+- UI, solver and Agent discovery paginate by entity ID, pinning every later page to the
+  first block hash. Reads stop with a named error after 100 page requests or 20 seconds,
+  never with a partial pool. Execution search retains its separate 256-intent service limit.
+  [Pagination behavior, boundary tests and live page traces](docs/GRAPH_PAGINATION.md).
 - The narration guard accepts only complete supported passages derived from tool outputs;
   it does not validate unrestricted prose. Correct paraphrases fall back to deterministic
   diagnosis. Guard acceptance does not prove tool selection is relevant or remove the
@@ -365,6 +419,9 @@ The later supply/input/commitment-evidence follow-up passes **186 Graph/agent ch
 [Regression details and output](docs/GRAPH_AGENT_INTEGRITY.md#verification).
 The Step 8 drawer follow-up passes **215 Graph/agent checks** (29 for drawer evidence)
 and **9 browser tests**. [Evidence scope and captured results](docs/GRAPH_8_EVIDENCE.md#verification).
+The pagination follow-up passes **258 server/Graph checks** (30 pagination cases),
+**12 browser tests** and the production build. Live Studio queries also passed with 50 rows
+per page. [Boundary tests and actual page traces](docs/GRAPH_PAGINATION.md#verification).
 `npm run agent:check:model -- --preflight` checks local key presence without network access;
 `npm run agent:check:model` runs the four live provider cases after configuration. Mocked
 SDK tests and no-model responses do not count as live provider acceptance.

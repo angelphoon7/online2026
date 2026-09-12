@@ -45,7 +45,7 @@ export async function createJudgeSession(code: string, store: DurableStore = dur
   if (!await consumeQuota('judge-login', 20, 60_000, store)) throw new JudgeAccessError('Too many access attempts. Retry in a minute.', 429);
   if (!timingSafeEqual(Buffer.from(digest(code), 'hex'), Buffer.from(digest(process.env.JUDGE_ACCESS_CODE!), 'hex'))) throw new JudgeAccessError('Incorrect judge access code.', 401);
   const token = randomBytes(32).toString('hex');
-  await store.compareAndSet(`judge-session:${digest(token)}`, null, encodeRecord({ expires: Date.now() + TTL, version: digest(code) }), { ttlMs: TTL });
+  if (!await store.compareAndSet(`judge-session:${digest(token)}`, null, encodeRecord({ expires: Date.now() + TTL, version: digest(code) }), { ttlMs: TTL })) throw new JudgeAccessError('Could not save the judge session. Retry sign-in.', 503);
   return token;
 }
 export async function deleteJudgeSession(request: Request) {

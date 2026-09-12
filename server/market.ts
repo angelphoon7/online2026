@@ -19,8 +19,8 @@ const settledEvent = parseAbiItem('event Settled(address indexed proposer,bytes3
 let cached: { key: string; until: number; blockHash: Hex; value: MarketSnapshot } | undefined;
 let pending: Promise<MarketSnapshot> | undefined;
 
-export async function marketSnapshot(fresh = false, minBlock = 0n): Promise<MarketSnapshot> {
-  if (readSource() === 'graph') return marketSnapshotFromGraph(minBlock);
+export async function marketSnapshot(fresh = false, minBlock = 0n, signal?: AbortSignal): Promise<MarketSnapshot> {
+  if (readSource() === 'graph') return marketSnapshotFromGraph(minBlock, { signal });
   // Direct reads have no indexer to fall behind, but the cache below can still hold a snapshot
   // that predates the caller's floor, so a floored read bypasses it. Answering below the floor
   // would defeat the point: the caller asked not to be shown a market older than its own

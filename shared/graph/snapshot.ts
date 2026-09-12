@@ -23,6 +23,7 @@
 
 import { gql, SubgraphIndexingError, SubgraphLagError, type GqlOptions } from './client';
 import { POOL_SNAPSHOT, INTENT_BY_ID } from './queries';
+import { readGraphPages, SubgraphPaginationError, type GraphPageMeta, type GraphPageOptions } from './pages';
 import { fromGraph, hashIntent, sameAddress, type GraphIntent } from '../intent';
 import type { Intent, TicketMeta, Hex, Address } from '../intent';
 
@@ -56,7 +57,7 @@ export type LiveIntent = Intent & {
 };
 
 export type Snapshot = {
-  /** The block this whole payload describes — data and _meta came from one request. */
+  /** Every page was read at this block, with matching deployment and timestamp. */
   block: bigint;
   timestamp: bigint;
   deployment: string;
@@ -68,19 +69,13 @@ export type Snapshot = {
   excluded: Exclusion[];
 };
 
-export type SnapshotOptions = GqlOptions & {
-  /** Freshness floor: fail rather than answer from a block earlier than this. */
-  minBlock?: bigint;
-  /** Per-list cap. graph-node's maximum is 1000. */
+export type SnapshotOptions = GraphPageOptions & {
+  /** Compatibility alias for pageSize; this is a page size, never a total-result cap. */
   first?: number;
 };
 
 type PoolResponse = {
-  _meta: {
-    block: { number: number; timestamp: string };
-    hasIndexingErrors: boolean;
-    deployment: string;
-  };
+  _meta: GraphPageMeta;
   intents: (GraphIntent & {
     committedAtBlock: string;
     committedTx: string;
@@ -100,13 +95,8 @@ type PoolResponse = {
 
 export async function getPoolSnapshot(options: SnapshotOptions = {}): Promise<Snapshot> {
   const minBlock = options.minBlock ?? 0n;
-  const first = options.first ?? 1000;
-
-  const data = await gql<PoolResponse>(
-    POOL_SNAPSHOT,
-    { minBlock: Number(minBlock), first },
-    options
-  );
+  const data = await readGraphPages<PoolResponse>(POOL_SNAPSHOT, { intents: '0x', tickets: '' },
+    { ...options, pageSize: options.pageSize ?? options.first });
 
   // A mapping failure means the entities are not trustworthy; do not quietly solve on them.
   if (data._meta.hasIndexingErrors) throw new SubgraphIndexingError();
@@ -133,6 +123,9 @@ export async function getPoolSnapshot(options: SnapshotOptions = {}): Promise<Sn
   const intents: LiveIntent[] = [];
   const excluded: Exclusion[] = [];
 
+  // Preserve the prior discovery order after cursor pagination, with a deterministic tie.
+  data.intents.sort((a, b) => BigInt(a.committedAtBlock) < BigInt(b.committedAtBlock) ? -1
+    : BigInt(a.committedAtBlock) > BigInt(b.committedAtBlock) ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   for (const g of data.intents) {
     const id = g.id as Hex;
     const owner = g.owner.toLowerCase() as Address;
@@ -158,6 +151,9 @@ export async function getPoolSnapshot(options: SnapshotOptions = {}): Promise<Sn
 
     // The nested list is the authority on custody; a short list means a ticket entity is
     // missing entirely, which would otherwise look like "not escrowed".
+    if (g.offeredTickets.length >= 1000 && g.offeredTickets.length < g.offered.length) {
+      throw new SubgraphPaginationError('offered ticket relations reached their nested query limit');
+    }
     if (g.offeredTickets.length !== g.offered.length) {
       const known = new Set(g.offeredTickets.map((t) => t.id));
       const missing = g.offered.filter((id) => !known.has(id));

@@ -12,13 +12,14 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 export async function GET() {
-  const checks: Record<string, boolean> = { storage: false, graph: false, demoGroups: false, judgeAccess: false, judgeSigners: false, ticketIssuer: false };
+  const checks: Record<string, boolean> = { storage: false, graph: false, demoGroups: false, judgeAccess: false, judgeSigners: false, ticketIssuer: false, signingIdle: false };
   let mode: string | null = null, snapshotBlock: string | null = null;
   try {
     mode = storageMode();
     const store = durableStore(), key = `health:${randomUUID()}`;
     checks.storage = await store.compareAndSet(key, null, 'ok', { ttlMs: 60_000 }) && await store.get(key) === 'ok';
     await store.compareAndSet(key, 'ok', null);
+    checks.signingIdle = (await Promise.all([...participantKeys().keys()].map(owner => store.get(`signing:active:5042002:${owner}`)))).every(active => active === null);
     const status = await judgingStatus();
     snapshotBlock = status.snapshotBlock;
     checks.graph = status.lagSeconds <= 120;
@@ -34,6 +35,7 @@ export async function GET() {
     }
     try {
       const { client, account } = await checkDemoIssuer();
+      checks.signingIdle = checks.signingIdle && await store.get(`signing:active:5042002:${account.address.toLowerCase()}`) === null;
       checks.ticketIssuer = await client.getBalance({ address: account.address }) >= parseEther('0.2');
     } catch { /* Report a failed capability without exposing credentials or provider errors. */ }
   } catch { /* Failed checks stay false; this endpoint never returns secrets or provider diagnostics. */ }

@@ -1,0 +1,186 @@
+{
+  "checkedAt": "2026-09-12T21:49:27.082Z",
+  "environment": "local production Node server; real Graph and Arc RPC; persistent file backend",
+  "health": {
+    "ready": true,
+    "checks": {
+      "storage": true,
+      "graph": true,
+      "demoGroups": true,
+      "judgeAccess": true,
+      "judgeSigners": true,
+      "ticketIssuer": true,
+      "signingIdle": true
+    },
+    "storage": "file",
+    "snapshotBlock": "61795257"
+  },
+  "pairChecksPassed": 12,
+  "tripleSimulationsPassed": 4,
+  "evidenceUnchangedAcrossProcessRestart": true,
+  "transactionsBroadcast": 0,
+  "hostedRedisVerified": false,
+  "laptopOffHostedCheck": false,
+  "entries": [
+    {
+      "group": "single-date",
+      "selection": "AB",
+      "id": "f61f3d7b-290b-4830-b1fa-a4c2af82c777",
+      "snapshotBlock": "61793733",
+      "simulationBlock": "61793739",
+      "candidates": 0,
+      "simulationSuccess": null,
+      "digest": "d118c77951690b80e5276e7fe2ef0962dc3b7ed3b8d06406c550f59f72ea9f48"
+    },
+    {
+      "group": "single-date",
+      "selection": "AC",
+      "id": "eeb05514-5eaf-4d74-a1de-90af69dcc6fd",
+      "snapshotBlock": "61793733",
+      "simulationBlock": "61793741",
+      "candidates": 0,
+      "simulationSuccess": null,
+      "digest": "cb94c036a68e4e016f2e1f4a80df000c5c8b9d3626a47a5460e9b1d18be8d90e"
+    },
+    {
+      "group": "single-date",
+      "selection": "BC",
+      "id": "1c911a32-87f9-4e38-a7a7-d7df1a731387",
+      "snapshotBlock": "61793733",
+      "simulationBlock": "61793742",
+      "candidates": 0,
+      "simulationSuccess": null,
+      "digest": "97b1774827f7cfd11e3d0486f60636bd264d0c061fc03cd995a39118f468c2f8"
+    },
+    {
+      "group": "single-date",
+      "selection": "ABC",
+      "id": "d864f56f-5d21-404a-b9c2-29bddcaa7818",
+      "snapshotBlock": "61793737",
+      "simulationBlock": "61793745",
+      "candidates": 1,
+      "simulationSuccess": true,
+      "digest": "229847d2a2220c0249a2a69b38adb2ee0b414a02d3202d61a78710f1a7935bbb"
+    },
+    {
+      "group": "single-section",
+      "selection": "AB",
+      "id": "fb746fb9-8c28-4acd-a275-08bb90c47b05",
+      "snapshotBlock": "61793740",
+      "simulationBlock": "61793747",
+      "candidates": 0,
+      "simulationSuccess": null,
+      "digest": "e3d9516232c117aa54f1f619dadb3820feff36bf8aa122061fef70dac6c119d4"
+    },
+    {
+      "group": "single-section",
+      "selection": "AC",
+      "id": "8418ed70-0723-4fc2-a9cc-ff94fb95a2d3",
+      "snapshotBlock": "61793740",
+      "simulationBlock": "61793749",
+      "candidates": 0,
+      "simulationSuccess": null,
+      "digest": "1658dd7cdb34f9f59bbf87d1ed7994a6a11e1fe5944b582e8cbb078ec9c6ce9b"
+    },
+    {
+      "group": "single-section",
+      "selection": "BC",
+      "id": "ad994fab-7181-49a9-841f-aceb29975121",
+      "snapshotBlock": "61793740",
+      "simulationBlock": "61793751",
+      "candidates": 0,
+      "simulationSuccess": null,
+      "digest": "b3f49070ca1551c0b03ecbbd9f94a8ab1c0696d6dfc6ea42b54a6f9bbc537785"
+    },
+    {
+      "group": "single-section",
+      "selection": "ABC",
+      "id": "a5f5e0d5-9577-4067-a595-02b9f50798ea",
+      "snapshotBlock": "61793740",
+      "simulationBlock": "61793753",
+      "candidates": 1,
+      "simulationSuccess": true,
+      "digest": "7d1bb461287b73988d9b2629c1421e51247a5ce9fd88e4fd004a4aac152ca9b9"
+    },
+    {
+      "group": "triple-date",
+      "selection": "AB",
+      "id": "e0fbb8ad-3e0d-4176-a337-e0bb449f4a31",
+      "snapshotBlock": "61793748",
+      "simulationBlock": "61793755",
+      "candidates": 0,
+      "simulationSuccess": null,
+      "digest": "40c7b6d3e54221b73a9d3b11e3fa4bba87cb2c04635197432876d88dff8604c5"
+    },
+    {
+      "group": "triple-date",
+      "selection": "AC",
+      "id": "c3ecb001-529b-46c4-bc04-97027acf4662",
+      "snapshotBlock": "61793748",
+      "simulationBlock": "61793758",
+      "candidates": 0,
+      "simulationSuccess": null,
+      "digest": "a3f208d971f8eb09266f4380e61e46ebc8a82c7612851cd5e4ca8cf7c49342ae"
+    },
+    {
+      "group": "triple-date",
+      "selection": "BC",
+      "id": "0aa38732-3dd4-4ddd-8f80-51dc658b5616",
+      "snapshotBlock": "61793748",
+      "simulationBlock": "61793759",
+      "candidates": 0,
+      "simulationSuccess": null,
+      "digest": "1be5914705b9abd36c9e76bdc7ce30da1e8144938222336bdf69c8d880ca0e0d"
+    },
+    {
+      "group": "triple-date",
+      "selection": "ABC",
+      "id": "a269e2c7-87fb-4223-9f48-d660fa86a7c2",
+      "snapshotBlock": "61793748",
+      "simulationBlock": "61793764",
+      "candidates": 1,
+      "simulationSuccess": true,
+      "digest": "65d67b805f9ecdec8376d508600f2369a7ea1dd9a7d6aea9a8bd3b590ff3125b"
+    },
+    {
+      "group": "triple-section",
+      "selection": "AB",
+      "id": "f4aa01ae-bf1f-43a5-a042-dd31c808b829",
+      "snapshotBlock": "61793758",
+      "simulationBlock": "61793766",
+      "candidates": 0,
+      "simulationSuccess": null,
+      "digest": "1c9109d1038241a3ce42367084051c166553b6ea92326e06ef0c5fec83949222"
+    },
+    {
+      "group": "triple-section",
+      "selection": "AC",
+      "id": "58ac44ce-79b6-4df0-87dc-995c7a7ad707",
+      "snapshotBlock": "61793758",
+      "simulationBlock": "61793770",
+      "candidates": 0,
+      "simulationSuccess": null,
+      "digest": "568d9143630306bd6bec252481bb9e71f5a3a01ab1d7e68c294103836da7c612"
+    },
+    {
+      "group": "triple-section",
+      "selection": "BC",
+      "id": "f71744ea-a050-4ce9-8a76-9b2384e7fbdc",
+      "snapshotBlock": "61793769",
+      "simulationBlock": "61793772",
+      "candidates": 0,
+      "simulationSuccess": null,
+      "digest": "b9e7720a2c2f79f74bad333a3d705cf322d43f2065fa088d47c280065a707049"
+    },
+    {
+      "group": "triple-section",
+      "selection": "ABC",
+      "id": "08cf10b2-307e-4fad-a406-6e4d053bb33b",
+      "snapshotBlock": "61793769",
+      "simulationBlock": "61793776",
+      "candidates": 1,
+      "simulationSuccess": true,
+      "digest": "12f647b21812d597e74984886f604259a76ee5979a3d0d17d74209c393419265"
+    }
+  ]
+}

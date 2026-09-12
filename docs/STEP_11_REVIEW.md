@@ -78,9 +78,10 @@ it does not close the budget-write, browser-recording or Studio full-status chec
    evidence-rendered passages, including amounts, payment direction, counts and hypothetical
    qualifications. It does not certify arbitrary prose or tool relevance. [95 passing
    tests, implementation and remaining live-provider requirement](GRAPH_7G_7H.md).
-3. **Large-pool completeness is bounded.** The snapshot query caps each list at 1,000 and
-   does not paginate or detect every possible truncation. The service's 256-intent search
-   cap is a separate bound. Do not describe discovery as unbounded.
+3. **Pagination gap resolved in Steps 5-C / 5-D / 6-A.** UI, solver and Agent discovery now
+   share independent ID cursors and pin all pages to one block hash. Resource limits and
+   malformed/truncated pages fail explicitly rather than returning a prefix. The service's
+   256-intent search cap remains separate. [Boundary tests and live page traces](GRAPH_PAGINATION.md).
 4. **No live-model run is established by this review.** The configured default model exists
    in [Anthropic's model documentation](https://platform.claude.com/docs/en/models/sonnet-5/whats-new-sonnet-5),
    but account access, hosted key configuration and narration still need an end-to-end check.

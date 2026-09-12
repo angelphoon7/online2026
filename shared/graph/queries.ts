@@ -1,44 +1,33 @@
 // GraphQL documents for the pool snapshot — step 5-C of docs/RESHUFFLE_GRAPH_PLAN.md.
 //
-// Two things are deliberate in POOL_SNAPSHOT:
-//
-//  1. `_meta` is in the SAME request as the data. The returned block number is then the block
-//     the data itself came from, so "at Arc Testnet block #N" is a fact about that payload
-//     rather than a separate, possibly later, read.
-//
-//  2. `block: { number_gte: $minBlock }` is the freshness floor (trust rule 2). graph-node
-//     REJECTS the query if it has not yet indexed that block — it never silently answers from
-//     an older one. That rejection is the mechanism, not a failure: shared/graph/client.ts
-//     turns it into a SubgraphLagError carrying the block actually indexed, so the caller can
-//     wait instead of reading a stale pool.
-//
-// Limits: `first` caps at 1000 per list and nested lists default to 100. Intents offer at most
-// four tickets, so offeredTickets is never truncated. If the pool ever exceeds 1000, paginate
-// with `id_gt` rather than raising `first`.
+// All roots and _meta share $at: a number_gte floor on the first page and its block hash
+// thereafter. Cursor order is id, never a timestamp or numeric token id. pages.ts validates
+// progress and completes each root independently. Presentation order is restored after loading.
 
 /**
- * Everything the solver needs to discover the pool, in one request.
+ * One page of solver discovery. Use getPoolSnapshot() to consume the complete pool.
  *
  * `offeredTickets` is nested rather than joined client-side so that custody can be checked
  * per intent without a second round trip, and at the same block.
  */
 export const POOL_SNAPSHOT = /* GraphQL */ `
-  query PoolSnapshot($minBlock: Int!, $first: Int!) {
-    _meta(block: { number_gte: $minBlock }) {
+  query PoolSnapshot($at: Block_height!, $first: Int!, $intentsAfter: Bytes!, $ticketsAfter: String!, $with_intents: Boolean!, $with_tickets: Boolean!) {
+    _meta(block: $at) {
       block {
         number
         timestamp
+        hash
       }
       hasIndexingErrors
       deployment
     }
     intents(
       first: $first
-      where: { state: LIVE }
-      orderBy: committedAtBlock
+      where: { state: LIVE, id_gt: $intentsAfter }
+      orderBy: id
       orderDirection: asc
-      block: { number_gte: $minBlock }
-    ) {
+      block: $at
+    ) @include(if: $with_intents) {
       id
       owner
       eventId
@@ -54,7 +43,7 @@ export const POOL_SNAPSHOT = /* GraphQL */ `
       nonce
       committedAtBlock
       committedTx
-      offeredTickets {
+      offeredTickets(first: 1000) {
         id
         escrowed
         depositor
@@ -63,9 +52,11 @@ export const POOL_SNAPSHOT = /* GraphQL */ `
     }
     tickets(
       first: $first
-      where: { escrowed: true, redeemed: false }
-      block: { number_gte: $minBlock }
-    ) {
+      where: { escrowed: true, redeemed: false, id_gt: $ticketsAfter }
+      orderBy: id
+      orderDirection: asc
+      block: $at
+    ) @include(if: $with_tickets) {
       id
       eventId
       sessionId

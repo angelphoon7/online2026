@@ -24,6 +24,7 @@
     "subgraph:check": "node scripts/check-subgraph-manifest.mjs",
     "subgraph:deploy": "node scripts/deploy-subgraph.mjs",
     "subgraph:parity": "node scripts/check-subgraph-parity.mjs",
+    "subgraph:pagination": "npx --yes tsx --conditions=react-server scripts/check-graph-pagination.mts",
     "subgraph:lag": "node scripts/measure-subgraph-lag.mjs",
     "subgraph:status": "node scripts/check-subgraph-status.mjs",
     "subgraph:lag:tx": "node scripts/measure-subgraph-transaction.mjs",

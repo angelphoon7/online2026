@@ -1,4 +1,5 @@
 import { getPoolSnapshot } from '@/shared/graph';
+import { graphReadError } from '@/server/graph-read-error';
 import { SubgraphLagError, SubgraphHistoryUnavailable } from '@/shared/graph/client';
 import { SnapshotCapacityReadError } from '@/server/solve-hypothetical';
 import { ask, agentConfigured, AgentNotConfigured } from '@/server/agent/narrate';
@@ -76,6 +77,7 @@ async function handleAsk(request: Request, budget: RequestBudget) {
     return Response.json(await ask(snapshot, intentHash, question, budget), { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     budget.checkpoint();
+    const pageError = graphReadError(error); if (pageError) return pageError;
     if (error instanceof SubgraphLagError) {
       return Response.json(
         { error: 'The indexer has not reached the block of your last transaction yet.', indexedBlock: error.indexedBlock?.toString() ?? null },

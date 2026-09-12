@@ -29,6 +29,12 @@ for (const name of fs.existsSync('.data/evidence') ? fs.readdirSync('.data/evide
 const legacy = '.data/demo-tickets/' + DEPLOYMENT.ticketNFT + '.json';
 if (fs.existsSync(legacy)) {
   const claims = JSON.parse(fs.readFileSync(legacy, 'utf8')).claims;
+  const date = new Date().toISOString().slice(0, 10);
+  const legacyToday = Object.values(claims).filter(c => (c as { date: string }).date === date).length;
+  if (legacyToday) {
+    const quotaKey = `quota:claims:${DEPLOYMENT.ticketNFT}:${Math.floor(Date.now() / 86_400_000)}`;
+    rows.set(quotaKey, { value: String(Number(rows.get(quotaKey)?.value ?? 0) + legacyToday), expires: Date.now() + 86_400_000 * 2 });
+  }
   for (const [owner, plan] of Object.entries(claims) as [string, { mints: { raw: string; hash: string; tokenId?: string }[] }][]) {
     const id = 'claim:' + DEPLOYMENT.ticketNFT + ':' + owner.toLowerCase();
     if (rows.has('signing:job:' + id)) continue;

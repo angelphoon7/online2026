@@ -35,7 +35,7 @@ function transport(t: TestContext, tool: string, mode: Mode = 'copy') {
       return Response.json({ data: {
         _meta: { block: { number: Number(block), timestamp: String(now) }, deployment: 'QmFixture', hasIndexingErrors: false },
         intents: intents.map(i => ({ ...i, id: hashIntent(i), offered: i.offered.map(String), sessionMask: String(i.sessionMask), sectionMask: String(i.sectionMask), maxNetPay: String(i.maxNetPay), deadline: String(i.deadline), nonce: String(i.nonce), committedAtBlock: '60000000', committedTx: selected,
-          offeredTickets: i.offered.map(id => ({ id: String(id), escrowed: true, depositor: i.owner, redeemed: false })) })),
+          offeredTickets: i.offered.map(id => ({ id: String(id), escrowed: true, depositor: i.owner, redeemed: false })) })).sort((a, b) => a.id < b.id ? -1 : 1),
         tickets: intents.map((i, index) => ({ id: String(index + 1), eventId: 1, sessionId: 0, sectionId: index, row: 1, seat: 1, depositor: i.owner, redeemed: false })),
       } });
     }

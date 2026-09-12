@@ -64,7 +64,9 @@ export class FileStore implements DurableStore {
     for (let attempt = 0; !lock; attempt++) {
       try { lock = await open(lockPath, 'wx', 0o600); }
       catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== 'EEXIST' || attempt >= 100) throw new StorageUnavailable('Local storage is locked. Stop local writers and inspect mutation.lock before recovery.');
+        // Windows may report EACCES/EPERM while the previous worker unlinks its closed
+        // lock handle. Retry acquisition only; never remove another worker's lock.
+        if (!['EEXIST', 'EACCES', 'EPERM'].includes((e as NodeJS.ErrnoException).code ?? '') || attempt >= 100) throw new StorageUnavailable('Local storage is locked. Stop local writers and inspect mutation.lock before recovery.');
         await new Promise(r => setTimeout(r, 10));
       }
     }

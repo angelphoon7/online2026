@@ -1,4 +1,5 @@
 import { getPoolSnapshot } from '@/shared/graph';
+import { graphReadError } from '@/server/graph-read-error';
 import { SubgraphLagError, SubgraphHistoryUnavailable } from '@/shared/graph/client';
 import { SnapshotCapacityReadError } from '@/server/solve-hypothetical';
 import { diagnose } from '@/server/agent/diagnose';
@@ -49,6 +50,7 @@ async function handleDiagnosis(request: Request, context: { params: Promise<{ ha
     );
   } catch (error) {
     budget.checkpoint();
+    const pageError = graphReadError(error); if (pageError) return pageError;
     if (error instanceof SnapshotCapacityReadError) {
       return Response.json({ error: error.message, code: error.name, snapshotBlock: String(error.block) }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
     }
