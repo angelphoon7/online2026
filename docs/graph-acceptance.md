@@ -25,6 +25,11 @@ npm run subgraph:lag:tx -- --check 10  # read-only preflight for a receipt-to-in
 
 ## 4-A Acceptance
 
+Latest read-only follow-up: block **61797886**, 183 intents / 284 tickets / 250 escrowed /
+15 settlements, no indexing errors, and matching RPC block hash and ticket counts.
+The private Studio status and full warning/error log review remain pending.
+[Exact remaining panel checks](GRAPH_STUDIO_REVIEW.md).
+
 ### Follow-up, 12 September 2026
 
 The public endpoint was healthy at **61762011**: 122 intents (74 LIVE, 46 SETTLED, 2 REVOKED),

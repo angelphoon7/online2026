@@ -7,6 +7,11 @@ and complete Logs inspection remain unverified.** The user's screenshot shows De
 Not published and Subgraph not indexed, with INFO write batches through block 61761333.
 Those visible INFO rows do not establish the absence of historical warnings.
 
+The later public refresh reached block **61797886**, with **183 intents, 284 tickets,
+250 escrowed tickets and 15 settlements**; indexing errors remained false and block hash and
+ticket counts matched RPC. [Latest public record](checks/graph-status.json).
+Authenticated panel evidence is still pending; use the [specific review checklist](GRAPH_STUDIO_REVIEW.md).
+
 The [public status check](checks/graph-status.json) at block 61762011 found
 `hasIndexingErrors=false`, 122 intents, 164 tickets, 130 escrowed tickets and 15 settlements.
 The indexed block hash, minted count and escrow count agree with RPC at that same block.

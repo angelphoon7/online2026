@@ -32,13 +32,19 @@ export class RedisRestStore implements DurableStore {
     if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.search || parsed.hash || !token) throw new StorageUnavailable('Configure a HTTPS Redis REST endpoint and token.');
   }
   private key(key: string) { return `${this.namespace}:${key}`; }
-  private async command<T>(command: (string | number)[]): Promise<T> {
+  private async command<T>(command: (string | number)[], signal?: AbortSignal): Promise<T> {
     try {
-      const response = await fetch(this.url, { method: 'POST', headers: { authorization: `Bearer ${this.token}`, 'content-type': 'application/json' }, body: JSON.stringify(command), cache: 'no-store', signal: AbortSignal.timeout(10_000) });
+      signal?.throwIfAborted();
+      const deadline = AbortSignal.timeout(10_000);
+      const response = await fetch(this.url, { method: 'POST', headers: { authorization: `Bearer ${this.token}`, 'content-type': 'application/json' }, body: JSON.stringify(command), cache: 'no-store', signal: signal ? AbortSignal.any([signal, deadline]) : deadline });
       const body = await response.json();
+      signal?.throwIfAborted();
       if (!response.ok || body.error || !Object.hasOwn(body, 'result')) throw new StorageUnavailable();
       return body.result as T;
-    } catch { throw new StorageUnavailable(); } // Provider errors can contain credentials or stored signed transactions.
+    } catch { signal?.throwIfAborted(); throw new StorageUnavailable(); } // Never expose provider errors or stored transaction bytes.
+  }
+  evaluate<T>(script: string, keys: string[], args: (string | number)[], signal?: AbortSignal) {
+    return this.command<T>(['EVAL', script, keys.length, ...keys.map(key => this.key(key)), ...args], signal);
   }
   get(key: string) { return this.command<string | null>(['GET', this.key(key)]); }
   async compareAndSet(key: string, expected: string | null, next: string | null, options: CasOptions = {}) {
@@ -90,9 +96,16 @@ export function storageMode(): 'redis' | 'file' {
   if (mode === 'file' && (process.env.VERCEL || (process.env.NODE_ENV === 'production' && process.env.ALLOW_PERSISTENT_FILE_STORAGE !== 'true'))) throw new StorageUnavailable('Production requires Redis REST storage or an explicitly configured persistent-volume backend.');
   return mode;
 }
-export function durableStore(): DurableStore {
+function storageNamespace() {
   const namespace = process.env.STORAGE_NAMESPACE ?? 'reshuffle-arc-testnet';
   if (!/^[a-zA-Z0-9_-]{1,64}$/.test(namespace)) throw new StorageUnavailable('Invalid STORAGE_NAMESPACE.');
+  return namespace;
+}
+export function redisStore(): RedisRestStore {
+  return new RedisRestStore(process.env.REDIS_REST_URL ?? '', process.env.REDIS_REST_TOKEN ?? '', storageNamespace());
+}
+export function durableStore(): DurableStore {
+  const namespace = storageNamespace();
   return storageMode() === 'redis'
     ? new RedisRestStore(process.env.REDIS_REST_URL ?? '', process.env.REDIS_REST_TOKEN ?? '', namespace)
     : new FileStore(resolve(process.env.STORAGE_DIRECTORY ?? join(process.cwd(), '.data', 'shared'), namespace));

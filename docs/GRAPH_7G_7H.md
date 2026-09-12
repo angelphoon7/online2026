@@ -1,8 +1,9 @@
 # Step 7-G / H: evidence-bound answers
 
-Checked 12 September 2026. **Implementation and local validation complete; live Anthropic
-acceptance remains pending.** The local environment has no `ANTHROPIC_API_KEY`. The
-[live acceptance record](checks/graph-agent-model.json) is `BLOCKED`, with zero model requests;
+Checked 12 September 2026. **Live Anthropic acceptance PASS:** four questions, eight real
+`claude-sonnet-5` Messages API calls, all four answers accepted without fallback, and zero
+blockchain transactions. The [live acceptance record](checks/graph-agent-model.json) contains
+the returned provider request/message IDs, token usage, tool outputs and pinned read blocks.
 SDK transport fixtures are not counted as live model calls.
 
 ## What changed
@@ -43,12 +44,49 @@ response is labelled as a deterministic answer; it is not presented as successfu
 
 ## Local verification
 
+Original implementation checks, followed by the live-provider run below:
+
 | Check | Result |
 | --- | --- |
 | `npm test` | 95 passed, 0 failed; includes 32 added guard/SDK cases and subcases |
 | `npm run build` | PASS, including TypeScript |
 | Changed-file ESLint | PASS, no errors or warnings |
-| Real provider acceptance | BLOCKED, no key configured; zero requests |
+| Real provider acceptance, subsequent live run | PASS, four scenarios / eight actual model calls / zero transactions |
+
+### Real provider follow-up
+
+The final acceptance-script run used the real POST handler and real Graph, RPC and Anthropic
+HTTP traffic. Each question selects a fresh snapshot; all evidence and historical reads within
+that answer belong to its one block. No guard rule, search bound, drawer evidence binding or
+pagination behavior was relaxed to obtain these results.
+
+| Scenario | Snapshot block | Actual model calls | Guard fallback | Result |
+| --- | --- | --- | --- | --- |
+| Diagnosis | 61798055 | 2 | false | PASS |
+| Hypothetical 30 USDC ceiling | 61798081 | 2 | false | PASS |
+| Pool overview | 61798106 | 2 | false | PASS |
+| Conflicting prefix, block and payment instructions | 61798133 | 2 | false | PASS |
+
+The hypothetical distinguished the **30 USDC ceiling** from an actual candidate requiring
+**no payment either way**, and stated that applying changed conditions requires a new signed
+intent. Pool overview returned **134 live intents / 250 escrowed tickets**, with section and
+session counts from the same snapshot. The conflicting question did not introduce block 999
+or the invented 999 USDC receipt into the answer. These are observed cases, not a claim about
+every future model response or future settlement.
+
+The initial live attempt exposed a bug in the acceptance script itself: its fetch observer
+consumed the request body before forwarding it. `agent-model-transport.mts` now reads a clone
+of both request and response, allowing the actual HTTP transport and SDK to consume their
+own bodies. Four added tests cover a real localhost HTTP round trip, provider provenance,
+failed-provider accounting and refusal to send writes/unrelated requests. Mock provider
+fixtures in those tests cannot produce the live acceptance record.
+
+The subsequent full regression run passed **275 server/Graph checks**, including the earlier
+snapshot, guard, strict hypothetical input, counterparty commitment, drawer and pagination
+cases. [Captured test output](checks/graph-agent-model-regressions.txt).
+The final `tsc --noEmit --incremental false` and ESLint on the changed acceptance code also
+passed. The production build result in the earlier table belongs to the original checks;
+this follow-up changes acceptance tooling and records, and does not change the app UI.
 
 `server/__tests__/agent-guard.mts` tests the exact prefix, simultaneous correct/incorrect
 blocks, signs, payment direction, six-decimal conversion, participant counts, claimed
@@ -106,10 +144,9 @@ results. These are derived from public Arc Testnet/Subgraph state. The API key i
 as provider authentication. Wallet private keys and environment file contents are not in the
 prompt or tool results.
 
-The workspace's automatic approval review rejected the live command because sending the
-intent/address evidence to Anthropic had not been explicitly approved. The subsequent local
-`--preflight` was allowed and confirmed the missing key. Running the model acceptance from
-this assistant session still requires that data-sharing approval and a configured key.
+The user subsequently configured the local key and explicitly requested real-provider
+acceptance. That authorized read-only run is now recorded as PASS. The earlier missing-key
+and pending-authorization status is superseded by the actual provider receipts above.
 
 ## Limits
 

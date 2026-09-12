@@ -392,9 +392,9 @@ not measured performance claims. [Recording guide](docs/DEMO_GRAPH.md).
   diagnosis. Guard acceptance does not prove tool selection is relevant or remove the
   underlying indexer/solver bounds.
 - Without a model key, ask returns a baseline diagnosis rather than interpreting arbitrary
-  what-if questions. Live Anthropic acceptance is currently **BLOCKED** by missing credentials
-  and pending approval to send the public evidence; the [record](docs/checks/graph-agent-model.json)
-  contains zero model calls. The hosted demo still needs separate verification.
+  what-if questions. Live Anthropic acceptance **passed four scenarios with eight real model
+  calls**, all without guard fallback. The [record](docs/checks/graph-agent-model.json) includes
+  provider receipts and pinned evidence. The hosted demo still needs separate verification.
 - Adjacency is enforceable for issuer-native tickets with consecutive seat numbering;
   external ticket systems are outside this demo.
 
@@ -425,6 +425,9 @@ per page. [Boundary tests and actual page traces](docs/GRAPH_PAGINATION.md#verif
 `npm run agent:check:model -- --preflight` checks local key presence without network access;
 `npm run agent:check:model` runs the four live provider cases after configuration. Mocked
 SDK tests and no-model responses do not count as live provider acceptance.
+The real-provider follow-up passed diagnosis, a 30 USDC hypothetical, pool overview and
+conflicting instructions at blocks **61798055–61798133**, with **275 server/Graph regression
+checks** also passing. [Results and transport regression fix](docs/GRAPH_7G_7H.md#real-provider-follow-up).
 The earlier Step 11 run passed 32 Solidity tests, 32 Graph/agent checks, 29 solver tests, 11 deployment checks,
 36 manifest checks and 1,719 live parity checks. [Review scope and remaining gaps](docs/STEP_11_REVIEW.md).
 To rebuild the subgraph, install its dependencies with `npm --prefix subgraph ci`, then run

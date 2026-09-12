@@ -1,27 +1,27 @@
 {
-  "checkedAt": "2026-09-12T17:06:54.672Z",
+  "checkedAt": "2026-09-12T22:11:52.920Z",
   "endpoint": "https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1",
   "chainId": 5042002,
   "meta": {
     "block": {
-      "number": 61762011,
-      "timestamp": 1789232809,
-      "hash": "0xd902b32afe4a34dd1ad7525a3e276ab03d2d096c6b4464733be1db07679e93d6"
+      "number": 61797886,
+      "timestamp": 1789251107,
+      "hash": "0x72df7f504b05a6252a9cd854d54f1317dc6120b44c9604367033703022503c35"
     },
     "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL",
     "hasIndexingErrors": false
   },
-  "observedChainHead": "61762019",
-  "headMinusIndexBlocks": "8",
+  "observedChainHead": "61797893",
+  "headMinusIndexBlocks": "7",
   "counts": {
-    "intents": 122,
+    "intents": 183,
     "states": {
-      "LIVE": 74,
+      "LIVE": 134,
       "SETTLED": 46,
-      "REVOKED": 2
+      "REVOKED": 3
     },
-    "tickets": 164,
-    "escrowed": 130,
+    "tickets": 284,
+    "escrowed": 250,
     "settlements": 15
   },
   "checks": {
