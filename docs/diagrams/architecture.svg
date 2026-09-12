@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-labelledby="title description">
 <title id="title">RESHUFFLE — deployed Arc Testnet architecture</title>
-<desc id="description">Participants sign outcome conditions through a Next.js frontend. A Node.js backend reads Arc RPC state, runs a bounded TypeScript solver, simulates with eth_call, and stores evidence. A submitting wallet sends the settlement transaction. Four Solidity contracts enforce conditions and transfer USDC and tickets. The receipt is verified before displaying the net USDC distribution. The Graph integration is planned.</desc>
+<desc id="description">Participants sign outcome conditions through a Next.js frontend. The Graph indexes Arc events for public discovery and the read-only agent. A Node.js backend rechecks Arc RPC state, runs a bounded TypeScript solver, simulates with eth_call, and stores evidence. A submitting wallet sends the settlement transaction. Four Solidity contracts enforce conditions and transfer USDC and tickets. Separate testnet issuer and judge controls may sign for controlled wallets.</desc>
 <defs>
   <marker id="blue" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#93c5fd"/></marker>
   <marker id="green" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#6ee7b7"/></marker>
@@ -34,14 +34,14 @@
 <rect x="634" y="237" width="500" height="583" rx="16" fill="#0e192b" stroke="#334155" />
 <text x="658" y="278" font-size="23" fill="#f8fafc" font-weight="700" >BACKEND / NODE.JS</text>
 <rect x="658" y="301" width="452" height="101" rx="16" fill="#142036" stroke="#334155" />
-<text x="678" y="336" font-size="25" fill="#93c5fd" font-weight="700" >POST /api/solve</text>
-<text x="678" y="368" font-size="20" fill="#cbd5e1" font-weight="400" >Committed hashes in · signed fields from RPC</text>
+<text x="678" y="336" font-size="25" fill="#93c5fd" font-weight="700" >POST /api/solve/pool</text>
+<text x="678" y="368" font-size="20" fill="#cbd5e1" font-weight="400" >Live indexed intents from The Graph</text>
 <rect x="658" y="423" width="452" height="166" rx="16" fill="#142036" stroke="#334155" />
 <text x="678" y="458" font-size="24" fill="#f8fafc" font-weight="700" >TypeScript solver + simulation</text>
 <text x="678" y="491" font-size="20" fill="#cbd5e1" font-weight="400" >Read custody, intents and payment capacity</text><text x="678" y="518" font-size="20" fill="#cbd5e1" font-weight="400" >Bounded search · deterministic ranking</text><text x="678" y="545" font-size="20" fill="#cbd5e1" font-weight="400" >Least gross cash moved among candidates</text><text x="678" y="572" font-size="20" fill="#cbd5e1" font-weight="400" >found within the search budget · eth_call</text>
 <rect x="658" y="610" width="452" height="186" rx="16" fill="#142036" stroke="#334155" />
-<text x="678" y="645" font-size="24" fill="#f8fafc" font-weight="700" >Inspectable evidence</text>
-<text x="678" y="678" font-size="20" fill="#cbd5e1" font-weight="400" >Source block · candidates · exclusions</text><text x="678" y="703" font-size="20" fill="#cbd5e1" font-weight="400" >Chosen proposal · simulation · tx hash</text><text x="678" y="728" font-size="20" fill="#cbd5e1" font-weight="400" >Receipt API checks calldata + chain result</text><text x="678" y="753" font-size="20" fill="#cbd5e1" font-weight="400" >JSON persisted in .data/evidence</text><text x="678" y="778" font-size="20" fill="#cbd5e1" font-weight="400" >HTTP backend holds no signing wallet</text>
+<text x="678" y="645" font-size="24" fill="#f8fafc" font-weight="700" >Read-only agent + evidence</text>
+<text x="678" y="678" font-size="19" fill="#cbd5e1" font-weight="400" >Indexed pool → diagnosis → optional Claude</text><text x="678" y="703" font-size="19" fill="#cbd5e1" font-weight="400" >Conditions tried · bounds · commitment links</text><text x="678" y="728" font-size="19" fill="#cbd5e1" font-weight="400" >Receipt API checks calldata + chain result</text><text x="678" y="753" font-size="19" fill="#cbd5e1" font-weight="400" >Separate testnet issuer / judge routes sign</text><text x="678" y="778" font-size="19" fill="#cbd5e1" font-weight="400" >Agent and solver never broadcast</text>
 
 <rect x="1254" y="237" width="602" height="583" rx="16" fill="#0b211f" stroke="#276759" />
 <text x="1278" y="278" font-size="23" fill="#6ee7b7" font-weight="700" >ARC TESTNET / FOUR CONTRACTS</text>
@@ -79,9 +79,10 @@
 <rect x="64" y="923" width="1090" height="103" rx="14" fill="#0b2928" stroke="#276759" />
 <text x="88" y="960" font-size="25" fill="#6ee7b7" font-weight="700" >USDC is both the settlement asset and native gas token.</text>
 <text x="88" y="996" font-size="21" fill="#cbd5e1" font-weight="400" >No second token needed. All signed conditions are checked before any transfer.</text>
-<rect x="1178" y="923" width="678" height="103" rx="14" fill="#101724" stroke="#64748b" stroke-dasharray="7 6"/>
-<text x="1202" y="959" font-size="23" fill="#cbd5e1" font-weight="700" >PLANNED · The Graph discovery adapter</text>
-<text x="1202" y="995" font-size="20" fill="#94a3b8" font-weight="400" >Current backend uses Arc RPC logs; no subgraph is connected.</text>
+<rect x="1178" y="923" width="678" height="103" rx="14" fill="#101724" stroke="#93c5fd" />
+<text x="1202" y="959" font-size="23" fill="#93c5fd" font-weight="700" >THE GRAPH · Studio / arc-testnet</text>
+<text x="1202" y="988" font-size="19" fill="#cbd5e1" font-weight="400" >Arc events → Ticket / Intent / Settlement → backend</text>
+<text x="1202" y="1013" font-size="18" fill="#94a3b8" font-weight="400" >Hash binding + receipt-block freshness floor</text>
 <text x="64" y="1057" font-size="17" fill="#94a3b8" font-weight="400" >Implementation: app/reshuffle · app/api · server/ · solver/ · src/     |     Simulation does not lock state; contracts revalidate at execution.</text>
 </g>
 </svg>

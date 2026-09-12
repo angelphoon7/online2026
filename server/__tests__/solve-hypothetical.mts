@@ -107,7 +107,8 @@ test('raising the budget unlocks a settlement that the committed intent cannot r
 
 test('a settlement that excludes the hypothetical is not reported as found', async () => {
   // C and D can swap with each other at zero payment. The hypothetical A wants a section that
-  // does not exist in the pool, so the chosen candidate is C+D and says nothing about A.
+  // does not exist in the pool, so nothing that includes A can settle - and a C+D reshuffle
+  // says nothing about A.
   const cOffers = intent({ owner: C, offered: [3n], sectionMask: SECTION_1 });
   const dOffers = intent({ owner: D, offered: [4n], sectionMask: SECTION_0 });
   const snap = snapshot(
@@ -125,9 +126,11 @@ test('a settlement that excludes the hypothetical is not reported as found', asy
   assert.deepEqual(result.counterparties, []);
   assert.equal(result.participantCount, null);
   assert.equal(result.targetNetPay, null);
-  // The search did find something — just not one containing the hypothetical. Reporting that
-  // as "found" would tell the user a change helps them when it does not.
-  assert.ok(result.candidatesFound > 0, 'C and D can still settle between themselves');
+  // The C+D reshuffle is not counted, because the search never enumerates a subset without
+  // the asker. Spending the bound on other people's reshuffles is what made "no settlement
+  // found" the answer for almost every intent in a real pool; the question asked here is
+  // whether THIS participant can settle, and only candidates including them can answer it.
+  assert.equal(result.candidatesFound, 0, 'candidates are counted only if they include the asker');
 });
 
 test('payment capacity is enforced, so a relaxation cannot promise what V8 would reject', async () => {

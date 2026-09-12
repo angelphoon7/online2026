@@ -44,6 +44,17 @@ export interface SearchConfig {
   maxParticipants: number;
   maxCandidates: number;
   timeoutMs: number;
+  /**
+   * Restrict the search to reshuffles that include this intent.
+   *
+   * The bound is spent on candidates, not on subsets, so a global search over a large pool
+   * fills its budget with reshuffles between other people and never reaches the asking
+   * participant at all. That is the right behaviour when proposing a settlement - any valid
+   * reshuffle will do - and the wrong one when answering "can I settle?", where a candidate
+   * without the asker answers a different question. The ranking rule is unchanged; it is
+   * applied to the candidates that include this hash.
+   */
+  mustInclude?: Hex;
 }
 
 export interface Candidate {

@@ -1,0 +1,13 @@
+Command: npm run subgraph:parity
+Run date: 2026-09-12
+Read-only; no transaction broadcast.
+
+subgraph  https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1
+deployment QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL
+indexed block 61754713, chain head 61754719, lag 6 blocks
+comparing at block 61754713 (pinned to the indexed block)
+intents 121, tickets 164
+
+hash binding verified on 121 intents
+
+PASS — 1719 checks at block 61754713: 121 intents, 164 tickets

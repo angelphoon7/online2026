@@ -13,7 +13,7 @@ const arrow = (d, color = '#93c5fd', marker = 'blue') => `<path d="${d}" fill="n
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-labelledby="title description">
 <title id="title">RESHUFFLE — deployed Arc Testnet architecture</title>
-<desc id="description">Participants sign outcome conditions through a Next.js frontend. A Node.js backend reads Arc RPC state, runs a bounded TypeScript solver, simulates with eth_call, and stores evidence. A submitting wallet sends the settlement transaction. Four Solidity contracts enforce conditions and transfer USDC and tickets. The receipt is verified before displaying the net USDC distribution. The Graph integration is planned.</desc>
+<desc id="description">Participants sign outcome conditions through a Next.js frontend. The Graph indexes Arc events for public discovery and the read-only agent. A Node.js backend rechecks Arc RPC state, runs a bounded TypeScript solver, simulates with eth_call, and stores evidence. A submitting wallet sends the settlement transaction. Four Solidity contracts enforce conditions and transfer USDC and tickets. Separate testnet issuer and judge controls may sign for controlled wallets.</desc>
 <defs>
   <marker id="blue" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#93c5fd"/></marker>
   <marker id="green" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#6ee7b7"/></marker>
@@ -47,14 +47,14 @@ ${lines(108, 706, ['Signs and broadcasts settlement', 'After verified receipt: w
 ${box(634, 237, 500, 583, '#0e192b', '#334155')}
 ${text(658, 278, 'BACKEND / NODE.JS', 23, '#f8fafc', 700)}
 ${box(658, 301, 452, 101)}
-${text(678, 336, 'POST /api/solve', 25, '#93c5fd', 700)}
-${lines(678, 368, ['Committed hashes in · signed fields from RPC'], 20)}
+${text(678, 336, 'POST /api/solve/pool', 25, '#93c5fd', 700)}
+${lines(678, 368, ['Live indexed intents from The Graph'], 20)}
 ${box(658, 423, 452, 166)}
 ${text(678, 458, 'TypeScript solver + simulation', 24, '#f8fafc', 700)}
 ${lines(678, 491, ['Read custody, intents and payment capacity', 'Bounded search · deterministic ranking', 'Least gross cash moved among candidates', 'found within the search budget · eth_call'], 20, '#cbd5e1', 27)}
 ${box(658, 610, 452, 186)}
-${text(678, 645, 'Inspectable evidence', 24, '#f8fafc', 700)}
-${lines(678, 678, ['Source block · candidates · exclusions', 'Chosen proposal · simulation · tx hash', 'Receipt API checks calldata + chain result', 'JSON persisted in .data/evidence', 'HTTP backend holds no signing wallet'], 20, '#cbd5e1', 25)}
+${text(678, 645, 'Read-only agent + evidence', 24, '#f8fafc', 700)}
+${lines(678, 678, ['Indexed pool → diagnosis → optional Claude', 'Conditions tried · bounds · commitment links', 'Receipt API checks calldata + chain result', 'Separate testnet issuer / judge routes sign', 'Agent and solver never broadcast'], 19, '#cbd5e1', 25)}
 
 ${box(1254, 237, 602, 583, '#0b211f', '#276759')}
 ${text(1278, 278, 'ARC TESTNET / FOUR CONTRACTS', 23, '#6ee7b7', 700)}
@@ -92,9 +92,10 @@ ${text(924, 880, 'WALLET → settle(intents, legs) · one onchain transaction', 
 ${box(64, 923, 1090, 103, '#0b2928', '#276759', 14)}
 ${text(88, 960, 'USDC is both the settlement asset and native gas token.', 25, '#6ee7b7', 700)}
 ${text(88, 996, 'No second token needed. All signed conditions are checked before any transfer.', 21)}
-${box(1178, 923, 678, 103, '#101724', '#64748b', 14, 'stroke-dasharray="7 6"')}
-${text(1202, 959, 'PLANNED · The Graph discovery adapter', 23, '#cbd5e1', 700)}
-${text(1202, 995, 'Current backend uses Arc RPC logs; no subgraph is connected.', 20, '#94a3b8')}
+${box(1178, 923, 678, 103, '#101724', '#93c5fd', 14)}
+${text(1202, 959, 'THE GRAPH · Studio / arc-testnet', 23, '#93c5fd', 700)}
+${text(1202, 988, 'Arc events → Ticket / Intent / Settlement → backend', 19, '#cbd5e1')}
+${text(1202, 1013, 'Hash binding + receipt-block freshness floor', 18, '#94a3b8')}
 ${text(64, 1057, 'Implementation: app/reshuffle · app/api · server/ · solver/ · src/     |     Simulation does not lock state; contracts revalidate at execution.', 17, '#94a3b8')}
 </g>
 </svg>`;

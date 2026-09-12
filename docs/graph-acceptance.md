@@ -45,9 +45,9 @@ the ticket is first referenced and the `meta()` fallback never ran.
   caught up      indexed advanced 59 blocks while the head advanced 54 — keeping pace
 ```
 
-**Use ~2s as the expected on-screen duration of "Indexing block #M…", and ~6s as the worst
-case observed.** The gap is directly measured; the seconds are inferred from the observed
-block time, not from a published constant.
+The gap is directly measured; the seconds are inferred from observed block time. These
+samples do not measure how long "Indexing block #M…" remains on screen after a particular
+transaction. Measure receipt-to-index waiting separately before publishing that duration.
 
 Two caveats that matter beyond this table:
 
@@ -80,6 +80,9 @@ hash binding verified on 121 intents
 PASS — 1719 checks at block 61644115: 121 intents, 164 tickets
 ```
 
+This historical excerpt mixes the initial block of one run with another completion block.
+Use the consistent [step 11 report at block 61754713](checks/step-11-parity.txt) for submission.
+
 ### What the 1719 checks cover
 
 | Check | Count | Against |
@@ -92,8 +95,8 @@ PASS — 1719 checks at block 61644115: 121 intents, 164 tickets
 
 **Hash binding is the load-bearing one.** The registry keys on the bare struct hash, so
 re-hashing binds all twelve signed fields at once: had the indexer altered any field, the hash
-could not match. This is what makes a wrong intent impossible rather than merely unlikely, and
-it is why the solver can treat subgraph output as trustworthy input.
+would be rejected by the hash comparison. This binds the signed intent fields; it does not
+authenticate indexed ticket metadata, prove query completeness or replace chain-state checks.
 
 ### The check is falsifiable
 

@@ -129,7 +129,10 @@ export async function solveHypothetical(
   };
 
   const started = performance.now();
-  const result = solve(intents, state, SEARCH_CONFIG);
+  // Ask the question that was actually asked: is there a reshuffle that includes THIS
+  // participant? Without this the bound is spent on reshuffles between other people, and the
+  // answer becomes "no settlement found" for almost everyone in a pool of any size.
+  const result = solve(intents, state, { ...SEARCH_CONFIG, mustInclude: hypotheticalHash });
   const runtimeMs = performance.now() - started;
 
   const chosen = result.chosen;

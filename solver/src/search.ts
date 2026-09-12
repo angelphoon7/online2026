@@ -28,8 +28,21 @@ export function search(
   const startTime = Date.now();
   const maxSize = Math.min(intents.length, config.maxParticipants);
 
+  // With mustInclude set, enumerate only subsets that contain that intent: hold it fixed and
+  // combine the rest. Filtering after enumeration would still walk every subset of the pool,
+  // which is what exhausts the time bound before the relevant ones are reached.
+  const required = config.mustInclude
+    ? intents.find((i) => hashIntent(i).toLowerCase() === config.mustInclude!.toLowerCase())
+    : undefined;
+  if (config.mustInclude && !required) {
+    return { candidates, excluded, termination: 'complete' };
+  }
+  const others = required ? intents.filter((i) => i !== required) : intents;
+  const subsetsOfSize = (size: number): Iterable<Intent[]> =>
+    required ? mapCombinations(others, size - 1, (rest) => [required, ...rest]) : combinations(intents, size);
+
   for (let size = 2; size <= maxSize; size++) {
-    for (const subset of combinations(intents, size)) {
+    for (const subset of subsetsOfSize(size)) {
       if (Date.now() - startTime > config.timeoutMs) return { candidates, excluded, termination: 'timeout' };
       if (candidates.length >= config.maxCandidates) return { candidates, excluded, termination: 'candidate-limit' };
 
@@ -221,6 +234,10 @@ function checkAdjacentTickets(tickets: bigint[], state: ChainState): boolean {
   }
 
   return true;
+}
+
+function* mapCombinations<T, R>(arr: T[], k: number, wrap: (combo: T[]) => R): Generator<R> {
+  for (const combo of combinations(arr, k)) yield wrap(combo);
 }
 
 export function* combinations<T>(arr: T[], k: number): Generator<T[]> {

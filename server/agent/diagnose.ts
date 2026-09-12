@@ -43,6 +43,15 @@ export type Relaxation = {
   /** Signed, in contract units. */
   targetNetPay: string | null;
   receives: string[];
+  /**
+   * Budget relaxation only: did the extra budget actually do the work?
+   *
+   * False when the candidate it found asks this owner for no more than their committed limit
+   * already allows. That settlement was always within their signed conditions, so the
+   * bounded baseline search simply did not reach it - and recommending "raise your limit"
+   * would name a cause that is not one.
+   */
+  binding?: boolean;
 };
 
 export type Evidence = {
@@ -317,7 +326,15 @@ export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: C
   const relaxations: Relaxation[] = [];
   const cap = BigInt(Math.round(budgetCapUsdc())) * USDC;
   if (intent.maxNetPay < cap) {
-    relaxations.push(asRelaxation('maxNetPay->cap', await hypothetical({ maxNetPay: cap })));
+    const raised = asRelaxation('maxNetPay->cap', await hypothetical({ maxNetPay: cap }));
+    // The budget is only the reason if the settlement found actually costs more than the
+    // committed limit permits. When it does not, what changed was how far the bounded search
+    // got, not what the participant is willing to pay, and saying otherwise would hand a
+    // judge a false cause.
+    if (raised.found) {
+      raised.binding = raised.targetNetPay !== null && BigInt(raised.targetNetPay) > intent.maxNetPay;
+    }
+    relaxations.push(raised);
   }
   if (intent.mustBeAdjacent) {
     relaxations.push(asRelaxation('mustBeAdjacent=false', await hypothetical({ mustBeAdjacent: false })));
@@ -345,7 +362,7 @@ export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: C
 
 /** The relaxation a judge should be shown first: one that worked, cheapest for this owner. */
 export function smallestWorkingChange(evidence: Evidence): Relaxation | null {
-  const worked = evidence.relaxations.filter((r) => r.found);
+  const worked = evidence.relaxations.filter((r) => r.found && r.binding !== false);
   if (!worked.length) return null;
   // Among changes that produced a settlement, prefer the one costing this owner least. Stated
   // as "the smallest change among those tried" - never as optimal, and never as the only one.

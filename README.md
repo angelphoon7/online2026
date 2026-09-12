@@ -8,6 +8,8 @@ The current demo is a single page at `/`: open the live event poster to use the 
 
 **Target Arc bounties: Best DeFi / Onchain Finance · Launch on Testnet & Push to Mainnet — [category confirmation pending](#bounty-category-verification).**
 
+**Target The Graph bounty: Best AI Tooling or AI Use Case with The Graph (From Scratch) · AI Use Case path · Start Fresh pool.** See [submission draft and eligibility checks](docs/THE_GRAPH_SUBMISSION.md).
+
 **A market for outcomes, not listings.**
 
 You never give up your tickets unless the whole replacement arrives.
@@ -23,6 +25,8 @@ You never give up your tickets unless the whole replacement arrives.
 ## Contents
 
 - [Ready-to-settle demo](#ready-to-settle-demo)
+- [The Graph: setup, live endpoint and agent](#the-graph)
+- [AI usage and planning artifacts](#ai-usage)
 - [The problem](#the-problem)
 - [The solution](#the-solution)
 - [High-level architecture](#high-level-architecture)
@@ -62,6 +66,233 @@ The demo opens without a wallet and automatically searches all live event intent
 For broader wishlist inventory, `npm run demo:inventory -- --broadcast` prepares 64 additional tickets across both sessions and all four sections, deposits them and commits 32 adjacent-pair swap offers. Reruns resume the same batch. Additional batches use a name, e.g. `npm run demo:inventory -- --broadcast batch-2`. A new name adds 64 tickets; an existing name resumes its saved batch. [Inventory setup and verification](docs/DEMO_INVENTORY.md) | [Public ticket IDs and transaction hashes](deployments/section-inventory.json).
 
 For asynchronous judging, host the Next.js frontend **and backend** and share its `/demo` URL. Seed before publishing the public manifest. A shared on-chain round can be consumed once; reseed and redeploy the updated manifest for the next round on hosts with immutable files. See [setup, recovery and hosting details](docs/DEMO_SETUP.md).
+
+## The Graph
+
+### Why an indexer is structurally required
+
+`IntentRegistry` stores commitment state and owner, plus nonce reservations; it does not store
+the full matching conditions in an enumerable pool. Those fields are emitted in
+`IntentCommitted`. This implementation relies on The Graph to reconstruct the live intent
+pool. The indexed data powers public ticket positions, standing intents, settlement history,
+backend discovery and the agent's diagnosis. RPC log reconstruction remains a development
+option; run the Graph demonstration with `READ_SOURCE=graph`.
+
+### What is indexed
+
+| Contract | Event | Entity effect |
+|---|---|---|
+| TicketNFT | `TicketMinted` | Ticket metadata and initial owner |
+| TicketNFT | `Transfer` | Current owner, escrow custody and depositor |
+| TicketNFT | `TicketRedeemedEvt` | Ticket redemption status |
+| IntentRegistry | `IntentCommitted` | All 12 signed fields, ordered offered IDs, LIVE state and commitment transaction |
+| IntentRegistry | `IntentRevoked` | REVOKED state and closing transaction |
+| Settlement | `Settled` | Settlement receipt; listed intents become SETTLED |
+
+The deployed schema has **Ticket, Intent and Settlement**. Escrow custody is derived from
+NFT transfers; there is no separate Escrow data source. `Settled` contains hashes and a
+participant count, so per-leg receipts and USDC net payments are decoded from transaction
+input and verified through RPC. They are not indexed in a `SettlementLeg` entity.
+[Schema](subgraph/schema.graphql) · [actual ABI audit](docs/graph-audit.txt).
+
+### Graph trust model
+
+1. **Hash binding:** the shared `hashIntent()` recomputes each indexed commitment and rejects
+   altered fields as `HASH_MISMATCH`. The registry key is the bare struct hash; the EIP-712
+   domain (`chainId` and `verifyingContract`) authenticates the signature at commit.
+2. **Freshness floor:** reads following a transaction use `block: { number_gte: receiptBlock }`.
+   The UI waits for indexing rather than substituting an older pool. Indexing errors are surfaced.
+3. **Execution checks:** indexed discovery is followed by chain reads and `eth_call` simulation.
+   Settlement checks V0–V8 again in the real transaction. Simulation does not reserve state;
+   a later withdrawal can still make a proposal revert and cost its proposer gas.
+
+Read-only audit on September 12, 2026:
+
+```text
+comparing at block 61754713 (pinned to the indexed block)
+hash binding verified on 121 intents
+PASS — 1719 checks at block 61754713: 121 intents, 164 tickets
+```
+
+[Full output](docs/checks/step-11-parity.txt) · [what the checks cover](docs/graph-acceptance.md).
+This is evidence for that block, not a claim that the pool never changes.
+
+### Endpoint and query
+
+[Studio query endpoint: reshuffle v0.1.1](https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1),
+network `arc-testnet`, chain ID `5042002`. Deployment:
+`QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL`.
+
+The browser uses the same-origin `/api/graph` proxy; any query key stays server-side. This
+small inspection query works in Studio with variables `{ "minBlock": 0 }`. After a write,
+replace `0` with its receipt block. It displays a sample, not the complete solver input.
+
+```graphql
+query InspectPool($minBlock: Int!) {
+  _meta(block: { number_gte: $minBlock }) {
+    block { number timestamp }
+    hasIndexingErrors
+  }
+  intents(first: 20, where: { state: LIVE }, block: { number_gte: $minBlock }) {
+    id owner eventId offered exactCount maxNetPay committedTx
+  }
+  tickets(first: 20, where: { escrowed: true }, block: { number_gte: $minBlock }) {
+    id sessionId sectionId row seat depositor
+  }
+}
+```
+
+The application's complete [PoolSnapshot query](shared/graph/queries.ts) takes
+`{ "minBlock": 0, "first": 1000 }` and includes every signed field needed for hash binding.
+
+### Run locally
+
+Install Node.js 22 or newer, then install dependencies from the repository root:
+
+```sh
+npm ci
+npm --prefix solver ci
+```
+
+Create `.env.local` only if it does not already exist. Copy the needed settings from
+[.env.example](.env.example); keep existing wallet credentials private. `.env.example` is a
+template, not the application's active settings. Next loads `.env.local` ahead of `.env`;
+CLI scripts may load `.env` explicitly, so keep shared selections consistent.
+
+For public Graph reads and no-model diagnosis, these settings suffice; no wallet key is needed:
+
+```dotenv
+DEPLOYMENT=arc-testnet
+NEXT_PUBLIC_DEPLOYMENT=arc-testnet
+ARC_RPC=https://rpc.testnet.arc.io
+READ_SOURCE=graph
+SUBGRAPH_URL=https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1
+```
+
+```sh
+npm run dev
+```
+
+Open `http://localhost:3000/`, open an event poster, then **Check all intents** and choose
+**Why no match?** on an intent. The workspace is readable without connecting a wallet.
+Signing or settlement connects when needed. The automatic search finds candidates while the
+page is open; **Propose and settle** is a separate wallet transaction. The agent does not
+automatically execute a swap.
+
+The evidence can also be inspected without an Anthropic key or wallet:
+
+```text
+GET http://localhost:3000/api/agent/diagnose/<committed-intent-hash>
+GET http://localhost:3000/api/agent/diagnose/<committed-intent-hash>?minBlock=<receipt-block>
+```
+
+Use a full hash from the live pool. The endpoint returns named status, evidence, bounds,
+runtime and a deterministic sentence. `/api/agent/ask` also falls back to deterministic
+diagnosis when no model key is set. Free-form tool selection and narration require the key.
+The built app returned HTTP 200 with `SETTLEABLE` at block 61756153 in the current
+[live diagnosis check](docs/checks/step-11-diagnose.json), without invoking a model or signing.
+For a production server use `npm run build` and `npm start`; mount persistent storage for
+`.data/evidence`. [Backend routes and permissions](server/README.md).
+
+### Environment variables
+
+| Variable | Consumer | Actual behavior |
+|---|---|---|
+| `DEPLOYMENT` | Deployment/subgraph CLI scripts | Selects `deployments/<network>.json`; default `arc-testnet` |
+| `NEXT_PUBLIC_DEPLOYMENT` | Next frontend and backend chain configuration | Selects generated public deployment record at build time; keep equal to `DEPLOYMENT` |
+| `SUBGRAPH_URL` | Backend and shared Graph client | Required for Graph reads; set to the versioned query endpoint above |
+| `SUBGRAPH_API_KEY` | Backend | Optional query credential; never a `NEXT_PUBLIC_` value |
+| `SUBGRAPH_DEPLOY_KEY` | Deployment CLI | Publishing only; not needed to run the app or query the existing subgraph |
+| `READ_SOURCE` | Backend market and solver discovery | `graph` or `rpc`; defaults to `graph` when `SUBGRAPH_URL` is set, otherwise `rpc`. Local Anvil uses `rpc` |
+| `ARC_RPC` | Backend and CLI | RPC used for chain verification, capacity and simulation; defaults to selected deployment RPC in the backend |
+| `ARC_CHAIN_ID` | Backend consistency check / CLI | If set, must agree with the deployment; Arc Testnet is `5042002` |
+| `NEXT_PUBLIC_RPC_URL` | Browser chain configuration | Public RPC override; browser public reads use the same-origin transport |
+| `ANTHROPIC_API_KEY` | Agent narration only | Optional; diagnose needs no model key, ask uses a template if absent |
+| `AGENT_MODEL` | Agent narration | Defaults to `claude-sonnet-5`; verify access for the hosted account |
+| `BUDGET_CAP_USDC` | Deterministic diagnosis | BUDGET relaxation ceiling, default `100`; USDC has 6 settlement decimals |
+| `JUDGE_CONTROLS_ENABLED` | Testnet judge routes | `true` enables hosted budget/revoke controls; enabled by default in development. Requires controlled participant keys |
+| `DEMO_TICKETS_ENABLED` | Testnet issuer route | Enables hosted free-ticket claims; enabled by default in development |
+| `DEMO_ISSUER_PRIVATE_KEY`, `PRIVATE_KEY`, `SEED_*_PRIVATE_KEY` | Optional issuer/judge/local transaction tooling | Signing credentials, never public. Seed keys are read from `.env.seed`; none is required for ordinary public reads or diagnosis |
+
+The plan's `GRAPH_API_KEY`, `ARC_RPC_URL` and `NEXT_PUBLIC_READ_SOURCE` are examples; this
+implementation uses **`SUBGRAPH_API_KEY`, `ARC_RPC` and `READ_SOURCE`**. Addresses and deployment
+blocks come from the deployment records, not hand-edited environment variables. Regenerate
+public records with `npm run deployment:public` and rebuild when changing networks. Existing
+testnet signatures do not authorize intents on a different chain or registry.
+
+### Agent
+
+One indexed pool snapshot → deterministic supply/demand checks and solver reruns → optional
+Claude tool selection and narration. Tools are `diagnose_intent`, `what_if` and `pool_overview`.
+The agent module has no signing capability. Enabled testnet judge controls are a separate
+server feature that can sign for controlled participants.
+
+Diagnosis spends its search bound on candidates containing the selected intent. It tries
+single-condition changes to payment limit, adjacency, cohesion and accepted sections/sessions;
+it does not change event or exact ticket count. Hypotheticals are marked `submittable: false`
+and omit calldata. Acting on a change requires a newly signed commitment. The drawer's
+Evidence panel exposes the conditions tried and commitment transaction links.
+
+Each solver run is bounded by **4 participants, 100 candidates and a 2,000 ms timeout**.
+The real settlement service accepts at most four offered/received tickets per intent and
+256 searchable live intents. Ranking minimizes gross cash moved among candidates found,
+then participant count, then the ordered intent-hash set. These are configured limits,
+not measured performance claims. [Recording guide](docs/DEMO_GRAPH.md).
+
+### Graph limitations
+
+- No result means none found within the search bound. Single-condition trials do not
+  establish whether a combination of changes would work.
+- The pool and its timestamp come from one indexed response, but USDC balances/allowances
+  are separate latest-RPC reads. Closed-intent lookup is also a separate unpinned query.
+  The current diagnosis is therefore not a historical proof of every fact at one block.
+- Snapshot lists are capped at 1,000 with no pagination yet. Large markets need pagination
+  before the entire pool can be claimed as searched.
+- The narration guard rejects banned wording, unsupported full identifiers and a missing
+  expected block reference. It does not validate every amount/ticket reference or reject
+  all extra block references. Evidence JSON is the inspectable result, not proof of every
+  sentence the model might generate.
+- Without a model key, ask returns a baseline diagnosis rather than interpreting arbitrary
+  what-if questions. Live narration and the hosted demo need separate verification.
+- Adjacency is enforceable for issuer-native tickets with consecutive seat numbering;
+  external ticket systems are outside this demo.
+
+### Verification
+
+```sh
+npm test
+npm --prefix solver test
+npm run deployment:check
+npm run subgraph:check
+npm run subgraph:parity
+npx tsc --noEmit
+```
+
+The current run passed 32 Solidity tests, 32 Graph/agent checks, 29 solver tests, 11 deployment checks,
+36 manifest checks and 1,719 live parity checks. [Review scope and remaining gaps](docs/STEP_11_REVIEW.md).
+To rebuild the subgraph, install its dependencies with `npm --prefix subgraph ci`, then run
+`npm run subgraph:codegen` and `npm --prefix subgraph run build`. Querying the existing deployment
+does not require redeploying it.
+
+## AI usage
+
+AI coding assistance was used during development under user-provided product and UI
+instructions. The confirmed assisted work in this conversation includes
+`component/market/Market.tsx`, `lib/section-supply.ts`,
+`scripts/test-section-supply.mjs`, `scripts/seed-inventory.mjs`, `server/market.ts` and
+`docs/DEMO_INVENTORY.md` (ticket flow, availability and inventory tooling).
+For this step, Codex assisted with `README.md`, `server/README.md`,
+`docs/THE_GRAPH_SUBMISSION.md`, `docs/PLANNING_ARTIFACTS.md`, `docs/STEP_11_REVIEW.md`,
+the architecture export labels and verification records. Copied planning files preserve
+their supplied content; copying does not establish who originally authored them.
+
+The user supplied the requirements, corrections and Graph integration plan. This disclosure
+does not assign authorship to every earlier file: the team should complete any additional
+tool/file/asset attribution before submission. The application itself optionally uses Claude
+to narrate deterministic evidence; that runtime use is distinct from coding assistance.
+[Specifications, instructions and planning artifacts](docs/PLANNING_ARTIFACTS.md).
+
+---
 
 ## The problem
 
@@ -167,7 +398,7 @@ This is why the contract checks session, section, count, cohesion, adjacency, bu
 
 **Presentation downloads:** [4K PNG](docs/diagrams/architecture.png) · [Scalable SVG](docs/diagrams/architecture.svg) · [Export instructions](docs/diagrams/README.md).
 
-This diagram reflects the current implementation. The backend reconstructs intents from Arc RPC logs, searches, simulates and verifies receipts; the submitting wallet broadcasts the settlement transaction. The Graph adapter is planned. The confirmed USDC distribution groups payments by wallet and excludes gas from its zero-sum total.
+The backend discovers the live pool through The Graph, rechecks chain state, searches, simulates and verifies receipts; the submitting wallet broadcasts the settlement transaction. The read-only agent explains indexed conditions using solver evidence. RPC discovery remains available for local development. The confirmed USDC distribution groups payments by wallet and excludes gas from its zero-sum total. Testnet issuer and judge controls have separate server signing permissions; see the [backend boundaries](server/README.md).
 
 ### Trust model
 
@@ -673,34 +904,26 @@ The solver duplicates the contract's constraint logic so proposals do not fail o
 
 ```mermaid
 erDiagram
-    TICKET ||--o{ ESCROW_POSITION : "has"
-    TICKET }o--o{ INTENT : "offered in"
-    TICKET }o--o{ SETTLEMENT_LEG : "received in"
-    INTENT ||--o| SETTLEMENT_LEG : "matched by"
-    SETTLEMENT ||--|{ SETTLEMENT_LEG : "contains"
-
+    TICKET }o--o{ INTENT : offeredTickets
+    SETTLEMENT o|--|{ INTENT : settles
     TICKET {
-        id String PK
+        id ID PK
+        tokenId BigInt
         eventId Int
         sessionId Int
         sectionId Int
         row Int
         seat Int
         owner Bytes
+        depositor Bytes
+        escrowed Boolean
         redeemed Boolean
     }
-    ESCROW_POSITION {
-        id String PK
-        depositor Bytes
-        depositedAt BigInt
-        active Boolean
-    }
     INTENT {
-        hash Bytes PK
+        id Bytes PK
         owner Bytes
         eventId Int
-        offered String
-        state String
+        offered BigIntArray
         sessionMask BigInt
         sectionMask BigInt
         exactCount Int
@@ -709,48 +932,27 @@ erDiagram
         mustBeAdjacent Boolean
         maxNetPay BigInt
         deadline BigInt
-        committedAt BigInt
+        nonce BigInt
+        state IntentState
+        committedTx Bytes
+        closedTx Bytes
     }
     SETTLEMENT {
-        id String PK
+        id Bytes PK
         proposer Bytes
+        txHash Bytes
         blockNumber BigInt
-        participantCount Int
-    }
-    SETTLEMENT_LEG {
-        id String PK
-        intent Bytes FK
-        owner Bytes
-        received String
-        netPayment BigInt
+        timestamp BigInt
+        participantCount BigInt
     }
 ```
 
-Indexed events: `TicketMinted`, `TicketEscrowed`, `TicketWithdrawn`, `TicketRedeemed`, `IntentCommitted`, `IntentRevoked`, `Settled`.
+This shows the deployed [schema](subgraph/schema.graphql). Ticket custody lives on `Ticket`;
+all signed fields and the original offered-ticket order live on `Intent`. Settlement records
+link to the affected intents. `Settled` emits no per-leg payment data, so there is no
+`SettlementLeg` entity. [Indexed events and receipt boundary](#what-is-indexed).
 
-```solidity
-event IntentCommitted(
-    bytes32 indexed intentHash,
-    address indexed owner,
-    uint32  indexed eventId,
-    uint256[] offered,
-    uint256 sessionMask,
-    uint256 sectionMask,
-    uint8   exactCount,
-    bool    mustShareSession,
-    bool    mustShareSection,
-    bool    mustBeAdjacent,
-    int256  maxNetPay,
-    uint64  deadline,
-    uint256 nonce
-);
-```
-
-`IntentRegistry` stores only `hash → owner, state`, so the matching conditions exist on-chain **only in this event**. If the event omits a field, the subgraph cannot reconstruct it and the solver cannot match on it.
-
-`eventId` and `offered` are not optional fields. Without them the solver cannot tell which tickets an intent is actually putting up, and the pool is not reconstructible — which would make the claim that The Graph supplies the live matching inputs untrue. `SETTLEMENT_LEG` likewise carries its `owner` and `received` ids so a settlement can be explained after the fact.
-
-The subgraph is discovery and prefiltering. Chain state at execution is authoritative — balances and allowances move, an indexer lags, and the contract re-validates everything regardless.
+The subgraph supplies discovery and prefiltering. Chain state at execution is authoritative.
 
 ---
 
@@ -971,20 +1173,20 @@ Named, not hidden.
 
 ## Repository
 
-```
-src/
-  TicketNFT.sol        ERC-721, packed metadata, redemption
-  Escrow.sol           custody, unconditional withdrawal
-  IntentRegistry.sol   EIP-712 commitment and revocation
-  Settlement.sol       V1-V8 validation, atomic execution
-test/
-  Settlement.t.sol     the rejection table
-script/
-  Deploy.s.sol
-solver/                TypeScript
-subgraph/
-web/
-docs/                  PRD, TRD
+```text
+src/                   Four Solidity contracts
+script/                Foundry deployment and seeding
+scripts/               Deployment, evidence and verification tools
+test/                  Solidity validation and rejection tests
+solver/src/            TypeScript bounded search and validation
+shared/                Shared intent hashing and Graph snapshot client
+subgraph/              Schema, generated manifest and event mappings
+server/                Market adapters, solver, receipts and read-only agent
+app/api/               Next.js backend route handlers
+component/market/      Interactive ticket workspace and agent drawer
+lib/                   Frontend models, configuration and API clients
+deployments/           Chain records and public transaction evidence
+docs/                  Specifications, demo guides and submission package
 ```
 
 ### Build
@@ -1002,10 +1204,10 @@ forge script script/Deploy.s.sol --rpc-url $ARC_RPC --broadcast
 
 | Contract | Address | Network |
 |---|---|---|
-| TicketNFT | *TBD* | Arc Testnet |
-| Escrow | *TBD* | Arc Testnet |
-| IntentRegistry | *TBD* | Arc Testnet |
-| Settlement | *TBD* | Arc Testnet |
+| TicketNFT | [0xb2490568bb27c9c38588e3b5511ee3980892cce4](https://testnet.arcscan.app/address/0xb2490568bb27c9c38588e3b5511ee3980892cce4) | Arc Testnet |
+| Escrow | [0x07ab57380db7df630fab2d3d3a1019a5a890b018](https://testnet.arcscan.app/address/0x07ab57380db7df630fab2d3d3a1019a5a890b018) | Arc Testnet |
+| IntentRegistry | [0x479b4455f494679dcdd6f6f32e93e08682deda75](https://testnet.arcscan.app/address/0x479b4455f494679dcdd6f6f32e93e08682deda75) | Arc Testnet |
+| Settlement | [0x75872168f2d6ae13c7d9258159e59025fd9b5eae](https://testnet.arcscan.app/address/0x75872168f2d6ae13c7d9258159e59025fd9b5eae) | Arc Testnet |
 
 ### Measured settlement gas
 

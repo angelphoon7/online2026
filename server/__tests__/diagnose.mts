@@ -105,12 +105,42 @@ test('budget blocked: supply and demand both pass, and raising the limit settles
   // Exactly B's floor, not the raised ceiling: the solver minimises gross cash moved.
   assert.equal(budget?.targetNetPay, (10n * USDC).toString());
   assert.deepEqual(budget?.counterparties, [B]);
+  // The extra budget is what did the work here: 10 USDC is more than A's committed limit of 0.
+  assert.equal(budget?.binding, true, 'the raise must be load-bearing to be recommended');
   assert.equal(smallestWorkingChange(evidence)?.change, 'maxNetPay->cap');
 
   const sentence = renderEvidence(evidence);
   assert.match(sentence, /^At Arc Testnet block #61000000,/);
   assert.match(sentence, /no settlement was found within the search bound/);
   assert.match(sentence, /smallest change among those tried/);
+});
+
+// A budget relaxation can report `found` for a reason that has nothing to do with the budget.
+// The search stops at maxCandidates, so widening any condition changes which candidates are
+// reached first, and one of them may be a settlement the committed limit already permitted.
+// Observed on Arc Testnet at block 61751218: `maxNetPay->cap` found a candidate whose
+// targetNetPay was 0 against a committed limit of 0. Recommending "raise your limit" there
+// names a cause that is not one, so a non-binding raise must never be the recommendation.
+test('a budget raise the committed limit already permits is not recommended', () => {
+  const nonBinding = {
+    block: '61000000',
+    timestamp: NOW.toString(),
+    intent: '0xdead' as Hex,
+    status: 'NOT_FOUND_WITHIN_BOUND' as const,
+    relaxations: [
+      { change: 'maxNetPay->cap', found: true, counterparties: [B], participantCount: 2,
+        targetNetPay: '0', receives: ['3'], binding: false },
+    ],
+    bounds: { maxParticipants: 4, maxCandidates: 100, timeoutMs: 2000, budgetCapUsdc: 100, groupSearchCap: 40 },
+    counterpartyTx: {},
+    runtimeMs: 1,
+  };
+
+  assert.equal(smallestWorkingChange(nonBinding as never), null, 'a non-binding raise is no recommendation');
+
+  // The same relaxation with a payment above the committed limit is a real cause, and is kept.
+  const binding = { ...nonBinding, relaxations: [{ ...nonBinding.relaxations[0], targetNetPay: (10n * USDC).toString(), binding: true }] };
+  assert.equal(smallestWorkingChange(binding as never)?.change, 'maxNetPay->cap');
 });
 
 // ---------------------------------------------------------------- adjacency blocked

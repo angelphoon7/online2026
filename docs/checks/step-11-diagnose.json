@@ -1,0 +1,30 @@
+{
+  "block": "61756153",
+  "timestamp": "1789229817",
+  "intent": "0xf7387010926792738ba5c0b1048ec46e5aa3197ba8ef81ca7976b8864d31baf0",
+  "relaxations": [],
+  "bounds": {
+    "maxParticipants": 4,
+    "maxCandidates": 100,
+    "timeoutMs": 2000,
+    "budgetCapUsdc": 100,
+    "groupSearchCap": 40
+  },
+  "counterpartyTx": {
+    "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd": "0xa31c56bf1ed8aa34029760fd4f70bc3dab60b0032e4fb0e6419222ddcfa8f2db"
+  },
+  "status": "SETTLEABLE",
+  "settleable": {
+    "counterparties": [
+      "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd"
+    ],
+    "participantCount": 2,
+    "targetNetPay": "0",
+    "receives": [
+      "36",
+      "37"
+    ]
+  },
+  "runtimeMs": 515.9349000000002,
+  "sentence": "At Arc Testnet block #61756153, a reshuffle including this intent was found, with 2 participants (1 counterparty), with no payment either way. Use Propose and settle to submit it; the contract re-checks every signed condition before it executes."
+}
