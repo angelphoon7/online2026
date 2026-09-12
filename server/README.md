@@ -42,6 +42,11 @@ commitments even when one wallet has several intents. Supply grouping reports it
 subset, and what-if tool inputs undergo strict runtime validation before capacity reads.
 [API shape, behavior and regression cases](../docs/GRAPH_AGENT_INTEGRITY.md).
 
+The drawer validates successful tool outputs by intent hash and answer block, independently
+renders what-if and pool-overview results, and exposes their scoped input/output evidence.
+Conflicting blocks reject the answer; tool errors are shown separately from matching results.
+[Step 8 drawer evidence](../docs/GRAPH_8_EVIDENCE.md).
+
 Only hashes are accepted as explicit solver inputs; client-supplied budgets and ownership claims cannot change signed conditions. Explicit requests support 2–4 distinct committed intents. The pool service accepts up to 256 searchable live intents, forming candidates of at most four participants and four offered/received tickets per intent. Each search has 100-candidate and 2-second limits. Assignment recursion also checks the deadline. RPC mode scans bounded log pages; Graph discovery is the demo path. There is no claim about unbounded market search.
 
 Market Graph queries apply `number_gte` to metadata, intents, tickets and settlements; an unmet

@@ -43,6 +43,9 @@ export default function JudgeControls({ busy, label, onBudget, onRevoke, freshne
   const { floor, indexingBlock } = useSyncExternalStore(freshness.subscribe, freshness.getSnapshot, freshness.getServerSnapshot);
   const [pool, setPool] = useState<JudgeIntent[] | null>(null);
   const [enabled, setEnabled] = useState(false);
+  const [access, setAccess] = useState({ configured: false, authenticated: false });
+  const [code, setCode] = useState('');
+  const [pending, setPending] = useState<{ intentHash: Hex; maxNetPay: string | null }[]>([]);
   const [hash, setHash] = useState<Hex | ''>('');
   // The typed budget, tagged with the intent it was typed for. Derived rather than mirrored
   // into state by an effect: the field then shows the on-chain value automatically whenever the
@@ -56,6 +59,12 @@ export default function JudgeControls({ busy, label, onBudget, onRevoke, freshne
     const ticket = freshness.getSnapshot();
     if (ticket.indexingBlock !== null) { if (select) setHash(select); return; }
     try {
+      const sessionResponse = await fetch('/api/demo/session', { cache: 'no-store' });
+      const session = await sessionResponse.json();
+      if (!freshness.current(ticket.revision)) return;
+      if (!sessionResponse.ok) throw new Error(session.error ?? 'Judge access unavailable');
+      setEnabled(!!session.enabled); setAccess(session);
+      if (!session.authenticated) { setPool([]); setPending([]); return; }
       const response = await fetch(`/api/demo/budget?minBlock=${ticket.floor}`, { cache: 'no-store' });
       const data = await response.json();
       if (!freshness.current(ticket.revision)) return;
@@ -63,6 +72,7 @@ export default function JudgeControls({ busy, label, onBudget, onRevoke, freshne
       if (data.enabled) requireSnapshotBlock(data.snapshotBlock, ticket.floor);
       setEnabled(!!data.enabled);
       setPool(data.intents ?? []);
+      setPending(data.pending ?? []);
       // Keep the current selection while it is still live; otherwise follow the hash a change
       // produced, and fall back to the first controllable intent.
       setHash(previous => {
@@ -72,7 +82,6 @@ export default function JudgeControls({ busy, label, onBudget, onRevoke, freshne
       });
     } catch (e) {
       if (!freshness.current(ticket.revision)) return;
-      setEnabled(false);
       setPool([]);
       setError(e instanceof Error ? e.message : 'Judge controls unavailable');
     }
@@ -83,7 +92,6 @@ export default function JudgeControls({ busy, label, onBudget, onRevoke, freshne
   const selected = pool?.find(i => i.hash.toLowerCase() === String(hash).toLowerCase());
   const budget = edited && selected && edited.hash === selected.hash ? edited.value : String(selected?.maxNetPayUsdc ?? '');
 
-  if (!enabled || !pool?.length) return null;
   const locked = busy || !!running;
 
   const run = async (
@@ -114,13 +122,45 @@ export default function JudgeControls({ busy, label, onBudget, onRevoke, freshne
     void run('Apply budget', () => onBudget(selected.hash, usdc), result => (result as BudgetChange).newHash);
   };
 
+  if (!enabled && !error) return null;
+  if (!access.authenticated) return <details className="dishonest judge">
+    <summary>Judge controls / access</summary>
+    {access.configured ? <form onSubmit={async e => {
+      e.preventDefault(); setRunning('login'); setError('');
+      try {
+        const response = await fetch('/api/demo/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error ?? 'Sign-in failed');
+        setCode(''); await load();
+      } catch (e) { setError(e instanceof Error ? e.message : 'Sign-in failed'); }
+      finally { setRunning(''); }
+    }}>
+      <p>Use the access code supplied with the judging instructions to change the prepared demo requests. You do not need a wallet for these controls.</p>
+      <label htmlFor="judge-code">Judge access code</label>
+      <input id="judge-code" type="password" autoComplete="current-password" value={code} onChange={e => setCode(e.target.value)} />
+      <button className="secondary" disabled={locked || !code}>Unlock judge controls</button>
+    </form> : <p>The operator needs to finish configuring judge access. You can still explore the market and run matching.</p>}
+    {error && <p role="alert">{error}</p>}
+  </details>;
+
   return <details className="dishonest judge">
     <summary>Judge controls / change a signed condition</summary>
+    <button className="text-button" disabled={locked} onClick={async () => {
+      try {
+        const response = await fetch('/api/demo/session', { method: 'DELETE' });
+        if (!response.ok) throw new Error('Sign-out failed. Retry.');
+        setAccess(a => ({ ...a, authenticated: false })); setPool([]); setPending([]);
+      } catch (e) { setError(e instanceof Error ? e.message : 'Sign-out failed'); }
+    }}>Lock judge controls</button>
     <p>Real transactions, signed by the seeded demo participants whose keys this server holds. A budget change is a <span className="mono">revoke</span> followed by a <span className="mono">commit</span> under a new intent hash, because <span className="mono">maxNetPay</span> is a signed field and the hash covers it.</p>
 
+    {pending.map(p => <p key={p.intentHash}>
+      An earlier action is unfinished. <button className="secondary" disabled={locked} onClick={() => void run('Resume action', () => p.maxNetPay === null ? onRevoke(p.intentHash) : onBudget(p.intentHash, Number(p.maxNetPay) / 1e6), r => 'newHash' in r ? r.newHash : undefined)}>Resume saved action</button>
+    </p>)}
+    {!pool?.length && <p>No editable live demo requests remain. The operator needs to prepare another group.</p>}
     <label htmlFor="judge-intent">Participant intent</label>
     <select id="judge-intent" value={hash} disabled={locked} onChange={e => setHash(e.target.value as Hex)}>
-      {pool.map(i => <option key={i.hash} value={i.hash}>
+      {(pool ?? []).map(i => <option key={i.hash} value={i.hash}>
         {label(i.owner)} / wants {i.exactCount}{i.mustBeAdjacent ? ' adjacent' : ''} / {signedLimit(i.maxNetPayUsdc)}
       </option>)}
     </select>

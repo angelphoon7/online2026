@@ -7,6 +7,16 @@ const A = hash('1'), B = hash('2'), NEW = hash('3'), REVOKE = hash('a'), COMMIT 
 const owner = (digit: string) => `0x${digit.repeat(40)}`;
 const intent = (id: string, who: string, state = 1) => ({ hash: id, owner: who, offered: [], eventId: 1, sessionMask: '1', sectionMask: '1', exactCount: 2, mustShareSession: true, mustShareSection: true, mustBeAdjacent: true, maxNetPay: '1000000', deadline: '2000000000', nonce: '1', commitTx: hash('c'), state, expired: false });
 const diagnosis = (id: string, block: number) => ({ block: String(block), intent: id, status: 'SETTLEABLE', relaxations: [], bounds: { maxParticipants: 4, maxCandidates: 100, timeoutMs: 2000, budgetCapUsdc: 40 }, counterpartyIntents: [], runtimeMs: 1 });
+const hypothetical = (over = {}) => ({ block: '100', intent: A, submittable: false, found: true,
+  changes: { maxNetPayUsdc: -0.000001, mustBeAdjacent: false, addSections: [0, 3] },
+  bounds: { maxParticipants: 4, maxCandidates: 100, timeoutMs: 2000 }, participantCount: 2, targetNetPay: '-1',
+  counterparties: [owner('2')], receives: ['41', '42'],
+  counterpartyIntents: [{ intentHash: hash('6'), owner: owner('2'), committedTx: hash('d') }], ...over });
+const overview = (over = {}) => ({ block: '100', liveIntents: 3, escrowedTickets: 6, pureBuyers: 0, pureSellers: 1,
+  bySession: [{ sessionId: 0, tickets: 4 }, { sessionId: 1, tickets: 2 }],
+  bySection: [{ sectionId: 2, tickets: 6 }], excludedByReason: { EXPIRED: 2 }, ...over });
+const toolAnswer = (evidence: unknown[]) => ({ block: '100', model: 'fixture', guardFallback: false,
+  answer: 'At Arc Testnet block #100: tool evidence for this question.', evidence });
 
 async function fixture(page: Page, partial = false) {
   const control = { block: 100, graphBlock: 100, graphError: false, changed: false, staleMarket: false, holdMarket: false, holdAsk: false, oldMarket: null as Route | null, oldAsk: null as Route | null, reads: [] as string[] };
@@ -20,6 +30,11 @@ async function fixture(page: Page, partial = false) {
       return json(market(control.staleMarket ? 199 : control.block));
     }
     if (path === '/api/demo/reset') return json({ enabled: false, state: 'idle' });
+    // Judge controls now read access before listing intents; this suite mocks an existing
+    // authorized fixture session and never signs in to the actual server.
+    if (path === '/api/demo/session') return json({ enabled: true, configured: true, authenticated: true });
+    if (path === '/api/demo/session') return json({ enabled: true, configured: true, authenticated: true });
+    if (path === '/api/demo/scenarios') return json({ batch: 'fixture', snapshotBlock: String(control.block), lagSeconds: 0, groups: [] });
     if (path === '/api/demo/budget') {
       if (request.method() === 'GET') return json({ enabled: true, snapshotBlock: String(control.block), intents: market().intents.filter(i => i.state === 1).map(i => ({ ...i, maxNetPayUsdc: 1 })) });
       control.changed = true; control.graphError = true;
@@ -118,8 +133,7 @@ test('drawer shows the selected intent, bounded grouping and separate commitment
         supply: { stages: [{ stage: 'cohesiveGroup', remaining: 1 }], firstZero: null, blockedAt: null, largestGroup: 1, need: 2, truncated: true, groupSearched: 40, groupCandidates: 42 },
         relaxations: [{ change: 'maxNetPay->cap', found: true, counterparties: refs.map(r => r.owner), counterpartyIntents: refs, participantCount: 3, targetNetPay: '2000000' }],
       } },
-      { tool: 'what_if', output: { block: '100', intent: A, submittable: false, found: true, participantCount: 2, targetNetPay: '1000000',
-        counterpartyIntents: [{ intentHash: hash('6'), owner: owner('2'), committedTx: hash('d') }] } },
+      { tool: 'what_if', output: hypothetical({ targetNetPay: '1000000' }) },
     ],
   } }));
   await page.getByRole('button', { name: 'Ask the agent', exact: true }).click();
@@ -136,7 +150,107 @@ test('drawer shows the selected intent, bounded grouping and separate commitment
     await expect(link).toBeVisible();
     await expect(link).toHaveAttribute('title', `Intent ${ref.intentHash} · owner ${ref.owner} · commit ${ref.committedTx}`);
   }
-  await expect(drawer.getByText('What-if candidate commitments')).toBeVisible();
+  await expect(drawer.getByRole('heading', { name: 'What-if result · call 3' })).toBeVisible();
   await expect(drawer.locator(`a[href$="${hash('d')}"]`)).toBeVisible();
   await expect(drawer.locator('.agent-parties a')).toHaveCount(3);
+});
+
+test('what-if-only answer displays every change, candidate and unsuccessful call without an old diagnosis', async ({ page }) => {
+  await fixture(page);
+  const miss = hypothetical({ changes: { mustShareSession: false }, found: false, participantCount: null, targetNetPay: null, counterparties: [], counterpartyIntents: [], receives: [] });
+  await page.route('**/api/agent/ask', route => route.fulfill({ json: toolAnswer([
+    { tool: 'what_if', input: { intentHash: A, changes: { mustBeAdjacent: false } }, output: hypothetical(), source: 'model' },
+    { tool: 'what_if', output: miss },
+    { tool: 'what_if', output: { ...miss, unavailable: 'NOT_LIVE_AT_THIS_BLOCK' } },
+    { tool: 'what_if', input: { intentHash: A, changes: { owner: owner('3') } }, output: { code: 'WhatIfError', error: 'Unsupported change field: owner.', submittable: false } },
+    { tool: 'what_if', output: hypothetical({ intent: B, receives: ['999'] }) },
+  ]) }));
+  await page.getByRole('button', { name: 'Ask the agent', exact: true }).click();
+  const drawer = page.getByRole('dialog', { name: 'Settlement agent' });
+  await expect(drawer.getByText(/BLOCK #100/)).toBeVisible();
+  await drawer.getByText('Evidence', { exact: true }).click();
+  await expect(drawer.getByRole('heading', { name: 'Diagnosis · Arc Testnet block #100' })).toBeVisible();
+  await drawer.getByRole('button', { name: 'What if I drop the adjacency requirement?', exact: true }).click();
+  await expect(drawer.locator('.agent-answer')).toBeVisible();
+  const candidate = drawer.getByRole('region', { name: 'What-if tool result 1', exact: true });
+  await expect(candidate).toBeVisible();
+  await expect(drawer.getByRole('heading', { name: /Diagnosis/ })).toHaveCount(0);
+  await expect(candidate.getByRole('row', { name: 'Adjacent seats required No', exact: true })).toBeVisible();
+  await expect(candidate.getByRole('row', { name: 'Additional accepted sections 0, 3', exact: true })).toBeVisible();
+  await expect(candidate.getByText('Receive at least 0.000001 USDC', { exact: true })).toBeVisible();
+  await expect(candidate.getByText('receives 0.000001 USDC', { exact: true })).toBeVisible();
+  await expect(candidate.getByText('Ticket #41, Ticket #42', { exact: true })).toBeVisible();
+  await expect(candidate.locator(`a[href$="${hash('d')}"]`)).toBeVisible();
+  await expect(candidate.getByText('Search bound: 4 participants, 100 candidates, 2000ms.')).toBeVisible();
+  await expect(drawer.getByRole('region', { name: 'What-if tool result 2', exact: true }).getByText(/^No candidate found within/)).toBeVisible();
+  const skipped = drawer.getByRole('region', { name: 'What-if tool result 3', exact: true });
+  await expect(skipped.getByText('Not evaluated: this intent is not live at this block.')).toBeVisible();
+  await expect(skipped.getByText(/^Configured search bound \(search not run\)/)).toBeVisible();
+  await expect(drawer.getByText('WhatIfError: Unsupported change field: owner.')).toBeVisible();
+  await expect(drawer.getByText(/1 unrelated or unsupported tool result/)).toBeVisible();
+  await expect(drawer.getByText('Ticket #999')).toHaveCount(0);
+  await drawer.getByText('Tool inputs and outputs (JSON)', { exact: true }).click();
+  const raw = drawer.locator('.agent-raw pre');
+  await expect(raw).toBeVisible();
+  await expect(raw).toContainText('"submittable": false');
+  await expect(raw).toContainText('"source": "model"');
+  await expect(raw).not.toContainText('999');
+});
+
+test('pool-only answers show totals, distributions and exclusions including empty pool results', async ({ page }) => {
+  await fixture(page);
+  let result = overview();
+  await page.route('**/api/agent/ask', route => route.fulfill({ json: toolAnswer([{ tool: 'pool_overview', input: {}, output: result }]) }));
+  await page.getByRole('button', { name: 'Ask the agent', exact: true }).click();
+  const drawer = page.getByRole('dialog', { name: 'Settlement agent' });
+  await expect(drawer.getByText(/BLOCK #100/)).toBeVisible();
+  await drawer.getByLabel('Ask about this intent').fill('What is in the pool?');
+  await drawer.getByRole('button', { name: 'Ask', exact: true }).click();
+  await expect(drawer.locator('.agent-answer')).toBeVisible();
+  await drawer.getByText('Evidence', { exact: true }).click();
+  const pool = drawer.getByRole('region', { name: 'Pool overview tool result 1', exact: true });
+  await expect(pool.getByRole('row', { name: 'Searchable live intents 3', exact: true })).toBeVisible();
+  await expect(pool.getByRole('row', { name: 'Escrowed, unredeemed tickets 6', exact: true })).toBeVisible();
+  await expect(pool.getByRole('row', { name: 'Pure buyers 0', exact: true })).toBeVisible();
+  await expect(pool.getByRole('row', { name: 'Pure sellers 1', exact: true })).toBeVisible();
+  await expect(pool.getByRole('table', { name: 'Tickets by session' }).getByRole('row', { name: 'Session 0 4' })).toBeVisible();
+  await expect(pool.getByRole('table', { name: 'Tickets by session' }).getByRole('row', { name: 'Session 1 2' })).toBeVisible();
+  await expect(pool.getByRole('table', { name: 'Tickets by section' }).getByRole('row', { name: 'Section 2 6' })).toBeVisible();
+  await expect(pool.getByRole('table', { name: 'Exclusion reasons' }).getByRole('row', { name: 'EXPIRED 2' })).toBeVisible();
+  await expect(drawer.getByRole('heading', { name: /Diagnosis/ })).toHaveCount(0);
+  result = overview({ liveIntents: 0, escrowedTickets: 0, pureSellers: 0, bySession: [], bySection: [], excludedByReason: {} });
+  await drawer.getByRole('button', { name: 'Ask', exact: true }).click();
+  await expect(pool.getByRole('row', { name: 'Searchable live intents 0', exact: true })).toBeVisible();
+  await expect(pool.getByText('No escrowed tickets by session at this block.')).toBeVisible();
+  await expect(pool.getByText('No escrowed tickets by section at this block.')).toBeVisible();
+  await expect(pool.getByText('No excluded intents at this block.')).toBeVisible();
+  await expect(pool.getByRole('row', { name: 'EXPIRED 2' })).toHaveCount(0);
+});
+
+for (const [tool, output] of [
+  ['diagnose_intent', diagnosis(A, 99)], ['what_if', hypothetical({ block: '99' })], ['pool_overview', overview({ block: '101' })],
+] as const) test(`drawer rejects ${tool} evidence at another block and clears the earlier answer`, async ({ page }) => {
+  await fixture(page);
+  await page.getByRole('button', { name: 'Ask the agent', exact: true }).click();
+  const drawer = page.getByRole('dialog', { name: 'Settlement agent' });
+  await expect(drawer.getByText(/BLOCK #100/)).toBeVisible();
+  await drawer.getByRole('button', { name: "Why can't this intent settle?", exact: true }).click();
+  await expect(drawer.locator('.agent-answer')).toBeVisible();
+  await page.route('**/api/agent/ask', route => route.fulfill({ json: toolAnswer([
+    { tool: 'diagnose_intent', output: diagnosis(A, 100) }, { tool, output },
+  ]) }));
+  await drawer.getByRole('button', { name: "Why can't this intent settle?", exact: true }).click();
+  await expect(drawer.getByRole('alert')).toHaveText('The evidence does not match the selected intent and answer block. Retry the question.');
+  await expect(drawer.locator('.agent-answer')).toHaveCount(0);
+  await expect(drawer.locator('.agent-evidence')).toHaveCount(0);
+});
+
+test('direct diagnosis for another intent shows an error and no evidence', async ({ page }) => {
+  await fixture(page);
+  await page.route('**/api/agent/diagnose/**', route => route.fulfill({ json: { ...diagnosis(B, 100), status: 'EXCLUDED', exclusion: { reason: 'EXPIRED' } } }));
+  await page.getByRole('button', { name: 'Ask the agent', exact: true }).click();
+  const drawer = page.getByRole('dialog', { name: 'Settlement agent' });
+  await expect(drawer.getByRole('alert')).toHaveText('The evidence does not match the selected intent and answer block. Retry the question.');
+  await expect(drawer.locator('.agent-evidence')).toHaveCount(0);
+  await expect(drawer.getByText(/expired/i)).toHaveCount(0);
 });

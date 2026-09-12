@@ -1,5 +1,5 @@
 import 'server-only';
-import { createWalletClient, defineChain, http, type Address, type Hex } from 'viem';
+import { createWalletClient, defineChain, encodeFunctionData, http, parseEther, type TransactionReceipt, type Address, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { readFileSync } from 'node:fs';
 import { chainConfig, abi } from './chain';
@@ -8,6 +8,11 @@ import { hashIntent } from '@/shared/intent';
 import type { Intent } from '../solver/src/types';
 import { DEPLOYMENT } from '@/lib/deployment';
 import { nextJudgeNonce } from './judge-nonce';
+import { allowReplacement, judgeControlsEnabled, requireAllowedIntent } from './judge-access';
+import { readJob, signingJob } from './signing-job';
+import { encodeRecord } from './durable-store';
+import { saveDemoReplacement } from './judging-demo';
+export { judgeControlsEnabled } from './judge-access';
 
 // Judge control: change a participant's budget — step 6-D of docs/RESHUFFLE_GRAPH_PLAN.md.
 //
@@ -95,204 +100,68 @@ export function participantKeys(): Map<Address, ReturnType<typeof privateKeyToAc
   return keys;
 }
 
-export function judgeControlsEnabled(): boolean {
-  return process.env.JUDGE_CONTROLS_ENABLED === 'true' || process.env.NODE_ENV === 'development';
-}
 
-export type BudgetChange = {
-  revokeTx: Hex;
-  commitTx: Hex;
-  /** The block the UI passes to waitForIndexed before re-reading the pool. */
-  commitBlock: string;
-  /** The intent hash changed, so the Agent drawer must follow it. */
-  newHash: Hex;
-  oldHash: Hex;
-  owner: Address;
-  previousMaxNetPay: string;
-  maxNetPay: string;
-  nonce: string;
+export type BudgetChange = { revokeTx: Hex; commitTx: Hex; commitBlock: string; newHash: Hex; oldHash: Hex; owner: Address; previousMaxNetPay: string; maxNetPay: string; nonce: string };
+export type Revocation = { revokeTx: Hex; revokeBlock: string; intentHash: Hex; owner: Address };
+type Plan = { owner: Address; root: string; current: string; next?: string; signature?: Hex; newHash?: Hex };
+const parseIntent = (raw: string): Intent => {
+  const v = JSON.parse(raw);
+  return { ...v, offered: v.offered.map(BigInt), sessionMask: BigInt(v.sessionMask), sectionMask: BigInt(v.sectionMask), maxNetPay: BigInt(v.maxNetPay), deadline: BigInt(v.deadline), nonce: BigInt(v.nonce) };
 };
-
-export type Revocation = {
-  revokeTx: Hex;
-  /** The block the UI passes to waitForIndexed before re-reading the pool. */
-  revokeBlock: string;
-  intentHash: Hex;
-  owner: Address;
-};
-
-/**
- * Revoke a live intent on-chain, as its owner.
- *
- * The other half of the judge controls: a judge removes a participant from the pool and
- * watches a reshuffle that depended on them stop being available. Like a budget change this
- * has to be a real transaction — revoke() is owner-only, so the server signs with that
- * participant's own key, and the subgraph learns about it from IntentRevoked.
- *
- * Withdrawing tickets is deliberately NOT done here. Revocation and custody are separate:
- * withdrawing does not revoke, and V2 would catch a withdrawn ticket at settlement anyway.
- * Conflating them would make the control demonstrate two different checks at once.
- */
-export async function revokeAsJudge(intentHash: Hex): Promise<Revocation> {
-  if (!judgeControlsEnabled()) {
-    throw new JudgeControlError('Judge controls are disabled on this server.', 403);
-  }
-
+async function changeAsJudge(intentHash: Hex, maxNetPay?: bigint): Promise<BudgetChange | Revocation> {
+  if (!judgeControlsEnabled()) throw new JudgeControlError('Judge controls are disabled.', 403);
+  const root = await requireAllowedIntent(intentHash);
   const { client, addresses } = chainConfig();
-  const { committed, snapshot } = await graphPool();
-
-  const current = committed.get(intentHash.toLowerCase() as Hex) ?? committed.get(intentHash);
-  if (!current) {
-    throw new JudgeControlError(
-      `Intent ${intentHash} is not live in the pool at block ${snapshot.block}.`,
-      404
-    );
-  }
-
-  const owner = current.owner.toLowerCase() as Address;
-  const account = participantKeys().get(owner);
-  if (!account) {
-    throw new JudgeControlError(
-      `The server holds no key for ${owner}; only seeded demo participants can be changed.`,
-      403
-    );
-  }
-
-  const wallet = createWalletClient({ account, chain: network, transport: http(process.env.ARC_RPC ?? DEPLOYMENT.rpc) });
-  const revokeTx = await wallet.writeContract({
-    address: addresses.IntentRegistry,
-    abi: abi('IntentRegistry'),
-    functionName: 'revoke',
-    args: [intentHash],
-    gas: 200000n,
-  });
-  const receipt = await client.waitForTransactionReceipt({ hash: revokeTx });
-  if (receipt.status !== 'success') {
-    throw new JudgeControlError(`Revoke reverted (${revokeTx}); the intent is still live.`, 502);
-  }
-
-  return { revokeTx, revokeBlock: receipt.blockNumber.toString(), intentHash, owner };
-}
-
-/**
- * Revoke `intentHash` and commit the same conditions with a different maxNetPay.
- *
- * maxNetPay is in contract units (USDC has 6 decimals) and is SIGNED: positive is a ceiling on
- * what the owner will pay, negative a floor on what they must receive.
- */
-export async function applyBudget(intentHash: Hex, maxNetPay: bigint): Promise<BudgetChange> {
-  if (!judgeControlsEnabled()) {
-    throw new JudgeControlError('Judge controls are disabled on this server.', 403);
-  }
-
-  const { client, addresses } = chainConfig();
-  const { committed, snapshot } = await graphPool();
-
-  const current = committed.get(intentHash.toLowerCase() as Hex) ?? committed.get(intentHash);
-  if (!current) {
-    throw new JudgeControlError(
-      `Intent ${intentHash} is not live in the pool at block ${snapshot.block}.`,
-      404
-    );
-  }
-  if (current.maxNetPay === maxNetPay) {
-    throw new JudgeControlError('That is already this intent\'s budget; nothing would change on-chain.', 409);
-  }
-
-  const owner = current.owner.toLowerCase() as Address;
-  const account = participantKeys().get(owner);
-  if (!account) {
-    throw new JudgeControlError(
-      `The server holds no key for ${owner}; only seeded demo participants can be changed.`,
-      403
-    );
-  }
-
-  const wallet = createWalletClient({ account, chain: network, transport: http(process.env.ARC_RPC ?? DEPLOYMENT.rpc) });
-
-  // A nonce is reserved at commit and never released, so walk forward to an unused one.
-  const nonce = await nextJudgeNonce(current, committed.values(), async candidate => {
-    return await client.readContract({
-      address: addresses.IntentRegistry,
-      abi: abi('IntentRegistry'),
-      functionName: 'usedNonce',
-      args: [owner, candidate],
-    }) as boolean;
-  });
-
-  const next: Intent = { ...current, maxNetPay, nonce };
-  const newHash = hashIntent(next);
-
-  // Revoke first. A later failure still returns this confirmed receipt so the UI's floor
-  // includes the revocation. Restoring an intent then requires a new valid commitment.
-  const revokeTx = await wallet.writeContract({
-    address: addresses.IntentRegistry,
-    abi: abi('IntentRegistry'),
-    functionName: 'revoke',
-    args: [intentHash],
-    gas: 200000n,
-  });
-  const revokeReceipt = await client.waitForTransactionReceipt({ hash: revokeTx });
-  if (revokeReceipt.status !== 'success') {
-    throw new JudgeControlError(`Revoke reverted (${revokeTx}); nothing was committed.`, 502);
-  }
-
-  try {
-    // The owner signs; commit() is permissionless, so the relay could be anyone.
-    const signature = await account.signTypedData({
-      domain: {
-        name: 'RESHUFFLE',
-        version: '1',
-        chainId: DEPLOYMENT.chainId,
-        verifyingContract: addresses.IntentRegistry,
-      },
-      types: EIP712_TYPES,
-      primaryType: 'Intent',
-      message: {
-        owner: next.owner,
-        offered: next.offered,
-        eventId: next.eventId,
-        sessionMask: next.sessionMask,
-        sectionMask: next.sectionMask,
-        exactCount: next.exactCount,
-        mustShareSession: next.mustShareSession,
-        mustShareSection: next.mustShareSection,
-        mustBeAdjacent: next.mustBeAdjacent,
-        maxNetPay: next.maxNetPay,
-        deadline: next.deadline,
-        nonce: next.nonce,
-      },
-    });
-
-    const commitTx = await wallet.writeContract({
-      address: addresses.IntentRegistry,
-      abi: abi('IntentRegistry'),
-      functionName: 'commit',
-      args: [next, signature],
-      gas: 400000n,
-    });
-    const commitReceipt = await client.waitForTransactionReceipt({ hash: commitTx });
-    if (commitReceipt.status !== 'success') {
-      throw new JudgeControlError(
-        `Commit reverted (${commitTx}). The old intent is revoked; create a new intent to restore a live request.`,
-        502
-      );
+  if (DEPLOYMENT.chainId !== 5042002 || await client.getChainId() !== 5042002) throw new JudgeControlError('Judge signing is restricted to Arc Testnet.', 403);
+  const id = ['judge', DEPLOYMENT.chainId, addresses.IntentRegistry.toLowerCase(), intentHash.toLowerCase(), maxNetPay === undefined ? 'revoke' : String(maxNetPay)].join(':');
+  const previous = await readJob<Plan, BudgetChange | Revocation>(id);
+  // Resume after revoke even though the old hash has left the live Graph pool.
+  const pool = previous ? null : await graphPool();
+  const current = previous ? parseIntent(previous.plan.current) : pool!.committed.get(intentHash.toLowerCase() as Hex);
+  if (!current) throw new JudgeControlError('The selected intent is no longer available in the indexed pool.', 404);
+  if (!previous && maxNetPay === current.maxNetPay) throw new JudgeControlError('That is already this budget.', 409);
+  const owner = current.owner.toLowerCase() as Address, account = participantKeys().get(owner);
+  if (!account) throw new JudgeControlError('The server has no signing key for this demo participant.', 403);
+  const wallet = createWalletClient({ account, chain: network, transport: http(process.env.ARC_RPC ?? DEPLOYMENT.rpc, { retryCount: 0 }) });
+  return signingJob<Plan, BudgetChange | Revocation>(String(DEPLOYMENT.chainId) + ':' + owner, id, async () => {
+    const plan: Plan = { owner, root, current: encodeRecord(current) };
+    const block = await client.getBlock();
+    if (current.deadline <= block.timestamp) throw new JudgeControlError('This demo intent has expired. The operator must prepare a new group.', 409);
+    if (maxNetPay !== undefined) {
+      const nonce = await nextJudgeNonce(current, pool!.committed.values(), async candidate => await client.readContract({ address: addresses.IntentRegistry, abi: abi('IntentRegistry'), functionName: 'usedNonce', args: [owner, candidate] }) as boolean);
+      const next = { ...current, maxNetPay, nonce };
+      plan.next = encodeRecord(next); plan.newHash = hashIntent(next);
+      plan.signature = await account.signTypedData({ domain: { name: 'RESHUFFLE', version: '1', chainId: DEPLOYMENT.chainId, verifyingContract: addresses.IntentRegistry }, types: EIP712_TYPES, primaryType: 'Intent', message: next });
     }
-
-    return {
-      revokeTx,
-      commitTx,
-      commitBlock: commitReceipt.blockNumber.toString(),
-      newHash,
-      oldHash: intentHash,
-      owner,
-      previousMaxNetPay: current.maxNetPay.toString(),
-      maxNetPay: maxNetPay.toString(),
-      nonce: nonce.toString(),
-    };
-  } catch (error) {
-    const failure = error instanceof JudgeControlError ? error : new JudgeControlError('The old intent was revoked. The replacement commitment was not confirmed; inspect its transaction status before creating another intent.', 502);
-    failure.confirmed = { blockNumber: revokeReceipt.blockNumber.toString(), hashes: [revokeTx] };
-    throw failure;
-  }
+    return plan;
+  }, async (plan, transaction) => {
+    const send = (name: 'revoke' | 'commit', args: unknown[], gas: bigint) => transaction(name, {
+      prepare: async () => {
+        await client.simulateContract({ account, address: addresses.IntentRegistry, abi: abi('IntentRegistry'), functionName: name, args, gas });
+        const request = await wallet.prepareTransactionRequest({ account, to: addresses.IntentRegistry, data: encodeFunctionData({ abi: abi('IntentRegistry'), functionName: name, args }), gas });
+        if (request.gas * (request.maxFeePerGas ?? request.gasPrice ?? 0n) > parseEther('0.1')) throw new JudgeControlError('The transaction fee exceeds the demo signing limit. Retry later.', 503);
+        return wallet.signTransaction(request);
+      },
+      receipt: hash => client.getTransactionReceipt({ hash }).catch(() => null),
+      broadcast: raw => client.sendRawTransaction({ serializedTransaction: raw }),
+      wait: hash => client.waitForTransactionReceipt({ hash, timeout: 40_000 }),
+    });
+    let revoked: TransactionReceipt | undefined;
+    try {
+      revoked = await send('revoke', [intentHash], 200_000n);
+      if (!plan.next) return { revokeTx: revoked.transactionHash, revokeBlock: String(revoked.blockNumber), intentHash, owner };
+      const next = parseIntent(plan.next);
+      const committed = await send('commit', [next, plan.signature], 400_000n);
+      await allowReplacement(plan.newHash!, plan.root);
+      await saveDemoReplacement(intentHash, plan.newHash!);
+      return { revokeTx: revoked.transactionHash, commitTx: committed.transactionHash, commitBlock: String(committed.blockNumber), newHash: plan.newHash!, oldHash: intentHash, owner, previousMaxNetPay: String(parseIntent(plan.current).maxNetPay), maxNetPay: String(next.maxNetPay), nonce: String(next.nonce) };
+    } catch (e) {
+      if (!revoked) throw e;
+      const failure = new JudgeControlError('The old intent was revoked. Retry this same budget change to resume the saved replacement commitment.', 503);
+      failure.confirmed = { blockNumber: String(revoked.blockNumber), hashes: [revoked.transactionHash] };
+      throw failure;
+    }
+  });
 }
+export async function revokeAsJudge(intentHash: Hex): Promise<Revocation> { return await changeAsJudge(intentHash) as Revocation; }
+export async function applyBudget(intentHash: Hex, maxNetPay: bigint): Promise<BudgetChange> { return await changeAsJudge(intentHash, maxNetPay) as BudgetChange; }

@@ -1,8 +1,11 @@
 import { revokeAsJudge, JudgeControlError } from '@/server/judge-budget';
 import type { Hex } from 'viem';
+import { JudgeAccessError, requireJudge } from '@/server/judge-access';
+import { SigningBusy } from '@/server/signing-job';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 120;
 
 // Judge control endpoint — plan 6-D, the Revoke participant half.
 //
@@ -14,10 +17,8 @@ export const dynamic = 'force-dynamic';
 // same set either control can act on.
 
 export async function POST(request: Request) {
-  if (request.headers.get('origin') && request.headers.get('origin') !== new URL(request.url).origin) {
-    return Response.json({ error: 'Cross-origin requests are not accepted.' }, { status: 403 });
-  }
   try {
+    await requireJudge(request, true);
     const text = await request.text();
     if (text.length > 2048) throw new JudgeControlError('Request too large');
     const { intentHash } = JSON.parse(text) as { intentHash?: string };
@@ -26,11 +27,12 @@ export async function POST(request: Request) {
     }
     return Response.json(await revokeAsJudge(intentHash as Hex), { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
-    const status = error instanceof JudgeControlError ? error.status : 500;
+    const known = error instanceof JudgeControlError || error instanceof JudgeAccessError || error instanceof SigningBusy;
+    const status = known ? error.status : 503;
     const message =
-      error instanceof JudgeControlError
+      known
         ? error.message
-        : 'The revocation failed. Check the server log; no partial state is reported here.';
+        : 'The revocation could not finish. Retry the same action to resume its saved transaction.';
     return Response.json({ error: message }, { status, headers: { 'Cache-Control': 'no-store' } });
   }
 }

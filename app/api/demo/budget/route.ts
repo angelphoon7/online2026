@@ -3,9 +3,14 @@ import { graphPool } from '@/server/solve-graph';
 import type { Hex } from 'viem';
 import { parseMinBlock } from '@/server/solve';
 import { SubgraphLagError } from '@/shared/graph';
+import { allowedIntent, JudgeAccessError, requireJudge } from '@/server/judge-access';
+import { SigningBusy, readJob } from '@/server/signing-job';
+import { durableStore } from '@/server/durable-store';
+import { DEPLOYMENT } from '@/lib/deployment';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 120;
 
 // Judge control endpoint — plan 6-D.
 //
@@ -18,13 +23,14 @@ export async function GET(request: Request) {
     return Response.json({ enabled: false, intents: [] }, { headers: { 'Cache-Control': 'no-store' } });
   }
   try {
+    await requireJudge(request);
     const minBlock = parseMinBlock({ minBlock: new URL(request.url).searchParams.get('minBlock') });
     const { committed, snapshot } = await graphPool(minBlock);
     // Only list what this server can actually change — an intent whose key we do not hold
     // would fail at POST, and offering it would be a control that does not work.
     const holders = participantKeys();
-    const intents = [...committed.entries()]
-      .filter(([, i]) => holders.has(i.owner.toLowerCase() as `0x${string}`))
+    const permitted = await Promise.all([...committed.entries()].filter(([, i]) => holders.has(i.owner.toLowerCase() as `0x${string}`)).map(async entry => await allowedIntent(entry[0]) ? entry : null));
+    const intents = permitted.filter(entry => entry !== null)
       .map(([hash, i]) => ({
       hash,
       owner: i.owner,
@@ -33,21 +39,29 @@ export async function GET(request: Request) {
       exactCount: i.exactCount,
       mustBeAdjacent: i.mustBeAdjacent,
     }));
+    const pending = [];
+    const store = durableStore();
+    for (const owner of holders.keys()) {
+      const id = await store.get(`signing:active:${DEPLOYMENT.chainId}:${owner}`);
+      if (!id?.startsWith(`judge:${DEPLOYMENT.chainId}:${DEPLOYMENT.intentRegistry}:`)) continue;
+      const hash = id.split(':')[3], job = await readJob<{ next?: string }, unknown>(id, store);
+      if (!job || job.result !== undefined || !await allowedIntent(hash, store)) continue;
+      pending.push({ intentHash: hash, maxNetPay: job.plan.next ? JSON.parse(job.plan.next).maxNetPay : null });
+    }
     return Response.json(
-      { enabled: true, snapshotBlock: snapshot.block.toString(), intents },
+      { enabled: true, snapshotBlock: snapshot.block.toString(), intents, pending },
       { headers: { 'Cache-Control': 'no-store' } }
     );
   } catch (error) {
+    if (error instanceof JudgeAccessError) return Response.json({ error: error.message }, { status: error.status, headers: { 'Cache-Control': 'no-store' } });
     if (error instanceof SubgraphLagError) return Response.json({ error: 'SubgraphLagError: waiting for the updated judge pool.' }, { status: 409 });
-    return Response.json({ error: (error as Error).message }, { status: 503 });
+    return Response.json({ error: 'Judge pool is temporarily unavailable.' }, { status: 503 });
   }
 }
 
 export async function POST(request: Request) {
-  if (request.headers.get('origin') && request.headers.get('origin') !== new URL(request.url).origin) {
-    return Response.json({ error: 'Cross-origin requests are not accepted.' }, { status: 403 });
-  }
   try {
+    await requireJudge(request, true);
     const text = await request.text();
     if (text.length > 2048) throw new JudgeControlError('Request too large');
     const body = JSON.parse(text) as { intentHash?: string; maxNetPayUsdc?: number; maxNetPay?: string };
@@ -74,14 +88,12 @@ export async function POST(request: Request) {
     const result = await applyBudget(intentHash as Hex, maxNetPay);
     return Response.json(result, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
-    const status = error instanceof JudgeControlError ? error.status : 500;
-    // Keep diagnostics useful without logging signing accounts, calldata or credentials.
-    const cause = error as { name?: string; shortMessage?: string; cause?: { name?: string; shortMessage?: string } };
-    console.error('Apply budget failed:', { name: cause?.name, shortMessage: cause?.shortMessage, cause: cause?.cause?.name, causeMessage: cause?.cause?.shortMessage });
+    const known = error instanceof JudgeControlError || error instanceof JudgeAccessError || error instanceof SigningBusy;
+    const status = known ? error.status : 503;
     const message =
-      error instanceof JudgeControlError
+      known
         ? error.message
-        : 'The budget change failed. Check the server log and transaction status before retrying.';
+        : 'The budget change could not finish. Retry the same action to resume its saved transaction.';
     return Response.json({ error: message, ...(error instanceof JudgeControlError && error.confirmed ? { confirmed: error.confirmed } : {}) }, { status, headers: { 'Cache-Control': 'no-store' } });
   }
 }

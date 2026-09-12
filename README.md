@@ -312,6 +312,11 @@ reported as incomplete. What-if inputs are validated at runtime. Candidate commi
 are bound to individual intent hashes, preserving separate commits from the same wallet.
 [Supply, input-validation and commitment-evidence fixes](docs/GRAPH_AGENT_INTEGRITY.md).
 
+The drawer validates each tool result against the selected intent and answer block. Its
+Evidence panel independently displays all what-if outcomes and pool statistics, with scoped
+input/output JSON; a pool-only answer never inherits an earlier diagnosis.
+[Step 8 evidence binding and display](docs/GRAPH_8_EVIDENCE.md).
+
 Each solver run is bounded by **4 participants, 100 candidates and a 2,000 ms timeout**.
 The real settlement service accepts at most four offered/received tickets per intent and
 256 searchable live intents. Ranking minimizes gross cash moved among candidates found,
@@ -358,6 +363,8 @@ suite** and production build passed. [Captured output](docs/checks/graph-agent-r
 The later supply/input/commitment-evidence follow-up passes **186 Graph/agent checks**,
 **3 browser tests**, and the production build.
 [Regression details and output](docs/GRAPH_AGENT_INTEGRITY.md#verification).
+The Step 8 drawer follow-up passes **215 Graph/agent checks** (29 for drawer evidence)
+and **9 browser tests**. [Evidence scope and captured results](docs/GRAPH_8_EVIDENCE.md#verification).
 `npm run agent:check:model -- --preflight` checks local key presence without network access;
 `npm run agent:check:model` runs the four live provider cases after configuration. Mocked
 SDK tests and no-model responses do not count as live provider acceptance.

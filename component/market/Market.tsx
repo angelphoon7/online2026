@@ -27,6 +27,7 @@ import Validation from './Validation';
 import MatchingStatus from './MatchingStatus';
 import PoolDialog from './PoolDialog';
 import JudgeControls, { type BudgetChange, type Revocation } from './JudgeControls';
+import JudgingGuide from './JudgingGuide';
 import AgentDrawer from './AgentDrawer';
 import { automaticSelection, latestRequest } from '@/lib/matching-status';
 import { waitForIndexed } from '@/shared/graph';
@@ -543,6 +544,7 @@ export default function Market() {
                 </div>
               </div>
               <div className="network-note">USDC pays for both settlement and native gas on Arc. You don’t need a second token.</div>
+              <JudgingGuide freshness={freshness} busy={disabled || solving} onSearch={hashes => { setAutomatic(false); setSelected(hashes); setProposal(null); setEvidence(null); void runSolver(hashes); }} />
               <div className="workspace-tools"><button className="secondary pool-toggle" aria-haspopup="dialog" aria-expanded={poolOpen} onClick={() => setPoolOpen(true)}>{indexingBlock !== null ? "Intent pool: indexing" : `Intent pool (${live.length})`}</button><p className="quiet">See what others offer and want. Opening the list is optional; matching runs automatically.</p></div>
               <PoolDialog open={poolOpen} onClose={() => setPoolOpen(false)}>
                 {indexingBlock !== null ? <p role="status">{indexingMessage(indexingBlock)} {INDEXING_PENDING}</p> : <>
