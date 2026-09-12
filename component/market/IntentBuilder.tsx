@@ -165,7 +165,6 @@ export default function IntentBuilder({ market, account, approved, busy, onAppro
             <div className="condition-row"><span id="valid-until-label">Valid until</span><div><p>{EVENT_CUTOFF_NOTE}</p>{cutoff !== null && eventStart !== null ? <><p id="valid-until" className="mono" aria-labelledby="valid-until-label">{formatEventTime(cutoff)}</p><p className="quiet">Event starts: {formatEventTime(eventStart)}</p>{timingUnavailable && <p role="alert">{CLOSED_SESSION_NOTE}</p>}</> : <p role="alert">{MISSING_SCHEDULE_NOTE}</p>}<p className="quiet">{DEMO_SCHEDULE_NOTE}</p></div></div>
             <button className="primary step-continue" disabled={busy || choiceInvalid || timingUnavailable} onClick={() => go(2)}>Continue <span>→</span></button>
           </div>}
-
         </div>}
       </section>;
     })}

@@ -1,7 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Basic&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #060e22;
+  --background: #08080a;
   --foreground: #f8fafc;
 }
 

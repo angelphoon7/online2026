@@ -25,11 +25,11 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
     let animId: number;
     let isCancelled = false;
 
-    // Load base dark-blue ticket and exact silhouette mask
+    // Load base ticket asset and mask
     const img = new window.Image();
-    img.src = '/ticket-darkblue.png';
+    img.src = '/ticket-darkblue.png?v=23';
     const mask = new window.Image();
-    mask.src = '/ticket-mask.png';
+    mask.src = '/ticket-mask.png?v=23';
 
     let loadedCount = 0;
     const onAssetLoad = () => {
@@ -46,31 +46,44 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
       if (!canvas || !ctx) return;
       setIsReady(true);
 
-      // Pre-render bright canvas strictly masked to the ticket ribbon silhouette
+      // Pre-render base canvas strictly using transparent ticket ribbon
+      const baseCanvas = document.createElement('canvas');
+      baseCanvas.width = 610;
+      baseCanvas.height = 380;
+      const baseCtx = baseCanvas.getContext('2d');
+      if (baseCtx) {
+        baseCtx.drawImage(img, 0, 0);
+        baseCtx.globalCompositeOperation = 'destination-in';
+        baseCtx.drawImage(mask, 0, 0);
+        baseCtx.globalCompositeOperation = 'source-over';
+      }
+
+      // Pre-render bright canvas strictly using transparent ticket ribbon
       const brightCanvas = document.createElement('canvas');
       brightCanvas.width = 610;
       brightCanvas.height = 380;
       const bCtx = brightCanvas.getContext('2d');
       if (bCtx) {
-        bCtx.filter = 'brightness(1.35) contrast(1.1) saturate(1.5)';
+        bCtx.filter = 'brightness(1.15) contrast(1.04) saturate(1.05)';
         bCtx.drawImage(img, 0, 0);
         bCtx.filter = 'none';
         bCtx.globalCompositeOperation = 'destination-in';
         bCtx.drawImage(mask, 0, 0);
+        bCtx.globalCompositeOperation = 'source-over';
       }
 
-      // Pre-render luminous gradient tint canvas strictly masked to the ticket ribbon
+      // Pre-render luminous crimson/coral sheen canvas strictly masked to the ticket ribbon
       const tintCanvas = document.createElement('canvas');
       tintCanvas.width = 610;
       tintCanvas.height = 380;
       const tCtx = tintCanvas.getContext('2d');
       if (tCtx) {
-        tCtx.drawImage(mask, 0, 0);
+        tCtx.drawImage(img, 0, 0);
         tCtx.globalCompositeOperation = 'source-in';
         const grad = tCtx.createLinearGradient(120, 0, 480, 0);
-        grad.addColorStop(0, 'rgba(217, 70, 239, 0.65)');
-        grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
-        grad.addColorStop(1, 'rgba(56, 189, 248, 0.65)');
+        grad.addColorStop(0, 'rgba(254, 215, 170, 0.25)');   // radiant golden light crest on ridge
+        grad.addColorStop(0.35, 'rgba(239, 68, 68, 0.35)');  // vivid crimson-scarlet luster
+        grad.addColorStop(1, 'rgba(225, 29, 72, 0.42)');     // deep ruby-wine sheen on right
         tCtx.fillStyle = grad;
         tCtx.fillRect(0, 0, 610, 380);
       }
@@ -88,31 +101,30 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
         const pingpong = 0.5 - 0.5 * Math.cos(cycle * 2.0 * Math.PI);
         const glowX = 0.18 + 0.64 * pingpong;
 
-        // Clear canvas with exact theme dark-blue background (#060e22)
-        ctx.fillStyle = '#060e22';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Clear canvas with transparency so the background dot grid fills all around the ribbon
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Render ticket slice-by-slice: smooth, synchronized wave motion with slightly larger amplitude
+        // Render ticket slice-by-slice: gentle, slow, non-vibrating wave motion
         for (let i = 0; i < totalSlices; i++) {
           const sx = i * SLICE_W;
           const normX = sx / canvas.width;
 
-          // Edge damping ensures the outer ticket tips remain anchored
+          // Edge damping ensures the outer padding remains completely still
           const edgeDamp = Math.max(0, Math.min(1, (normX - 0.04) / 0.14)) *
                            Math.max(0, Math.min(1, (0.96 - normX) / 0.14));
 
-          // 1. Primary wave crest aligned directly with the gliding glow (~8.5px crest)
+          // 1. Broad, gentle wave crest that glides slowly with the glow (zero high-frequency vibration)
           const dist = normX - glowX;
-          const crest = -Math.cos(dist * 5.8) * Math.exp(-dist * dist * 22.0) * 8.5;
+          const glowPulse = -Math.cos(dist * Math.PI * 2.2) * Math.exp(-dist * dist * 18.0) * 4.8;
 
-          // 2. Coordinated ribbon sway in sync with the glow travel (~3.5px sway)
-          const sway = -Math.sin((normX - 0.5) * Math.PI * 1.2) * (pingpong - 0.5) * 3.5;
+          // 2. Slow, broad harmonic ocean-like undulation across the ticket (single gentle curve, slow 7s period)
+          const harmonic = Math.sin(normX * Math.PI * 1.3 - time * 0.9) * 3.2;
 
-          // Combined wave displacement (peak amplitude ~9.5 - 10.5px)
-          const dy = (crest + sway) * edgeDamp;
+          // Combined gentle wave displacement
+          const dy = (glowPulse + harmonic) * edgeDamp;
 
           // Draw base ribbon slice
-          ctx.drawImage(img, sx, 0, SLICE_W, canvas.height, sx, dy, SLICE_W, canvas.height);
+          ctx.drawImage(baseCanvas, sx, 0, SLICE_W, canvas.height, sx, dy, SLICE_W, canvas.height);
 
           // If glow is near this slice, composite the glowing wave highlights
           const absDist = Math.abs(dist);
@@ -203,7 +215,11 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
           object-fit: contain;
           user-select: none;
           pointer-events: none;
-          filter: saturate(1.35) contrast(1.12);
+          mask-image: url('/ticket-mask.png?v=16');
+          mask-size: 100% 100%;
+          -webkit-mask-image: url('/ticket-mask.png?v=16');
+          -webkit-mask-size: 100% 100%;
+          filter: drop-shadow(0 0 22px rgba(225, 29, 72, 0.22));
         }
 
         .ticket-wave-canvas {
@@ -215,6 +231,7 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
           transition: opacity 0.3s ease;
           user-select: none;
           pointer-events: none;
+          filter: drop-shadow(0 0 22px rgba(225, 29, 72, 0.22));
         }
 
         .ticket-wave-canvas.visible {
