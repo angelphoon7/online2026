@@ -214,15 +214,17 @@ test('excluded: the snapshot reason is reported instead of a counterfactual', as
   const a = intent({ owner: A, offered: [1n] });
   const snap = snapshot([], [{ id: 1n, section: 0, row: 1, seat: 1, owner: A }]);
   const hash = hashIntent(a) as Hex;
-  snap.excluded = [{ id: hash, owner: A, reason: 'TICKET_NOT_IN_ESCROW', detail: '1' }];
+  // detail is the phrase getPoolSnapshot actually produces, not a bare ticket id.
+  snap.excluded = [{ id: hash, owner: A, reason: 'TICKET_NOT_IN_ESCROW', detail: 'ticket 1 is not in escrow' }];
 
   const evidence = await diagnose(snap, hash, funds);
 
   assert.equal(evidence.status, 'EXCLUDED');
   assert.equal(evidence.exclusion?.reason, 'TICKET_NOT_IN_ESCROW');
-  assert.equal(evidence.exclusion?.detail, '1');
+  assert.equal(evidence.exclusion?.detail, 'ticket 1 is not in escrow');
   assert.equal(evidence.relaxations.length, 0);
-  assert.match(renderEvidence(evidence), /ticket #1 is no longer escrowed by its owner/);
+  // The detail is carried through verbatim, not interpolated as an id.
+  assert.match(renderEvidence(evidence), /an offered ticket is not escrowed by its owner \(ticket 1 is not in escrow\)/);
 });
 
 test('revoked: status is CLOSED and the revoking transaction is named', async () => {

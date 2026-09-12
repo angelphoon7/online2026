@@ -118,3 +118,71 @@ FAIL ticket 106 seat: chain=7 graph=20100
 - Historical `eth_call` at the indexed block does work on Arc's public RPC, so reads are
   pinned. If that changes, the script says so and falls back to the head; pass `--latest` to
   force it, which is only sound while no transactions are in flight.
+
+---
+
+## Step 9 test evidence
+
+Every figure below came from an actual run; nothing here is estimated.
+
+### Captured fixture
+
+`node scripts/capture-snapshot.mjs` writes the untouched PoolSnapshot response body to
+`fixtures/snapshot-<block>.json`. The current capture:
+
+```
+captured fixtures/snapshot-61727725.json
+  block 61727725 · 73 live intents · 130 escrowed unredeemed tickets
+```
+
+The fixture exists so the diagnosis tests exercise the real `getPoolSnapshot` parse path —
+hash binding, signed-integer conversion, the V1–V3 exclusions — against data graph-node
+actually produced, rather than a hand-built object that skips all of it. Re-capture after
+re-seeding. Never hand-edit a fixture: an edited one stops being evidence.
+
+### Suite
+
+`npm test` — 31 tests, 31 passing, across five files:
+
+| File | Covers |
+|---|---|
+| `shared/graph/__tests__/snapshot-exclusions.mts` | Each named exclusion reason (HASH_MISMATCH, EXPIRED, TICKET_UNKNOWN, TICKET_REDEEMED, TICKET_NOT_IN_ESCROW withdrawn and wrong-owner, WRONG_EVENT), plus deadline-equals-block being *not* expired |
+| `shared/graph/__tests__/wait.mts` | `waitForIndexed` backoff, timeout, indexing-error short circuit, abort |
+| `server/__tests__/snapshot-fixture.mts` | Real indexed data: all 73 intents re-hash to their committed ids; ticket metadata survives the parse; one altered field is caught and only that intent; signed `maxNetPay`; a real diagnosis whose sentence passes the guard; the same diagnosis twice is identical |
+| `server/__tests__/diagnose.mts` | Budget-blocked, adjacency-blocked, section-blocked, nobody-wants-your-tickets, settleable, excluded, revoked; what-if never submittable; the three guard rejections |
+| `server/__tests__/solve-hypothetical.mts` | A hypothetical is never submittable; a raised budget settles; a candidate excluding the hypothetical is not reported as found; V8 capacity is enforced |
+
+Every case asserts a **named** result — which stage blocks, which relaxation worked, what the
+participant would pay. A rejection test that passes for the wrong reason is indistinguishable
+from one that passes correctly, which is why `snapshot-exclusions.mts` was converted from a
+print script into assertions: as a print script it passed no matter what it printed.
+
+One bug that conversion found: `Exclusion.detail` is a readable phrase (`ticket 2 is not in
+escrow`), not a bare ticket id, and the agent's template was interpolating it as one —
+producing `ticket #ticket 2 is not in escrow is no longer escrowed by its owner`. Fixed in
+`server/agent/template.ts`, which now appends the detail whole.
+
+### Parity, re-run after the agent work
+
+```
+subgraph  https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1
+deployment QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL
+indexed block 61728176, chain head 61728185, lag 9 blocks
+comparing at block 61728176 (pinned to the indexed block)
+intents 121, tickets 164
+
+hash binding verified on 121 intents
+
+PASS — 1719 checks at block 61728176: 121 intents, 164 tickets
+```
+
+### What is not covered by an automated test
+
+- **The hypothetical-to-settle rejection** the plan asks for has no endpoint to test: there is
+  no `/settle` route. The frontend re-solves from committed hashes and submits from the user's
+  wallet, so a hypothetical has no channel to a transaction at all. `submittable: false` is a
+  literal type and the result shape carries no calldata, which is a stronger guarantee than
+  the test would have been.
+- **`/api/agent/ask` narration** is not asserted against a live model: the deterministic engine
+  and the guard are tested, and the guard is what decides whether any model answer is shown.
+- **The end-to-end demo sequence** is step 10, and is manual.

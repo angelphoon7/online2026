@@ -233,7 +233,7 @@ export default function AgentDrawer({ open, onClose, intentHash, chainBlock, ind
       {evidence && <details className="agent-evidence" open={evidenceOpen} onToggle={event => setEvidenceOpen(event.currentTarget.open)}>
         <summary>Evidence</summary>
 
-        {evidence.exclusion && <p className="quiet">Excluded from matching: <span className="mono">{evidence.exclusion.reason}</span>{evidence.exclusion.detail ? ` (ticket #${evidence.exclusion.detail})` : ''}. Settlement rejects it on the same check.</p>}
+        {evidence.exclusion && <p className="quiet">Excluded from matching: <span className="mono">{evidence.exclusion.reason}</span>{evidence.exclusion.detail ? ` — ${evidence.exclusion.detail}` : ''}. Settlement rejects it on the same check.</p>}
 
         {evidence.closed && <p className="quiet">No longer live: <span className="mono">{evidence.closed.state}</span>{evidence.closed.tx && <> · <a className="hash" href={`${EXPLORER}/tx/${evidence.closed.tx}`} target="_blank" rel="noreferrer">{evidence.closed.tx.slice(0, 12)} open</a></>}</p>}
 

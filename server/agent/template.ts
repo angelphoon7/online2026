@@ -26,14 +26,21 @@ export function formatUsdc(units: string | bigint): string {
   return `${negative ? '-' : ''}${whole}${decimals} USDC`;
 }
 
-const EXCLUSION_SENTENCE: Record<ExclusionReason, (detail?: string) => string> = {
-  HASH_MISMATCH: () => 'the indexed fields do not hash to the id it was committed under, so it is not treated as signed',
-  EXPIRED: () => 'its deadline had passed at this block',
-  TICKET_UNKNOWN: (detail) => `one of its offered tickets${detail ? ` (#${detail})` : ''} has no indexed record`,
-  TICKET_NOT_IN_ESCROW: (detail) => `ticket #${detail ?? '?'} is no longer escrowed by its owner`,
-  TICKET_REDEEMED: (detail) => `ticket #${detail ?? '?'} has been redeemed`,
-  WRONG_EVENT: (detail) => `offered ticket #${detail ?? '?'} belongs to a different event`,
+// One clause per reason. The snapshot's `detail` is already a readable phrase naming the
+// offending ticket or deadline ("ticket 2 is not in escrow"), so it is appended whole rather
+// than interpolated as an id - treating it as a bare number produced sentences like
+// "ticket #ticket 2 is not in escrow is no longer escrowed by its owner".
+const EXCLUSION_CLAUSE: Record<ExclusionReason, string> = {
+  HASH_MISMATCH: 'the indexed fields do not hash to the id it was committed under, so it is not treated as signed',
+  EXPIRED: 'its deadline had passed at this block',
+  TICKET_UNKNOWN: 'one of its offered tickets has no indexed record',
+  TICKET_NOT_IN_ESCROW: 'an offered ticket is not escrowed by its owner',
+  TICKET_REDEEMED: 'an offered ticket has been redeemed',
+  WRONG_EVENT: 'an offered ticket belongs to a different event',
 };
+
+const exclusionSentence = (reason: ExclusionReason, detail?: string) =>
+  `${EXCLUSION_CLAUSE[reason]}${detail ? ` (${detail})` : ''}`;
 
 const STAGE_SENTENCE: Record<string, string> = {
   offeredByOthers: 'no other participant is offering any ticket',
@@ -61,7 +68,7 @@ export function renderEvidence(evidence: Evidence): string {
   const at = `At Arc Testnet block #${evidence.block},`;
 
   if (evidence.status === 'EXCLUDED' && evidence.exclusion) {
-    const reason = EXCLUSION_SENTENCE[evidence.exclusion.reason](evidence.exclusion.detail);
+    const reason = exclusionSentence(evidence.exclusion.reason, evidence.exclusion.detail);
     return `${at} this intent is not being matched: ${reason}. Settlement would reject it on the same check, so fix that first.`;
   }
 
