@@ -58,6 +58,11 @@ historical gas-report measurements.
 
 ## Open findings
 
+Follow-up on 12 September: [Step 4-A / 6-C](GRAPH_4A_6C.md) now records a real transfer's
+7.294-second receipt-to-index observation and successful HTTP Graph solver responses with
+matching source logs. This closes the missing transaction-latency / solver-run evidence;
+it does not close the budget-write, browser-recording or Studio full-status checks below.
+
 1. **Diagnosis is not completely pinned.** `server/solve-hypothetical.ts:readCapacity` reads
    balances/allowances at latest, and `server/agent/diagnose.ts` uses an unpinned closed-intent
    lookup. The Graph pool has a named block, but these additional facts may describe another

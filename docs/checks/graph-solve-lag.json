@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-09-12T17:11:35.089Z",
+  "request": {
+    "path": "/api/solve/pool",
+    "minBlock": "61862525"
+  },
+  "httpStatus": 409,
+  "response": {
+    "error": "The indexer has not reached the block of your last transaction. Retry shortly."
+  }
+}

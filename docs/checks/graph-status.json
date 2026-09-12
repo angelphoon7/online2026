@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-09-12T17:06:54.672Z",
+  "endpoint": "https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1",
+  "chainId": 5042002,
+  "meta": {
+    "block": {
+      "number": 61762011,
+      "timestamp": 1789232809,
+      "hash": "0xd902b32afe4a34dd1ad7525a3e276ab03d2d096c6b4464733be1db07679e93d6"
+    },
+    "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL",
+    "hasIndexingErrors": false
+  },
+  "observedChainHead": "61762019",
+  "headMinusIndexBlocks": "8",
+  "counts": {
+    "intents": 122,
+    "states": {
+      "LIVE": 74,
+      "SETTLED": 46,
+      "REVOKED": 2
+    },
+    "tickets": 164,
+    "escrowed": 130,
+    "settlements": 15
+  },
+  "checks": {
+    "indexedBlockHashMatchesRPC": true,
+    "ticketCountMatchesRPC": true,
+    "escrowCountMatchesRPC": true,
+    "initialSeedIntentsPresent": true
+  },
+  "scope": "Public query health and counts at one indexed block. Does not establish Studio Synced label or absence of historical log warnings."
+}

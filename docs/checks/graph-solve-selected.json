@@ -1,0 +1,279 @@
+{
+  "startedAt": "2026-09-12T17:11:33.890Z",
+  "httpElapsedMs": 1027,
+  "request": {
+    "method": "POST",
+    "path": "/api/solve",
+    "body": {
+      "minBlock": "61762063",
+      "intentHashes": [
+        "0x077a2ded214fdbbfb88c01a15d7c6d021272f25c48154c379b77495e9ae1547b",
+        "0x07b0c3976a7a3d780c629807ce4be286586cb1428c34c1911675926a13c30b84"
+      ]
+    }
+  },
+  "httpStatus": 200,
+  "evidence": {
+    "timestamp": "2026-09-12T17:11:34.828Z",
+    "intentsConsidered": 2,
+    "candidatesFound": 2,
+    "candidatesExcluded": [],
+    "chosen": {
+      "intentHashes": [
+        "0x077a2ded214fdbbfb88c01a15d7c6d021272f25c48154c379b77495e9ae1547b",
+        "0x07b0c3976a7a3d780c629807ce4be286586cb1428c34c1911675926a13c30b84"
+      ],
+      "gross": "0",
+      "reason": "Least cash moved among 2 candidates found within the search budget: 0 gross, 2 participants"
+    },
+    "search": {
+      "termination": "complete"
+    },
+    "chainId": 5042002,
+    "registry": "0x479b4455f494679dcdd6f6f32e93e08682deda75",
+    "settlement": "0x75872168f2d6ae13c7d9258159e59025fd9b5eae",
+    "source": {
+      "kind": "subgraph",
+      "subgraphEndpoint": "https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1",
+      "snapshotBlock": "61762563",
+      "blockNumber": "61762571",
+      "blockHash": "0xd7c706adf9a31364389280f602ae42642a94ebc4fd3586c61a301c79b3e887bf"
+    },
+    "requestedIntentHashes": [
+      "0x077a2ded214fdbbfb88c01a15d7c6d021272f25c48154c379b77495e9ae1547b",
+      "0x07b0c3976a7a3d780c629807ce4be286586cb1428c34c1911675926a13c30b84"
+    ],
+    "snapshotBlock": "61762563",
+    "candidates": [
+      {
+        "intents": [
+          {
+            "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+            "offered": [
+              "78",
+              "79"
+            ],
+            "eventId": 1,
+            "sessionMask": "3",
+            "sectionMask": "15",
+            "exactCount": 2,
+            "mustShareSession": true,
+            "mustShareSection": true,
+            "mustBeAdjacent": true,
+            "maxNetPay": "0",
+            "deadline": "1789790400",
+            "nonce": "36",
+            "hash": "0x077a2ded214fdbbfb88c01a15d7c6d021272f25c48154c379b77495e9ae1547b",
+            "committedTx": "0x4ac3daa33e8fff0ae55454821fe8fee5e4ccbbf4a6c8bd1fd543e3c198ac6148",
+            "committedAtBlock": "61618315"
+          },
+          {
+            "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+            "offered": [
+              "60",
+              "61"
+            ],
+            "eventId": 1,
+            "sessionMask": "3",
+            "sectionMask": "15",
+            "exactCount": 2,
+            "mustShareSession": true,
+            "mustShareSection": true,
+            "mustBeAdjacent": true,
+            "maxNetPay": "0",
+            "deadline": "1789790400",
+            "nonce": "27",
+            "hash": "0x07b0c3976a7a3d780c629807ce4be286586cb1428c34c1911675926a13c30b84",
+            "committedTx": "0x4c8d98f73bcaae14fb489de3c16176608a4bbd2af937023498fd0a4ccb165f9c",
+            "committedAtBlock": "61618235"
+          }
+        ],
+        "legs": [
+          {
+            "intentHash": "0x077a2ded214fdbbfb88c01a15d7c6d021272f25c48154c379b77495e9ae1547b",
+            "receives": [
+              "78",
+              "79"
+            ],
+            "netPayment": "0"
+          },
+          {
+            "intentHash": "0x07b0c3976a7a3d780c629807ce4be286586cb1428c34c1911675926a13c30b84",
+            "receives": [
+              "60",
+              "61"
+            ],
+            "netPayment": "0"
+          }
+        ],
+        "gross": "0",
+        "participantCount": 2,
+        "intentHashSet": [
+          "0x077a2ded214fdbbfb88c01a15d7c6d021272f25c48154c379b77495e9ae1547b",
+          "0x07b0c3976a7a3d780c629807ce4be286586cb1428c34c1911675926a13c30b84"
+        ]
+      },
+      {
+        "intents": [
+          {
+            "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+            "offered": [
+              "78",
+              "79"
+            ],
+            "eventId": 1,
+            "sessionMask": "3",
+            "sectionMask": "15",
+            "exactCount": 2,
+            "mustShareSession": true,
+            "mustShareSection": true,
+            "mustBeAdjacent": true,
+            "maxNetPay": "0",
+            "deadline": "1789790400",
+            "nonce": "36",
+            "hash": "0x077a2ded214fdbbfb88c01a15d7c6d021272f25c48154c379b77495e9ae1547b",
+            "committedTx": "0x4ac3daa33e8fff0ae55454821fe8fee5e4ccbbf4a6c8bd1fd543e3c198ac6148",
+            "committedAtBlock": "61618315"
+          },
+          {
+            "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+            "offered": [
+              "60",
+              "61"
+            ],
+            "eventId": 1,
+            "sessionMask": "3",
+            "sectionMask": "15",
+            "exactCount": 2,
+            "mustShareSession": true,
+            "mustShareSection": true,
+            "mustBeAdjacent": true,
+            "maxNetPay": "0",
+            "deadline": "1789790400",
+            "nonce": "27",
+            "hash": "0x07b0c3976a7a3d780c629807ce4be286586cb1428c34c1911675926a13c30b84",
+            "committedTx": "0x4c8d98f73bcaae14fb489de3c16176608a4bbd2af937023498fd0a4ccb165f9c",
+            "committedAtBlock": "61618235"
+          }
+        ],
+        "legs": [
+          {
+            "intentHash": "0x077a2ded214fdbbfb88c01a15d7c6d021272f25c48154c379b77495e9ae1547b",
+            "receives": [
+              "60",
+              "61"
+            ],
+            "netPayment": "0"
+          },
+          {
+            "intentHash": "0x07b0c3976a7a3d780c629807ce4be286586cb1428c34c1911675926a13c30b84",
+            "receives": [
+              "78",
+              "79"
+            ],
+            "netPayment": "0"
+          }
+        ],
+        "gross": "0",
+        "participantCount": 2,
+        "intentHashSet": [
+          "0x077a2ded214fdbbfb88c01a15d7c6d021272f25c48154c379b77495e9ae1547b",
+          "0x07b0c3976a7a3d780c629807ce4be286586cb1428c34c1911675926a13c30b84"
+        ]
+      }
+    ],
+    "excluded": [],
+    "pool": {
+      "liveIntents": 74,
+      "searchableIntents": 2,
+      "excludedIntents": 0,
+      "source": "subgraph",
+      "snapshotBlock": "61762563"
+    },
+    "bounds": {
+      "maxParticipants": 4,
+      "maxCandidates": 100,
+      "timeoutMs": 2000
+    },
+    "searchConfig": {
+      "maxParticipants": 4,
+      "maxCandidates": 100,
+      "timeoutMs": 2000
+    },
+    "runtimeMs": 1.0640000000021246,
+    "simulationBlock": "61762572",
+    "simulationResult": {
+      "success": true
+    },
+    "proposal": {
+      "intents": [
+        {
+          "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+          "offered": [
+            "78",
+            "79"
+          ],
+          "eventId": 1,
+          "sessionMask": "3",
+          "sectionMask": "15",
+          "exactCount": 2,
+          "mustShareSession": true,
+          "mustShareSection": true,
+          "mustBeAdjacent": true,
+          "maxNetPay": "0",
+          "deadline": "1789790400",
+          "nonce": "36",
+          "hash": "0x077a2ded214fdbbfb88c01a15d7c6d021272f25c48154c379b77495e9ae1547b",
+          "committedTx": "0x4ac3daa33e8fff0ae55454821fe8fee5e4ccbbf4a6c8bd1fd543e3c198ac6148",
+          "committedAtBlock": "61618315"
+        },
+        {
+          "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+          "offered": [
+            "60",
+            "61"
+          ],
+          "eventId": 1,
+          "sessionMask": "3",
+          "sectionMask": "15",
+          "exactCount": 2,
+          "mustShareSession": true,
+          "mustShareSection": true,
+          "mustBeAdjacent": true,
+          "maxNetPay": "0",
+          "deadline": "1789790400",
+          "nonce": "27",
+          "hash": "0x07b0c3976a7a3d780c629807ce4be286586cb1428c34c1911675926a13c30b84",
+          "committedTx": "0x4c8d98f73bcaae14fb489de3c16176608a4bbd2af937023498fd0a4ccb165f9c",
+          "committedAtBlock": "61618235"
+        }
+      ],
+      "legs": [
+        {
+          "intentHash": "0x077a2ded214fdbbfb88c01a15d7c6d021272f25c48154c379b77495e9ae1547b",
+          "receives": [
+            "78",
+            "79"
+          ],
+          "netPayment": "0"
+        },
+        {
+          "intentHash": "0x07b0c3976a7a3d780c629807ce4be286586cb1428c34c1911675926a13c30b84",
+          "receives": [
+            "60",
+            "61"
+          ],
+          "netPayment": "0"
+        }
+      ]
+    },
+    "transaction": {
+      "to": "0x75872168f2d6ae13c7d9258159e59025fd9b5eae",
+      "data": "0x719abecf00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000460000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000220000000000000000000000000a8dae73bde3a5c0e412884c9be2039a79dfb31fd000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000000f00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006aae08c000000000000000000000000000000000000000000000000000000000000000240000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004e000000000000000000000000000000000000000000000000000000000000004f000000000000000000000000a8dae73bde3a5c0e412884c9be2039a79dfb31fd000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000000f00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006aae08c0000000000000000000000000000000000000000000000000000000000000001b0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000003c000000000000000000000000000000000000000000000000000000000000003d000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000100077a2ded214fdbbfb88c01a15d7c6d021272f25c48154c379b77495e9ae1547b000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004e000000000000000000000000000000000000000000000000000000000000004f07b0c3976a7a3d780c629807ce4be286586cb1428c34c1911675926a13c30b84000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000003c000000000000000000000000000000000000000000000000000000000000003d",
+      "gas": "8000000",
+      "chainId": 5042002
+    },
+    "message": "Candidate found within the search budget",
+    "id": "dce6a22e-341c-4e79-86ae-985d8b8060bb"
+  }
+}

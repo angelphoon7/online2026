@@ -13,6 +13,7 @@ import { INTENT_STATE } from './types.js';
 import { hashIntent } from './hash.js';
 
 export interface SolverOutput {
+  candidates: Candidate[];
   chosen: { intents: Intent[]; legs: Leg[] } | null;
   evidence: Evidence;
 }
@@ -43,6 +44,7 @@ export function solve(
   evidence.search = { termination };
 
   return {
+    candidates: ranked,
     chosen: chosen
       ? { intents: chosen.intents, legs: chosen.legs }
       : null,

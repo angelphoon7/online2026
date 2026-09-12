@@ -9,18 +9,56 @@ repo, run against the live deployment. Re-run after any redeploy or reseed.
 | Query URL | `https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1` |
 | Deployment | `QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL` |
 | Network | arc-testnet (chainId 5042002) |
-| Indexing errors | none |
+| Public `_meta.hasIndexingErrors` | `false`; see the dated [status check](checks/graph-status.json) |
+| Studio UI | User screenshot shows Deployed / Not published / Subgraph not indexed; a Synced label and complete warning history are not established |
 
 Commands:
 
 ```bash
 npm run subgraph:parity     # audit the index against chain state
 npm run subgraph:lag        # measure how far the index trails the chain head
+npm run subgraph:status     # public health, block hash and inventory count checks
+npm run subgraph:lag:tx -- --check 10  # read-only preflight for a receipt-to-index sample
 ```
 
 ---
 
 ## 4-A Acceptance
+
+### Follow-up, 12 September 2026
+
+The public endpoint was healthy at **61762011**: 122 intents (74 LIVE, 46 SETTLED, 2 REVOKED),
+164 tickets, 130 escrowed and 15 settlements. The indexed block hash, total minted tickets and
+escrow balance match RPC reads pinned to that block; the initial seed commitments are present.
+[Machine-readable status and count checks](checks/graph-status.json).
+
+One real `TicketNFT.transferFrom(owner, owner, 10)` was confirmed in block **61762063**.
+The timer started immediately when the RPC receipt was observed. The Graph returned behind
+four times, then returned `_meta.block.number=61762071` and the ticket's
+`updatedAtBlock=61762063`. **Observed receipt-to-index wait: 7,294 ms, five queries.**
+The checks also verify the deployment ID, unchanged owner and `hasIndexingErrors=false`.
+[Transaction](https://testnet.arcscan.app/tx/0x276568800432ccaaf83bfac6377de48644b8222008205ec9c3ba6b14533f479e)
+· [Timing, polling and entity evidence](checks/graph-transfer-10.json).
+
+This is one sample including request latency, polling and local receipt checks. It is not a
+processing-time percentile, maximum delay or a measurement of the browser's indexing banner.
+The actual gas fee was 0.00063664 test USDC; custody and ownership did not change. It does not
+prove the separate Apply budget revoke/commit or recording requirements.
+
+The user-provided Studio screenshot shows INFO write batches through block 61761333, together
+with Deployed, Not published and Subgraph not indexed labels. Its visible rows contain no
+`reverted` / `unknown intent` warnings, but a cropped log view cannot establish their absence
+across the full history. **The literal Studio Synced / complete Logs check remains open.**
+Deployment and publication are separate: Studio's development endpoint can be queried before
+publication. [The Graph's Studio deployment documentation](https://thegraph.com/docs/en/subgraphs/developing/deploying-publishing/using-subgraph-studio/).
+
+For another sample, choose an unredeemed ticket outside escrow, held by the public deployment
+operator, and run `npm run subgraph:lag:tx -- --check TOKEN_ID`. Then explicitly run
+`npm run subgraph:lag:tx -- --send TOKEN_ID`. The send command uses the local testnet credential,
+checks a 0.02 test-USDC fee ceiling and keeps a private journal under `.data/graph-acceptance/`.
+A completed token sample is not resent; an interrupted journal stops the command for inspection.
+Public reports contain no private keys or raw signed transaction. Do not delete a journal to
+force a retry. The send mode is a real testnet transaction, whereas check mode is read-only.
 
 ### Entities populated
 
@@ -32,9 +70,9 @@ At block 61643973:
 | `Ticket` | 164 | 130 escrowed, 0 redeemed |
 | `Settlement` | 15 | 3 intents each |
 
-All three intent states occur, so `IntentCommitted`, `IntentRevoked` and `Settled` handlers
-all fire. No ticket carries placeholder metadata, so `TicketMinted` is always indexed before
-the ticket is first referenced and the `meta()` fallback never ran.
+All three intent states occur, showing populated commitment, revocation and settlement data.
+The parity run checks ticket metadata against the chain; populated metadata alone does not
+prove whether the mapping's `meta()` fallback ever ran.
 
 ### Indexing delay — measured, 12 samples at 2.5s
 
@@ -47,7 +85,7 @@ the ticket is first referenced and the `meta()` fallback never ran.
 
 The gap is directly measured; the seconds are inferred from observed block time. These
 samples do not measure how long "Indexing block #M…" remains on screen after a particular
-transaction. Measure receipt-to-index waiting separately before publishing that duration.
+transaction. The dated follow-up above records a separate receipt-to-index sample.
 
 Two caveats that matter beyond this table:
 

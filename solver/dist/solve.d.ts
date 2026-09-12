@@ -1,5 +1,6 @@
-import type { Intent, Leg, ChainState, SearchConfig, Evidence } from './types.js';
+import type { Intent, Leg, ChainState, SearchConfig, Candidate, Evidence } from './types.js';
 export interface SolverOutput {
+    candidates: Candidate[];
     chosen: {
         intents: Intent[];
         legs: Leg[];

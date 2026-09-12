@@ -99,9 +99,8 @@ export async function graphPool(minBlock = 0n): Promise<GraphPool> {
  *   - Exclusions are filtered to the requested hashes, so the evidence explains THIS request
  *     rather than padding it with reasons about intents nobody asked about.
  *
- * A requested hash the snapshot does not carry is simply absent from the map; solveOnChain
- * then falls back to log discovery for it, so a search cannot fail merely because the indexer
- * has not caught up with a commit.
+ * A requested hash absent from this snapshot stays absent. solveOnChain rejects that request
+ * without RPC log discovery; callers can refresh or use their commit receipt as minBlock.
  */
 export async function graphIntents(hashes: Hex[], minBlock = 0n): Promise<GraphPool> {
   const snapshot = await getPoolSnapshot({ minBlock });

@@ -27,7 +27,13 @@ npm.cmd run start -- --port 3101
 | `GET /api/evidence/{id}` | Returns the saved evidence, including source block, considered hashes, excluded candidates, chosen proposal, search caps and simulation result. |
 | `POST /api/evidence/{id}/receipt` | Accepts `{ "transactionHash": "0x…" }`. Checks chain ID, successful receipt, exact destination/calldata, `Settled` event and SETTLED registry states before attaching confirmation. |
 
-Only hashes are accepted as explicit solver inputs; client-supplied budgets and ownership claims cannot change signed conditions. Explicit requests support 2–4 distinct committed intents. The pool service accepts up to 256 searchable live intents, forming candidates of at most four participants and four offered/received tickets per intent. Each search has 100-candidate and 2-second limits. Assignment recursion also checks the deadline. RPC fallback for explicit hashes scans bounded log pages; Graph discovery is the demo path. There is no claim about unbounded market search.
+Only hashes are accepted as explicit solver inputs; client-supplied budgets and ownership claims cannot change signed conditions. Explicit requests support 2–4 distinct committed intents. The pool service accepts up to 256 searchable live intents, forming candidates of at most four participants and four offered/received tickets per intent. Each search has 100-candidate and 2-second limits. Assignment recursion also checks the deadline. RPC mode scans bounded log pages; Graph discovery is the demo path. There is no claim about unbounded market search.
+
+Both solver routes return top-level `snapshotBlock`, `bounds`, ranked `candidates` and `excluded`,
+alongside the existing evidence fields. Only the chosen `proposal` has RPC simulation evidence
+and, on success, transaction calldata. `snapshotBlock` is null in RPC mode. An unmet Graph
+floor returns HTTP 409; requested hashes unavailable in the searchable snapshot return HTTP
+422 without a log fallback. [Live HTTP responses and source logs](../docs/GRAPH_4A_6C.md).
 
 The ranking rule is least gross cash moved among candidates found within the search budget, then fewer participants, then the lexicographically smallest ordered set of hashes. The backend sorts input hashes before searching. No solution found within the search bound does not establish infeasibility.
 
@@ -35,7 +41,7 @@ All capacity, custody, ticket and intent reads use one block snapshot. A subsequ
 
 Evidence persists under `.data/evidence` on the server filesystem. Mount persistent storage when deploying the service; an ephemeral serverless filesystem will not preserve it. Public artifacts for the ten recorded rounds are also exported to `deployments/settlements`. Responses never include private keys or authenticated RPC URLs.
 
-`READ_SOURCE=graph` uses `server/market-graph.ts` and `server/solve-graph.ts` to discover the market from Studio. `READ_SOURCE=rpc` retains log-based discovery for local development. If unset, the presence of `SUBGRAPH_URL` selects Graph. Agent routes require Graph independently of this selector. Evidence identifies its source; explicit-hash solving can still use RPC log lookup for a requested hash absent from the indexed pool. Receipts and execution simulation always use RPC.
+`READ_SOURCE=graph` uses `server/market-graph.ts` and `server/solve-graph.ts` to discover the market from Studio. `READ_SOURCE=rpc` retains log-based discovery for local development. If unset, the presence of `SUBGRAPH_URL` selects Graph. Agent routes require Graph independently of this selector. Graph-mode explicit-hash solving stays within the indexed pool and never substitutes newer RPC log discovery. Receipts and execution simulation always use RPC.
 
 The agent's indexed pool is one snapshot, but payment capacity uses separate latest-RPC reads and closed-intent lookup is unpinned. See [Graph limitations](../README.md#graph-limitations) before describing the complete diagnosis as historical state. The model guard is a vocabulary/identifier/block-reference check, not complete numerical or semantic verification.
 

@@ -8,9 +8,8 @@ export const dynamic = 'force-dynamic';
 // Bounded search over 2-4 named intents — plan 6-C.
 //
 // Discovery comes from the subgraph when one is configured, so the evidence carries the
-// snapshot block the pool was read at and the named reason for anything excluded. Whatever the
-// subgraph has not indexed yet is discovered from logs instead (server/solve.ts), so a commit
-// from seconds ago is still searchable.
+// snapshot block the pool was read at and the named reason for anything excluded. A commit
+// absent from that snapshot is not silently discovered from newer RPC logs.
 //
 // Discovery only: registry state, custody, ticket metadata and USDC capacity are re-read from
 // the chain before the search, and the proposal is simulated before anyone submits it.
@@ -37,6 +36,9 @@ export async function POST(request: Request) {
     // indexer has not reached, and retrying is the correct response.
     if (failure.name === 'SubgraphLagError') {
       return Response.json({ error: 'The indexer has not reached the block of your last transaction. Retry shortly.' }, { status: 409 });
+    }
+    if (failure.name === 'GraphIntentUnavailable') {
+      return Response.json({ error: failure.message }, { status: 422 });
     }
     return Response.json({ error: 'Unable to solve from chain state. Check committed hashes and backend configuration.' }, { status: 502 });
   }

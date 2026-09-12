@@ -1,0 +1,76 @@
+{
+  "measuredAt": "2026-09-12T17:07:23.718Z",
+  "chainId": 5042002,
+  "endpoint": "https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1",
+  "kind": "receipt-observed-to-indexed-ticket-observed",
+  "transactionHash": "0x276568800432ccaaf83bfac6377de48644b8222008205ec9c3ba6b14533f479e",
+  "tokenId": "10",
+  "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+  "blockNumber": "61762063",
+  "receiptObservedAt": "2026-09-12T17:07:16.424Z",
+  "submissionToReceiptObservedMs": 781,
+  "receiptToIndexedObservedMs": 7294,
+  "polls": [
+    {
+      "elapsedMs": 161,
+      "indexedBlock": "61762053",
+      "status": "behind"
+    },
+    {
+      "elapsedMs": 1117,
+      "indexedBlock": "61762061",
+      "status": "behind"
+    },
+    {
+      "elapsedMs": 2478,
+      "indexedBlock": "61762061",
+      "status": "behind"
+    },
+    {
+      "elapsedMs": 4439,
+      "indexedBlock": "61762061",
+      "status": "behind"
+    },
+    {
+      "elapsedMs": 7294,
+      "indexedBlock": "61762071",
+      "status": "indexed"
+    }
+  ],
+  "indexed": {
+    "ticket": {
+      "id": "10",
+      "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+      "escrowed": false,
+      "updatedAtBlock": "61762063"
+    },
+    "_meta": {
+      "block": {
+        "number": 61762071,
+        "timestamp": 1789232839
+      },
+      "hasIndexingErrors": false,
+      "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL"
+    }
+  },
+  "gasUsed": "31832",
+  "gasFeeUSDC": "0.00063664",
+  "ownershipChanged": false,
+  "before": {
+    "ticket": {
+      "id": "10",
+      "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+      "escrowed": false,
+      "updatedAtBlock": "61594230"
+    },
+    "_meta": {
+      "block": {
+        "number": 61762053,
+        "timestamp": 1789232830
+      },
+      "hasIndexingErrors": false,
+      "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL"
+    }
+  },
+  "scope": "One observed sample, including Graph request time and polling. Not exact graph-node processing latency, a median, or a worst-case bound."
+}

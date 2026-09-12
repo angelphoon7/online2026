@@ -42,24 +42,28 @@ export type PoolSource = {
 };
 
 export async function solveOnChain(hashes: Hex[], committed?: ReadonlyMap<Hex, Intent>, pool?: PoolSource) {
-  const { client, addresses, usdc, startBlock, chainId } = chainConfig();
-  if (await client.getChainId() !== chainId) throw new Error('RPC returned the wrong chain');
-  const block = await client.getBlock();
-  const event = parseAbiItem('event IntentCommitted(bytes32 indexed intentHash,address indexed owner,uint32 indexed eventId,uint256[] offered,uint256 sessionMask,uint256 sectionMask,uint8 exactCount,bool mustShareSession,bool mustShareSection,bool mustBeAdjacent,int256 maxNetPay,uint64 deadline,uint256 nonce)');
   const discovered = new Map<Hex, Intent>();
-  // A supplied map may be partial — subgraph discovery has a freshness floor but no guarantee
-  // of having seen a commit from seconds ago. Hash binding still applies to everything it did
-  // supply: an intent that does not hash to the key it is presented under is never searched.
+  // Graph discovery stays inside its named snapshot. Missing/excluded hashes must never be
+  // reconstructed from newer RPC logs while the response still claims Graph provenance.
   if (committed) for (const hash of hashes) {
     const intent = committed.get(hash);
     if (!intent) continue;
     if (hashIntent(intent) !== hash) throw new Error('Committed intent hash mismatch');
     discovered.set(hash, intent);
   }
+  if (pool?.kind === 'subgraph' && hashes.some(hash => !discovered.has(hash))) {
+    const error = new Error('Requested intents are unavailable in the searchable Graph snapshot. Refresh the pool or supply the commit receipt as minBlock.');
+    error.name = 'GraphIntentUnavailable';
+    throw error;
+  }
+  const { client, addresses, usdc, startBlock, chainId } = chainConfig();
+  if (await client.getChainId() !== chainId) throw new Error('RPC returned the wrong chain');
+  const block = await client.getBlock();
+  const event = parseAbiItem('event IntentCommitted(bytes32 indexed intentHash,address indexed owner,uint32 indexed eventId,uint256[] offered,uint256 sessionMask,uint256 sectionMask,uint8 exactCount,bool mustShareSession,bool mustShareSection,bool mustBeAdjacent,int256 maxNetPay,uint64 deadline,uint256 nonce)');
   // Fixed deployment scope, selected hashes, and bounded log range per call. Reached only for
   // hashes discovery did not supply, so a complete subgraph pool scans no logs at all.
   let pages = 0;
-  for (let from = startBlock; discovered.size < hashes.length && from <= block.number; from += 10000n) {
+  for (let from = startBlock; pool?.kind !== 'subgraph' && discovered.size < hashes.length && from <= block.number; from += 10000n) {
     if (++pages > 100) throw new Error('Discovery range exceeds demo cap; configure an indexed discovery adapter');
     const toBlock = from + 9999n < block.number ? from + 9999n : block.number;
     const logs = await client.getLogs({ address: addresses.IntentRegistry, event, args: { intentHash: hashes }, fromBlock: from, toBlock, strict: true });
@@ -125,6 +129,7 @@ export async function solveOnChain(hashes: Hex[], committed?: ReadonlyMap<Hex, I
       simulationResult = { success: false, error: revert?.data?.errorName ?? 'Settlement simulation failed' };
     }
   }
+  const excluded = [...(pool?.excluded ?? []), ...inputExclusions, ...result.evidence.candidatesExcluded];
   return saveEvidence({
     ...result.evidence,
     chainId, registry: addresses.IntentRegistry, settlement: addresses.Settlement,
@@ -139,7 +144,10 @@ export async function solveOnChain(hashes: Hex[], committed?: ReadonlyMap<Hex, I
       blockHash: block.hash,
     },
     requestedIntentHashes: hashes, intentsConsidered: intents.length,
-    candidatesExcluded: [...(pool?.excluded ?? []), ...inputExclusions, ...result.evidence.candidatesExcluded],
+    candidatesExcluded: excluded,
+    snapshotBlock: pool?.snapshotBlock ?? null,
+    candidates: result.candidates,
+    excluded,
     ...(pool ? { pool: { liveIntents: pool.liveIntents, searchableIntents: intents.length, excludedIntents: pool.excluded.length, source: pool.kind ?? 'rpc', snapshotBlock: pool.snapshotBlock ?? null } } : {}),
     bounds: SEARCH_CONFIG,
     searchConfig: SEARCH_CONFIG, runtimeMs, simulationBlock: simulationBlock.toString(), simulationResult,

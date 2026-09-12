@@ -88,6 +88,7 @@ told which one.
 | Step | Measured | Source |
 |---|---|---|
 | Steady-state head/index distance, converted to seconds | median ~2s, max ~6s inferred; **not receipt-to-index timing** | `docs/graph-acceptance.md` 4-A, 12 samples |
+| One real transfer: receipt observed → indexed entity observed | **7.294s**, five queries; includes polling/request time, not an upper bound | [Receipt and timing](checks/graph-transfer-10.json), block 61762063 |
 | `diagnose` on a `NOT_FOUND_WITHIN_BOUND` intent | **~8.1s** | `runtimeMs` from the rehearsal above |
 | `diagnose` on a `SETTLEABLE` intent | ~1.7s | step 9 fixture suite |
 

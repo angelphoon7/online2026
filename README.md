@@ -145,6 +145,31 @@ query InspectPool($minBlock: Int!) {
 The application's complete [PoolSnapshot query](shared/graph/queries.ts) takes
 `{ "minBlock": 0, "first": 1000 }` and includes every signed field needed for hash binding.
 
+### Verified Graph solver and indexing measurement
+
+On 12 September 2026, a real ticket transfer confirmed at block **61762063** was observed in
+the index after **7.294 seconds** and five queries. This is one receipt-to-index observation
+including polling/network time, not a maximum delay. [Transaction and timing](docs/checks/graph-transfer-10.json).
+The public endpoint reports no indexing errors; the Studio screenshot's literal Synced label
+and full warning history remain unverified. [Step 4-A details](docs/graph-acceptance.md).
+
+`POST /api/solve/pool` accepts `{ "minBlock": "61762063" }`; `POST /api/solve` also takes
+two to four `intentHashes`. Both return `snapshotBlock`, `bounds`, `candidates` and `excluded`,
+alongside the chosen proposal and simulation evidence. Graph mode does not fall back to RPC
+logs for missing intents. An unmet floor returns 409; a hash unavailable in the searchable
+snapshot returns 422.
+
+```text
+pool source: subgraph @ block 61762525 — 74 searchable, 0 excluded
+pool source: subgraph @ block 61762563 — 2 of 2 requested hashes discovered
+```
+
+The live full-pool request found 100 candidates within the 4-participant / 100-candidate /
+2,000-ms bounds and simulated its chosen proposal successfully. Search took 146.233 ms;
+the whole HTTP request, including chain reads and simulation, took 19.101 seconds.
+[Full response](docs/checks/graph-solve-pool.json) · [Selected-intent response](docs/checks/graph-solve-selected.json)
+· [Server logs](docs/checks/graph-solver-server.txt) · [Reproduce Step 4-A / 6-C](docs/GRAPH_4A_6C.md).
+
 ### Run locally
 
 Install Node.js 22 or newer, then install dependencies from the repository root:
