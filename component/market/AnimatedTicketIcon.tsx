@@ -27,9 +27,9 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
 
     // Load base ticket asset and mask
     const img = new window.Image();
-    img.src = '/ticket-darkblue.png?v=9';
+    img.src = '/ticket-darkblue.png?v=10';
     const mask = new window.Image();
-    mask.src = '/ticket-mask.png?v=9';
+    mask.src = '/ticket-mask.png?v=10';
 
     let loadedCount = 0;
     const onAssetLoad = () => {
