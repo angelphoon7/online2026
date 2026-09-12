@@ -32,6 +32,7 @@ import { nextRecordedNonce } from '@/lib/intent-draft';
 import rejectionDemo from '@/deployments/act-three.json';
 
 import ConnectWalletButton from '@/component/connectWallet/ConnectWalletButton';
+import SpecularButton from './SpecularButton';
 
 const scrollTo = (element: HTMLElement | null) => element?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
 const equal = (a?: string | null, b?: string | null) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
@@ -287,16 +288,27 @@ export default function Market() {
             <div className="eyebrow">An outcome market for tickets</div>
             <h1>{HERO_TITLE_LINES[0]}<br /><span>{HERO_TITLE_LINES[1]}</span></h1>
             <div className="hero-cta-wrap">
-              <button
-                type="button"
-                className="select-event-btn"
+              <SpecularButton
+                size="lg"
+                radius={18}
+                tint="#eaf411"
+                tintOpacity={0}
+                blur={0}
+                textColor="#f5f5f5"
+                lineColor="#ea7833"
+                baseColor="#e66e4b"
+                intensity={1}
+                shineSize={10}
+                shineFade={40}
+                thickness={1}
+                speed={0.35}
+                followMouse
+                proximity={250}
+                autoAnimate={false}
                 onClick={() => document.getElementById('events')?.scrollIntoView({ behavior: 'smooth' })}
               >
-                <span>Select Event</span>
-                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="btn-arrow" aria-hidden="true">
-                  <path d="M8 3.5V12.5M8 12.5L12.5 8M8 12.5L3.5 8" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
+                Explore Events
+              </SpecularButton>
             </div>
           </div>
           <div className="hero-visual">
