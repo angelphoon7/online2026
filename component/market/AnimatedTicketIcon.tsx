@@ -27,9 +27,9 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
 
     // Load base ticket asset and mask
     const img = new window.Image();
-    img.src = '/ticket-darkblue.png?v=12';
+    img.src = '/ticket-darkblue.png?v=13';
     const mask = new window.Image();
-    mask.src = '/ticket-mask.png?v=12';
+    mask.src = '/ticket-mask.png?v=13';
 
     let loadedCount = 0;
     const onAssetLoad = () => {
@@ -75,9 +75,9 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
         tCtx.drawImage(img, 0, 0);
         tCtx.globalCompositeOperation = 'source-in';
         const grad = tCtx.createLinearGradient(120, 0, 480, 0);
-        grad.addColorStop(0, 'rgba(251, 146, 60, 0.30)');    // warm golden amber sheen on left
-        grad.addColorStop(0.48, 'rgba(244, 63, 94, 0.38)'); // radiant coral highlight in center fold
-        grad.addColorStop(1, 'rgba(225, 29, 72, 0.45)');     // rich ruby-crimson sheen on right
+        grad.addColorStop(0, 'rgba(254, 215, 170, 0.25)');   // radiant golden light crest on ridge
+        grad.addColorStop(0.35, 'rgba(239, 68, 68, 0.35)');  // vivid crimson-scarlet luster
+        grad.addColorStop(1, 'rgba(225, 29, 72, 0.42)');     // deep ruby-wine sheen on right
         tCtx.fillStyle = grad;
         tCtx.fillRect(0, 0, 610, 380);
       }
