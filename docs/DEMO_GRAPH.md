@@ -1,152 +1,78 @@
 # The Graph beat: run of show
 
-Step 10 of `docs/RESHUFFLE_GRAPH_PLAN.md`. The scene where a judge changes a signed condition
-on-chain and watches the indexer, the solver and the agent all follow.
+Steps 6-D, 8 and 10-B have a real Arc Testnet budget-change sample from 12 September 2026.
+[Complete evidence, receipt links and recording notes](GRAPH_APPLY_BUDGET.md).
 
-Every number below was measured against Arc Testnet, not chosen. Re-run the rehearsal after
-any reseed: the threshold the beat turns on is a property of the pool, and reseeding moves it.
+## Recorded sequence
 
-```bash
-npx --yes tsx --conditions=react-server scripts/rehearse-graph-act.mts
-```
-
----
-
-## What the beat is
-
-A participant who can settle now demands to be paid more than anyone else in the pool has
-signed up to pay. Nothing else changes — same tickets, same seats, same sessions.
-
-| | |
-|---|---|
-| Demo intent | `0xf7387010926792738ba5c0b1048ec46e5aa3197ba8ef81ca7976b8864d31baf0` |
-| Owner | `0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd` |
-| Before | `SETTLEABLE` — 2 participants, no payment either way |
-| Change | Apply budget to **−4 USDC** (a credit floor: *pay me at least 4*) |
-| After | `NOT_FOUND_WITHIN_BOUND` |
-| To restore on camera | Apply budget to **−3 USDC**, which still settles |
-
-**Why −4 and not −15.** The deepest signed willingness to pay in this pool is **3.00 USDC**.
-A floor of −3 is inside what someone will pay; −4 is outside it. That is the whole mechanism,
-and it is a fact about the committed intents rather than a tuned constant. The rehearsal
-prints it:
-
-```
-deepest signed willingness to pay in the pool: 3.00 USDC
-  0xf7387010...  settles now (2 participants, pays 0.00 USDC)
-                 deepest floor that still settles: -3 USDC  ·  breaks at: -4 USDC
-```
-
-Measured on five settleable intents; all five broke at exactly −4.
-
-**Why a floor and not a ceiling.** Every seeded intent in this pool settles at zero payment,
-so lowering a debit ceiling removes nothing — the participant was never paying anything. The
-signed sense of `maxNetPay` is what makes the beat possible at all: a negative limit is a
-credit floor, and the market has a finite depth to satisfy it.
-
----
-
-## Order of operations
-
-| Beat | Action | What must be on screen | What is behind it |
-|---|---|---|---|
-| 1 | Open the drawer on the demo intent | `Live · Arc Testnet block #N · via The Graph` | the snapshot's `_meta.block` |
-| 2 | Ask **Why can't this intent settle?** | answer opens `At Arc Testnet block #N`, says a reshuffle **was** found, 2 participants, no payment | `/api/agent/ask` to `diagnose_intent` |
-| 3 | Judge control: Apply budget to −4 USDC | receipt panel shows **two** transaction hashes: revoke and commit | 6-D, real on-chain `revoke()` + `commit()` |
-| 4 | Wait for the indexer | `Indexing block #M…`, then the header block advances to at least M and the drawer follows the **new hash** | `waitForIndexed(commitBlock)` |
-| 5 | Ask the same question again | answer now opens `At Arc Testnet block #M` and says no settlement was found within the search bound | same endpoint, later block |
-| 6 | Expand **Evidence** | supply funnel non-zero at every stage, demand non-empty, `maxNetPay->cap` found, the three cohesion relaxations not found, Arcscan links | the evidence JSON |
-| 7 | (optional) Apply budget to −3 USDC | after indexing, the answer returns to a settlement | the control works both ways |
-
-Beats 4 and 5 each need a held second. The block number changing and the answer changing are
-the two things the scene exists to show; rushing past them shows neither.
-
-### The sentences, rehearsed
-
-Before:
-
-> At Arc Testnet block #61751928, a reshuffle including this intent was found, with 2
-> participants (1 counterparty), with no payment either way. Use Propose and settle to submit
-> it; the contract re-checks every signed condition before it executes.
-
-After:
-
-> At Arc Testnet block #61752025, no settlement was found within the search bound. The
-> smallest change among those tried: raise the signed payment limit — that produced a
-> 2-participant reshuffle. Signing a new intent is what would make it real; nothing moves
-> until then.
-
-The second sentence is the point of the whole track: the pool is unchanged, the tickets the
-participant wants still exist (the funnel never reaches zero) and someone still wants theirs
-(demand is non-empty). What changed is one signed number, and the system says so without being
-told which one.
-
----
-
-## Timing, measured
-
-| Step | Measured | Source |
+| Beat | What to show | Observed evidence |
 |---|---|---|
-| Steady-state head/index distance, converted to seconds | median ~2s, max ~6s inferred; **not receipt-to-index timing** | `docs/graph-acceptance.md` 4-A, 12 samples |
-| One real transfer: receipt observed → indexed entity observed | **7.294s**, five queries; includes polling/request time, not an upper bound | [Receipt and timing](checks/graph-transfer-10.json), block 61762063 |
-| `diagnose` on a `NOT_FOUND_WITHIN_BOUND` intent | **~8.1s** | `runtimeMs` from the rehearsal above |
-| `diagnose` on a `SETTLEABLE` intent | ~1.7s | step 9 fixture suite |
+| 1 | Open the intent drawer and ask **Why can't this intent settle?** | Block **61770753**, `SETTLEABLE`, two intent legs, zero payment |
+| 2 | Expand **Judge controls / change a signed condition**, select that intent, enter **-12**, click **Apply budget** | Revoke at **61770769**, replacement commit at **61770778**; both receipt links visible |
+| 3 | Hold the indexing and block-change frames | **Indexing block #61770778**, old pool and answer hidden; drawer follows the new hash; diagnosis block **61770784** |
+| 4 | Ask the same question about the new hash | Block **61771245**, `NOT_FOUND_WITHIN_BOUND`; answer identifies the signed payment limit |
+| 5 | Expand **Evidence** | Supply stages all non-zero, `maxNetPay->cap` finds a candidate, dropping adjacency does not |
 
-The 8-second figure is the one to plan around. It is four relaxations, three of which run to
-the 2000 ms search timeout before reporting not-found. On camera that is a visible wait after
-beat 5. Either let it sit with the spinner — it is doing real work, and the Evidence panel
-then proves it — or shorten the published `timeoutMs`. If it is shortened, re-run the
-rehearsal: the bound is part of every claim the agent makes.
+The original intent is now revoked:
+`0xf7387010926792738ba5c0b1048ec46e5aa3197ba8ef81ca7976b8864d31baf0`.
 
----
+The replacement to select is:
+`0xa8304a351bbbe67ffc6d767114e57eb6504f96339aec8166602de1f8ada30488`.
 
-## Preconditions
+It has nonce **79** and a signed limit of **-12 USDC**, meaning its owner must receive
+at least 12 USDC. The other signed conditions and offered ticket order stayed the same.
+The control changes a real commitment; editing a number in the input alone changes nothing.
 
-- [ ] `npm test` green (32 tests)
-- [ ] `npm run subgraph:parity` PASS at a recent block
-- [ ] Rehearsal exits 0 and names a demo intent
-- [ ] `JUDGE_CONTROLS_ENABLED=true` (or dev mode) and `.env.seed` holds the owner's key
-- [ ] `ANTHROPIC_API_KEY` set if the narrated answer is shown; without it, show
-      `GET /api/agent/diagnose/:hash`, which is the same evidence with no model in the path
+## Watch the actual captures
 
-Reseeding invalidates both the intent hash and the −4/−3 threshold. Re-run the rehearsal and
-update this file; do not read the old numbers onto a new pool.
+1. [Before answer, real transactions, indexing and new hash](checks/graph-budget/apply-budget.webm).
+2. [Read-only retry: changed answer and expanded evidence](checks/graph-budget/read-only-retry.webm).
 
----
+The first capture includes an HTTP 503 when asking after the successful change. The second
+capture repeats only public reads for the already-created new hash. No transaction was
+resent. Both clips are at original speed; they are not an uninterrupted take. The block
+transition and answer each have a held beat. Preserve both when editing a submission video.
+Uploading/editing the final submission is separate from these recorded evidence clips.
 
-## Editing rules
+The observed UI indexing phase lasted **3.018 seconds**. It is one measured browser wait,
+including polling/HTTP time. Diagnosis computation and the later question retry are separate.
+The final answer and evidence require no Anthropic key: this run used the deterministic
+fallback with `model: null`, visibly labelled in the drawer.
 
-- Cutting the indexing wait is allowed. **Speeding up the video is not** — ETHGlobal forbids it.
-- The frame where the header block number changes from N to M must survive the cut, and so must
-  both answers. Without them the recording proves nothing a screenshot would not.
-- The two transaction hashes in beat 3 stay legible long enough to pause on. They are what
-  makes the control real rather than a frontend state change.
+## Why this budget was used
 
----
+The pool changed after the earlier -4/-3 rehearsal. Its new read-only rehearsal found the
+three largest other-leg debit ceilings totalled **11 USDC**, within the four-participant
+cap. Requiring receipt of **12 USDC** made the signed condition bind. The final bounded
+search found no settlement, while relaxing the budget produced a candidate.
 
-## Two defects this rehearsal found
+This threshold is a property of the sampled signed intents. It is not a ticket price or a
+constant for future demos. Do not use the old rehearsal hash or thresholds as fresh results.
+[Rehearsal snapshot and bounds](checks/graph-budget-plan.json).
 
-Both were found by trying to record the beat, and both would have been visible to a judge.
+## Recheck without another transaction
 
-**1. The search spent its bound on other people.** `search()` enumerated subsets in
-combination order and stopped at `maxCandidates`, and `solveHypothetical` then reported
-`found` only if the single globally top-ranked candidate happened to include the asker. In a
-73-intent pool the bound was exhausted on reshuffles between strangers, so **every one of the
-64 changeable intents diagnosed as `NOT_FOUND_WITHIN_BOUND`** — including ones that settle at
-zero payment. `SearchConfig.mustInclude` now holds the asking intent fixed and combines the
-rest, so the bound is spent on candidates that can answer the question actually asked. The
-same 64 intents now diagnose as `SETTLEABLE`, and one diagnosis runs in ~40 ms instead of
-~125 ms.
+```sh
+node scripts/check-graph-budget-evidence.mjs
+node scripts/record-graph-budget.mjs --verify
+```
 
-The global `/api/solve` path does not set `mustInclude` and is unchanged: when proposing a
-settlement, any valid reshuffle will do.
+The first checks the saved observations offline. The second queries existing receipts and
+opens the current replacement intent for a read-only browser verification. It does not click
+Apply budget. The target still needs to be LIVE for this browser flow; future settlement,
+revocation, expiry or pool changes can change the answer.
 
-**2. A budget relaxation could name a cause that was not one.** Because widening any condition
-changed which candidates the bounded search reached first, `maxNetPay->cap` could report
-`found` for a settlement the committed limit already permitted — observed at block 61751218
-with `targetNetPay: 0` against a committed limit of `0`. The agent would have told a judge to
-raise a limit that was never binding. `Relaxation.binding` now records whether the settlement
-found actually costs more than the committed limit, and `smallestWorkingChange` will not
-recommend a change that was not load-bearing.
+For a future new recording, first rehearse the current pool, verify the original answer on
+screen, and only then apply a new signed condition. `scripts/prepare-graph-budget.mts` and
+`record-graph-budget.mjs --check` are read-only. `--record` is the explicit transaction mode.
+An existing attempt journal blocks another recording, so preserve and inspect it; do not
+clear it simply to replay the old instructions.
 
-Both are covered by tests in `server/__tests__/`.
+Prerequisites for a new recording: a production build, Chrome and Playwright FFmpeg, working
+Graph/Arc RPC reads, the relevant participant's local signing credential, and test USDC for
+gas. The recorder enables judge controls only on its isolated localhost server. Public reads
+and the deterministic agent answer need no signing credential.
+
+Current validation: **50 tests passed**, production build/TypeScript passed, changed-file
+lint passed, and [the live evidence assertions passed](checks/graph-budget/summary.json).
+These checks cover this budget-change scene; Studio Synced/Logs and mainnet are separate.

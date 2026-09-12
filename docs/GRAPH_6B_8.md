@@ -74,5 +74,13 @@ The browser command needs an installed Google Chrome. It starts its own server o
 uses a fresh browser profile and intercepts every API request. It performs no wallet signing,
 real transaction or model call. Its fixture blocks 100/200 are regression inputs, not chain
 evidence. Local traces/results stay under `.data/browser-tests/`. Real-chain latency remains
-the separate [Step 4-A measurement](graph-acceptance.md); a live budget-change video is still
-a distinct submission deliverable.
+the separate [Step 4-A measurement](graph-acceptance.md).
+
+### Live Apply budget follow-up
+
+The real budget change in block **61770778** now verifies this path beyond fixtures: both
+receipt links appeared, the old pool and answer were hidden for the observed **3.018-second**
+indexing wait, all subsequent reads retained the floor, and the drawer followed the new hash.
+The later answer changed at block **61771245**. One HTTP 503 was recovered by retrying reads,
+without repeating transactions. [Receipts, assertions and two original-speed clips](GRAPH_APPLY_BUDGET.md).
+The follow-up suite has **50 passing tests**, including three added nonce-selection checks.

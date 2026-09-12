@@ -43,7 +43,9 @@ The checks also verify the deployment ID, unchanged owner and `hasIndexingErrors
 This is one sample including request latency, polling and local receipt checks. It is not a
 processing-time percentile, maximum delay or a measurement of the browser's indexing banner.
 The actual gas fee was 0.00063664 test USDC; custody and ownership did not change. It does not
-prove the separate Apply budget revoke/commit or recording requirements.
+prove the separate Apply budget revoke/commit or recording requirements. Those now have
+[their own live receipts and browser evidence](GRAPH_APPLY_BUDGET.md), recorded separately
+at commit block **61770778**.
 
 The user-provided Studio screenshot shows INFO write batches through block 61761333, together
 with Deployed, Not published and Subgraph not indexed labels. Its visible rows contain no

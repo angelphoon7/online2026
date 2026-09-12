@@ -1,0 +1,78 @@
+{
+  "checkedAt": "2026-09-12T18:13:36.675Z",
+  "mode": "READ_ONLY_HYPOTHETICAL",
+  "chainId": 5042002,
+  "endpoint": "https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1",
+  "snapshotBlock": "61769833",
+  "intent": {
+    "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+    "offered": [
+      "36",
+      "37"
+    ],
+    "eventId": 1,
+    "sessionMask": "3",
+    "sectionMask": "15",
+    "exactCount": 2,
+    "mustShareSession": true,
+    "mustShareSection": true,
+    "mustBeAdjacent": true,
+    "maxNetPay": "0",
+    "deadline": "1789790400",
+    "nonce": "15",
+    "hash": "0xf7387010926792738ba5c0b1048ec46e5aa3197ba8ef81ca7976b8864d31baf0",
+    "committedTx": "0x4f0944f42612facc79a41e21785c3ca21e3029012448b46c00ce36b09badf55f",
+    "committedAtBlock": "61618113"
+  },
+  "before": {
+    "block": "61769833",
+    "timestamp": "1789236810",
+    "intent": "0xf7387010926792738ba5c0b1048ec46e5aa3197ba8ef81ca7976b8864d31baf0",
+    "relaxations": [],
+    "bounds": {
+      "maxParticipants": 4,
+      "maxCandidates": 100,
+      "timeoutMs": 2000,
+      "budgetCapUsdc": 100,
+      "groupSearchCap": 40
+    },
+    "counterpartyTx": {
+      "0x4a599d033e1295e93bbfb5fea17ab44b2cbad9fd": "0x3622f7d465af2a873277fb20efe63f7fac225cd72c598efdb32c0e9550490c59",
+      "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd": "0xa31c56bf1ed8aa34029760fd4f70bc3dab60b0032e4fb0e6419222ddcfa8f2db"
+    },
+    "status": "SETTLEABLE",
+    "settleable": {
+      "counterparties": [
+        "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd"
+      ],
+      "participantCount": 2,
+      "targetNetPay": "0",
+      "receives": [
+        "36",
+        "37"
+      ]
+    },
+    "runtimeMs": 79.00289999999995
+  },
+  "newMaxNetPayUsdc": "-12",
+  "otherLegCeiling": "11500000",
+  "hypothetical": {
+    "submittable": false,
+    "found": false,
+    "snapshotBlock": "61769833",
+    "bounds": {
+      "maxParticipants": 4,
+      "maxCandidates": 100,
+      "timeoutMs": 2000
+    },
+    "termination": "timeout",
+    "counterparties": [],
+    "participantCount": null,
+    "targetNetPay": null,
+    "receives": [],
+    "gross": null,
+    "candidatesFound": 0,
+    "runtimeMs": 2007.6423,
+    "excludedCount": 6694
+  }
+}

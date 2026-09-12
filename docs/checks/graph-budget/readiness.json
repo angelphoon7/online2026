@@ -1,0 +1,115 @@
+{
+  "startedAt": "2026-09-12T18:17:02.135Z",
+  "mode": "--check",
+  "endpoint": "https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1",
+  "chainId": 5042002,
+  "mocked": false,
+  "videoSpeed": 1,
+  "modelConfigured": false,
+  "requests": [
+    {
+      "at": "2026-09-12T18:17:04.324Z",
+      "method": "GET",
+      "path": "/api/market?minBlock=0"
+    },
+    {
+      "at": "2026-09-12T18:17:05.045Z",
+      "method": "GET",
+      "path": "/api/demo/budget?minBlock=0"
+    },
+    {
+      "at": "2026-09-12T18:17:05.512Z",
+      "method": "GET",
+      "path": "/api/agent/diagnose/0xf7387010926792738ba5c0b1048ec46e5aa3197ba8ef81ca7976b8864d31baf0?minBlock=0"
+    },
+    {
+      "at": "2026-09-12T18:17:06.418Z",
+      "method": "POST",
+      "path": "/api/agent/ask",
+      "body": {
+        "intentHash": "0xf7387010926792738ba5c0b1048ec46e5aa3197ba8ef81ca7976b8864d31baf0",
+        "question": "Why can't this intent settle?",
+        "minBlock": "61770238"
+      }
+    }
+  ],
+  "observations": [
+    {
+      "at": "2026-09-12T18:17:03.939Z",
+      "live": "",
+      "answer": "",
+      "workspaceHidden": true
+    },
+    {
+      "at": "2026-09-12T18:17:05.044Z",
+      "live": "",
+      "answer": "",
+      "workspaceHidden": false
+    },
+    {
+      "at": "2026-09-12T18:17:05.507Z",
+      "live": "READING THE POOL",
+      "answer": "",
+      "workspaceHidden": false
+    },
+    {
+      "at": "2026-09-12T18:17:06.062Z",
+      "live": "LIVE · ARC TESTNET BLOCK #61770238 · VIA THE GRAPH",
+      "answer": "",
+      "workspaceHidden": false
+    },
+    {
+      "at": "2026-09-12T18:17:06.971Z",
+      "live": "LIVE · ARC TESTNET BLOCK #61770249 · VIA THE GRAPH",
+      "answer": "At Arc Testnet block #61770249, a reshuffle including this intent was found, with 2 participants (1 counterparty), with no payment either way. Use Propose and settle to submit it; the contract re-checks every signed condition before it executes.",
+      "workspaceHidden": false
+    }
+  ],
+  "before": {
+    "answer": "At Arc Testnet block #61770249, a reshuffle including this intent was found, with 2 participants (1 counterparty), with no payment either way. Use Propose and settle to submit it; the contract re-checks every signed condition before it executes.",
+    "guardFallback": true,
+    "guardReason": "NO_MODEL_CONFIGURED",
+    "evidence": [
+      {
+        "tool": "diagnose_intent",
+        "input": {
+          "intentHash": "0xf7387010926792738ba5c0b1048ec46e5aa3197ba8ef81ca7976b8864d31baf0"
+        },
+        "output": {
+          "block": "61770249",
+          "timestamp": "1789237024",
+          "intent": "0xf7387010926792738ba5c0b1048ec46e5aa3197ba8ef81ca7976b8864d31baf0",
+          "relaxations": [],
+          "bounds": {
+            "maxParticipants": 4,
+            "maxCandidates": 100,
+            "timeoutMs": 2000,
+            "budgetCapUsdc": 100,
+            "groupSearchCap": 40
+          },
+          "counterpartyTx": {
+            "0x4a599d033e1295e93bbfb5fea17ab44b2cbad9fd": "0x3622f7d465af2a873277fb20efe63f7fac225cd72c598efdb32c0e9550490c59",
+            "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd": "0xa31c56bf1ed8aa34029760fd4f70bc3dab60b0032e4fb0e6419222ddcfa8f2db"
+          },
+          "status": "SETTLEABLE",
+          "settleable": {
+            "counterparties": [
+              "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd"
+            ],
+            "participantCount": 2,
+            "targetNetPay": "0",
+            "receives": [
+              "36",
+              "37"
+            ]
+          },
+          "runtimeMs": 225.2536
+        }
+      }
+    ],
+    "block": "61770249",
+    "model": null
+  },
+  "status": "PASS_READ_ONLY",
+  "finishedAt": "2026-09-12T18:17:08.643Z"
+}

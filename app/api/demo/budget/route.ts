@@ -75,6 +75,9 @@ export async function POST(request: Request) {
     return Response.json(result, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     const status = error instanceof JudgeControlError ? error.status : 500;
+    // Keep diagnostics useful without logging signing accounts, calldata or credentials.
+    const cause = error as { name?: string; shortMessage?: string; cause?: { name?: string; shortMessage?: string } };
+    console.error('Apply budget failed:', { name: cause?.name, shortMessage: cause?.shortMessage, cause: cause?.cause?.name, causeMessage: cause?.cause?.shortMessage });
     const message =
       error instanceof JudgeControlError
         ? error.message

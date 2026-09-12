@@ -7,6 +7,7 @@ import { graphPool } from './solve-graph';
 import { hashIntent } from '@/shared/intent';
 import type { Intent } from '../solver/src/types';
 import { DEPLOYMENT } from '@/lib/deployment';
+import { nextJudgeNonce } from './judge-nonce';
 
 // Judge control: change a participant's budget — step 6-D of docs/RESHUFFLE_GRAPH_PLAN.md.
 //
@@ -210,18 +211,14 @@ export async function applyBudget(intentHash: Hex, maxNetPay: bigint): Promise<B
   const wallet = createWalletClient({ account, chain: network, transport: http(process.env.ARC_RPC ?? DEPLOYMENT.rpc) });
 
   // A nonce is reserved at commit and never released, so walk forward to an unused one.
-  let nonce = current.nonce + 1n;
-  for (let tries = 0; tries < 64; tries++) {
-    const used = await client.readContract({
+  const nonce = await nextJudgeNonce(current, committed.values(), async candidate => {
+    return await client.readContract({
       address: addresses.IntentRegistry,
       abi: abi('IntentRegistry'),
       functionName: 'usedNonce',
-      args: [owner, nonce],
-    });
-    if (!used) break;
-    nonce += 1n;
-    if (tries === 63) throw new JudgeControlError('Could not find an unused nonce for this participant.', 409);
-  }
+      args: [owner, candidate],
+    }) as boolean;
+  });
 
   const next: Intent = { ...current, maxNetPay, nonce };
   const newHash = hashIntent(next);

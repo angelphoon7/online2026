@@ -172,6 +172,29 @@ the whole HTTP request, including chain reads and simulation, took 19.101 second
 [Full response](docs/checks/graph-solve-pool.json) · [Selected-intent response](docs/checks/graph-solve-selected.json)
 · [Server logs](docs/checks/graph-solver-server.txt) · [Reproduce Step 4-A / 6-C](docs/GRAPH_4A_6C.md).
 
+### Live Apply budget evidence (Steps 6-D / 8 / 10-B)
+
+On September 12, 2026, a real browser click changed the signed limit from **0 to −12 USDC**
+by revoking the old intent and committing a replacement with nonce **79**.
+
+| Transaction | Block | Receipt |
+|---|---:|---|
+| Revoke old intent | 61770769 | [0x0c477d9e…b3430](https://testnet.arcscan.app/tx/0x0c477d9ea7156fb418c17464f3fb49fd83b06d14bf38bafccbc9e570284b3430) |
+| Commit new intent | 61770778 | [0x3d9fd3d3…3000a](https://testnet.arcscan.app/tx/0x3d9fd3d353e564b9a48add42266480d059ad78ce820f9f07de81516b6e93000a) |
+
+New intent: `0xa8304a351bbbe67ffc6d767114e57eb6504f96339aec8166602de1f8ada30488`.
+The drawer followed this hash automatically, displayed **Indexing block #61770778** for
+**3.018 seconds**, and hid the old pool and answer until the refreshed snapshot passed its
+receipt floor. The answer changed from `SETTLEABLE` at **61770753** to
+`NOT_FOUND_WITHIN_BOUND` at **61771245**, with a working budget relaxation in its evidence.
+The latter answer was captured in a read-only retry after one HTTP 503; neither transaction
+was repeated. Both original clips run at 1× speed.
+
+[Receipts, screenshots and recording details](docs/GRAPH_APPLY_BUDGET.md) ·
+[Assertions](docs/checks/graph-budget/summary.json) ·
+[Transaction/indexing clip](docs/checks/graph-budget/apply-budget.webm) ·
+[Answer/evidence retry clip](docs/checks/graph-budget/read-only-retry.webm).
+
 ### Run locally
 
 Install Node.js 22 or newer, then install dependencies from the repository root:

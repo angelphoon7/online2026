@@ -1,0 +1,303 @@
+{
+  "startedAt": "2026-09-12T18:25:21.633Z",
+  "mode": "--verify",
+  "endpoint": "https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1",
+  "chainId": 5042002,
+  "mocked": false,
+  "videoSpeed": 1,
+  "modelConfigured": false,
+  "preflight": {
+    "transactionNonce": 340,
+    "quotedGasPrice": "20250000000"
+  },
+  "requests": [
+    {
+      "at": "2026-09-12T18:25:23.612Z",
+      "method": "GET",
+      "path": "/api/market?minBlock=0"
+    },
+    {
+      "at": "2026-09-12T18:25:24.385Z",
+      "method": "GET",
+      "path": "/api/demo/budget?minBlock=0"
+    },
+    {
+      "at": "2026-09-12T18:25:24.788Z",
+      "method": "GET",
+      "path": "/api/agent/diagnose/0xa8304a351bbbe67ffc6d767114e57eb6504f96339aec8166602de1f8ada30488?minBlock=0"
+    },
+    {
+      "at": "2026-09-12T18:25:33.930Z",
+      "method": "POST",
+      "path": "/api/agent/ask",
+      "body": {
+        "intentHash": "0xa8304a351bbbe67ffc6d767114e57eb6504f96339aec8166602de1f8ada30488",
+        "question": "Why can't this intent settle?",
+        "minBlock": "61771227"
+      }
+    }
+  ],
+  "observations": [
+    {
+      "at": "2026-09-12T18:25:23.136Z",
+      "live": "",
+      "answer": "",
+      "workspaceHidden": true
+    },
+    {
+      "at": "2026-09-12T18:25:24.383Z",
+      "live": "",
+      "answer": "",
+      "workspaceHidden": false
+    },
+    {
+      "at": "2026-09-12T18:25:24.785Z",
+      "live": "READING THE POOL",
+      "answer": "",
+      "workspaceHidden": false
+    },
+    {
+      "at": "2026-09-12T18:25:33.453Z",
+      "live": "LIVE · ARC TESTNET BLOCK #61771227 · VIA THE GRAPH",
+      "answer": "",
+      "workspaceHidden": false
+    },
+    {
+      "at": "2026-09-12T18:25:43.143Z",
+      "live": "LIVE · ARC TESTNET BLOCK #61771245 · VIA THE GRAPH",
+      "answer": "At Arc Testnet block #61771245, no settlement was found within the search bound. The smallest change among those tried: raise the signed payment limit — that produced a 2-participant reshuffle. Signing a new intent is what would make it real; nothing moves until then.",
+      "workspaceHidden": false
+    }
+  ],
+  "before": {
+    "answer": "At Arc Testnet block #61770753, a reshuffle including this intent was found, with 2 participants (1 counterparty), with no payment either way. Use Propose and settle to submit it; the contract re-checks every signed condition before it executes.",
+    "guardFallback": true,
+    "guardReason": "NO_MODEL_CONFIGURED",
+    "evidence": [
+      {
+        "tool": "diagnose_intent",
+        "input": {
+          "intentHash": "0xf7387010926792738ba5c0b1048ec46e5aa3197ba8ef81ca7976b8864d31baf0"
+        },
+        "output": {
+          "block": "61770753",
+          "timestamp": "1789237280",
+          "intent": "0xf7387010926792738ba5c0b1048ec46e5aa3197ba8ef81ca7976b8864d31baf0",
+          "relaxations": [],
+          "bounds": {
+            "maxParticipants": 4,
+            "maxCandidates": 100,
+            "timeoutMs": 2000,
+            "budgetCapUsdc": 100,
+            "groupSearchCap": 40
+          },
+          "counterpartyTx": {
+            "0x4a599d033e1295e93bbfb5fea17ab44b2cbad9fd": "0x3622f7d465af2a873277fb20efe63f7fac225cd72c598efdb32c0e9550490c59",
+            "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd": "0xa31c56bf1ed8aa34029760fd4f70bc3dab60b0032e4fb0e6419222ddcfa8f2db"
+          },
+          "status": "SETTLEABLE",
+          "settleable": {
+            "counterparties": [
+              "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd"
+            ],
+            "participantCount": 2,
+            "targetNetPay": "0",
+            "receives": [
+              "36",
+              "37"
+            ]
+          },
+          "runtimeMs": 249.39699999999993
+        }
+      }
+    ],
+    "block": "61770753",
+    "model": null
+  },
+  "change": {
+    "revokeTx": "0x0c477d9ea7156fb418c17464f3fb49fd83b06d14bf38bafccbc9e570284b3430",
+    "commitTx": "0x3d9fd3d353e564b9a48add42266480d059ad78ce820f9f07de81516b6e93000a",
+    "commitBlock": "61770778",
+    "newHash": "0xa8304a351bbbe67ffc6d767114e57eb6504f96339aec8166602de1f8ada30488",
+    "oldHash": "0xf7387010926792738ba5c0b1048ec46e5aa3197ba8ef81ca7976b8864d31baf0",
+    "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+    "previousMaxNetPay": "0",
+    "maxNetPay": "-12000000",
+    "nonce": "79"
+  },
+  "readOnlyContinuationOf": "live.json",
+  "after": {
+    "answer": "At Arc Testnet block #61771245, no settlement was found within the search bound. The smallest change among those tried: raise the signed payment limit — that produced a 2-participant reshuffle. Signing a new intent is what would make it real; nothing moves until then.",
+    "guardFallback": true,
+    "guardReason": "NO_MODEL_CONFIGURED",
+    "evidence": [
+      {
+        "tool": "diagnose_intent",
+        "input": {
+          "intentHash": "0xa8304a351bbbe67ffc6d767114e57eb6504f96339aec8166602de1f8ada30488"
+        },
+        "output": {
+          "block": "61771245",
+          "timestamp": "1789237528",
+          "intent": "0xa8304a351bbbe67ffc6d767114e57eb6504f96339aec8166602de1f8ada30488",
+          "relaxations": [
+            {
+              "change": "maxNetPay->cap",
+              "found": true,
+              "counterparties": [
+                "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd"
+              ],
+              "participantCount": 2,
+              "targetNetPay": "0",
+              "receives": [
+                "36",
+                "37"
+              ],
+              "binding": true
+            },
+            {
+              "change": "mustBeAdjacent=false",
+              "found": false,
+              "counterparties": [],
+              "participantCount": null,
+              "targetNetPay": null,
+              "receives": []
+            },
+            {
+              "change": "mustShareSection=false",
+              "found": false,
+              "counterparties": [],
+              "participantCount": null,
+              "targetNetPay": null,
+              "receives": []
+            },
+            {
+              "change": "mustShareSession=false",
+              "found": false,
+              "counterparties": [],
+              "participantCount": null,
+              "targetNetPay": null,
+              "receives": []
+            }
+          ],
+          "bounds": {
+            "maxParticipants": 4,
+            "maxCandidates": 100,
+            "timeoutMs": 2000,
+            "budgetCapUsdc": 100,
+            "groupSearchCap": 40
+          },
+          "counterpartyTx": {
+            "0x4a599d033e1295e93bbfb5fea17ab44b2cbad9fd": "0x3622f7d465af2a873277fb20efe63f7fac225cd72c598efdb32c0e9550490c59",
+            "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd": "0x3d9fd3d353e564b9a48add42266480d059ad78ce820f9f07de81516b6e93000a"
+          },
+          "status": "NOT_FOUND_WITHIN_BOUND",
+          "supply": {
+            "stages": [
+              {
+                "stage": "offeredByOthers",
+                "remaining": 2
+              },
+              {
+                "stage": "eventId",
+                "remaining": 2
+              },
+              {
+                "stage": "session",
+                "remaining": 2
+              },
+              {
+                "stage": "section",
+                "remaining": 2
+              },
+              {
+                "stage": "cohesiveGroup",
+                "remaining": 2
+              }
+            ],
+            "firstZero": null,
+            "blockedAt": null,
+            "largestGroup": 2,
+            "need": 2,
+            "truncated": false
+          },
+          "demand": {
+            "perTicket": [
+              {
+                "ticket": "36",
+                "acceptingIntents": 1
+              },
+              {
+                "ticket": "37",
+                "acceptingIntents": 1
+              }
+            ],
+            "unwanted": []
+          },
+          "runtimeMs": 8741.6742
+        }
+      }
+    ],
+    "block": "61771245",
+    "model": null
+  },
+  "receipts": [
+    {
+      "hash": "0x0c477d9ea7156fb418c17464f3fb49fd83b06d14bf38bafccbc9e570284b3430",
+      "blockNumber": "61770769",
+      "status": "success",
+      "gasUsed": "30952",
+      "effectiveGasPrice": "20250000000",
+      "feeUsdc": "0.000626778"
+    },
+    {
+      "hash": "0x3d9fd3d353e564b9a48add42266480d059ad78ce820f9f07de81516b6e93000a",
+      "blockNumber": "61770778",
+      "status": "success",
+      "gasUsed": "104999",
+      "effectiveGasPrice": "20250000000",
+      "feeUsdc": "0.00212622975"
+    }
+  ],
+  "decodedIntent": {
+    "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+    "offered": [
+      "36",
+      "37"
+    ],
+    "eventId": 1,
+    "sessionMask": "3",
+    "sectionMask": "15",
+    "exactCount": 2,
+    "mustShareSession": true,
+    "mustShareSection": true,
+    "mustBeAdjacent": true,
+    "maxNetPay": "-12000000",
+    "deadline": "1789790400",
+    "nonce": "79"
+  },
+  "indexed": {
+    "old": {
+      "id": "0xf7387010926792738ba5c0b1048ec46e5aa3197ba8ef81ca7976b8864d31baf0",
+      "state": "REVOKED",
+      "closedTx": "0x0c477d9ea7156fb418c17464f3fb49fd83b06d14bf38bafccbc9e570284b3430"
+    },
+    "next": {
+      "id": "0xa8304a351bbbe67ffc6d767114e57eb6504f96339aec8166602de1f8ada30488",
+      "state": "LIVE",
+      "nonce": "79",
+      "maxNetPay": "-12000000",
+      "committedTx": "0x3d9fd3d353e564b9a48add42266480d059ad78ce820f9f07de81516b6e93000a"
+    },
+    "_meta": {
+      "block": {
+        "number": 61771270
+      },
+      "hasIndexingErrors": false,
+      "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL"
+    }
+  },
+  "status": "PASS_REAL_TRANSACTIONS_AND_BROWSER",
+  "finishedAt": "2026-09-12T18:25:47.032Z",
+  "video": "docs/checks/graph-budget/read-only-retry.webm"
+}
