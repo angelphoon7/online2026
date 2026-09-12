@@ -43,8 +43,11 @@ Every indexed intent is re-hashed against its commitment. Post-transaction queri
 an indexed block at least as recent as the receipt. Before settlement the backend rereads
 chain state and simulates; the contract validates again on execution. Hypotheticals return
 `submittable: false` and contain no transaction calldata. The agent cannot sign or submit.
-Payment capacity and closed-intent lookups have separate read timing, documented under
-[current limitations](../README.md#graph-limitations).
+Pool data, USDC balances/allowances and closed-intent lookups use the same exact snapshot
+block. Historical read failures return an error instead of substituting newer state.
+The guard checks the exact block prefix and complete supported passages, including payment
+direction and hypothetical qualifications. [Block evidence](GRAPH_7A_7D.md) and
+[real-provider acceptance](GRAPH_7G_7H.md) document the measured behavior.
 
 ## Developer feedback — observed facts only
 
@@ -58,8 +61,13 @@ Payment capacity and closed-intent lookups have separate read timing, documented
   than silently showing the pre-transaction pool.
 - Arc's public RPC rejects batching and can rate-limit parity reads. Our checker uses
   bounded concurrency and backoff. This is an RPC observation, not a Studio defect.
-- Earlier measurements sampled index/head distance, not receipt-to-index wall time. We do
-  not present their inferred seconds as transaction-indexing latency. [Measurement scope](graph-acceptance.md).
+- A real transfer was observed in the index after **7.294 seconds**; the separate Apply budget
+  browser indexing phase lasted **3.018 seconds**. These are dated individual observations
+  including polling/HTTP time. Earlier head-distance samples are not transaction latency.
+  [Measurement scope](graph-acceptance.md), [budget receipts and browser transition](GRAPH_APPLY_BUDGET.md).
+- Four real Anthropic scenarios passed with **eight provider calls** and no guard fallback.
+  Each answer's reads and evidence share its block. This is local handler-level acceptance,
+  not verification of a public hosted deployment. [Provider receipts](checks/graph-agent-model.json).
 
 ## Links and review path
 
@@ -73,6 +81,9 @@ Payment capacity and closed-intent lookups have separate read timing, documented
 | Contract audit | [C1–C6](graph-audit.txt) |
 | Checks and gaps | [Step 11 review](STEP_11_REVIEW.md) |
 | Live no-model diagnosis | [HTTP evidence at block 61756153](checks/step-11-diagnose.json) |
+| Real model narration | [Four scenarios and provider receipts](checks/graph-agent-model.json) |
+| Budget replacement and drawer | [Two real transactions and captures](GRAPH_APPLY_BUDGET.md) |
+| Teammate configuration | [Tracked template](../.env.example), [setup](../README.md#run-locally) |
 | Graph recording guide | [Run of show](DEMO_GRAPH.md) |
 | Arc execution proof | [Confirmed settlement transactions](../README.md#confirmed-arc-testnet-settlements) |
 | Architecture | [PNG](diagrams/architecture.png), [SVG](diagrams/architecture.svg) |
@@ -84,15 +95,19 @@ Payment capacity and closed-intent lookups have separate read timing, documented
   environment, commands and limitations.
 - [x] Public endpoint and a current read-only parity result are recorded.
 - [x] AI assistance is disclosed with file paths and planning artifacts indexed.
+- [x] Tracked environment template and non-overwriting setup command are available.
+- [x] Local real Anthropic acceptance passed; all three tools and conflicting instructions
+  are covered with provider provenance.
+- [x] Apply budget revoke/commit receipts and the drawer moving to the new hash are recorded
+  in the separate live browser proof.
+- [ ] Complete authenticated Studio status and full available warning/error log review.
 - [ ] Confirm Start Fresh eligibility and complete any earlier AI-tool/asset attribution
   that cannot be established from this workspace.
 - [ ] Commit the reviewed implementation and documentation to the public repository;
   verify access from a signed-out browser and record its URL in the submission form.
 - [ ] Add the hosted frontend/backend URL. Localhost is a local review option, not a hosted demo.
-- [ ] Check hosted model narration with the configured API key. No-key diagnosis is tested
-  separately and does not establish that a live model request works.
-- [ ] Record the actual budget-change revoke/commit receipts and the drawer moving to the
-  new hash. The rehearsal script is read-only; its hypothetical output is not this proof.
+- [ ] Check model narration on the hosted URL. Local provider acceptance does not establish
+  the hosted credentials, ingress, rate limits or persistence.
 - [ ] Upload the demo and presentation, then complete the actual partner selections.
 
 The event asks for AI attribution and the specs/prompts used in a spec-driven workflow.

@@ -5,28 +5,32 @@ import { createServer, request as httpRequest, type OutgoingHttpHeaders } from '
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { loadEnvFile } from 'node:process';
+import { dirname } from 'node:path';
+import { RedisRestStore } from '../server/durable-store';
 
 // --credentials reads a PRIVATE {url,token} test file, not signing credentials.
 const args = process.argv.slice(2);
-const credentialsAt = args.indexOf('--credentials');
-const outputAt = args.indexOf('--output');
-if (args.some((arg, i) => ![credentialsAt, credentialsAt + 1, outputAt, outputAt + 1].filter(n => n >= 0).includes(i)) || credentialsAt >= 0 && !args[credentialsAt + 1] || outputAt >= 0 && !args[outputAt + 1]) throw new Error('Use npm run agent:check:rate -- [--credentials PRIVATE.json] [--output report.json]');
+const options = new Map<string, string>();
+for (let i = 0; i < args.length; i += 2) {
+  if (!['--credentials', '--output'].includes(args[i]) || !args[i + 1] || args[i + 1].startsWith('--') || options.has(args[i])) throw new Error('Use npm run agent:check:rate -- [--credentials PRIVATE.json] [--output report.json]');
+  options.set(args[i], args[i + 1]);
+}
 let credentials: { url: string; token: string };
-if (credentialsAt >= 0) credentials = JSON.parse(fs.readFileSync(args[credentialsAt + 1], 'utf8'));
+if (options.has('--credentials')) credentials = JSON.parse(fs.readFileSync(options.get('--credentials')!, 'utf8'));
 else {
   for (const file of ['.env.local', '.env']) if (fs.existsSync(file)) loadEnvFile(file);
   credentials = { url: process.env.REDIS_REST_URL ?? '', token: process.env.REDIS_REST_TOKEN ?? '' };
 }
 if (!credentials.url || !credentials.token) throw new Error('Configure Redis REST credentials first. This check does not accept in-memory Redis substitutes.');
-const output = outputAt >= 0 ? args[outputAt + 1] : '.data/agent-rate-limit.json';
+const output = options.get('--output') ?? '.data/agent-rate-limit.json';
 const workerFile = fileURLToPath(new URL('./lib/agent-rate-worker.mts', import.meta.url));
-const namespace = 'rate-acceptance-' + randomUUID();
+const namespace = 'rate-acceptance-' + randomUUID().replaceAll('-', '');
 const children = new Set<ChildProcess>();
 type Worker = { child: ChildProcess; port: number; pid: number };
 async function worker(source: 'trusted-proxy' | 'vercel'): Promise<Worker> {
   // Signing/model secrets are not needed and are deliberately excluded from child configuration.
   const base = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/PRIVATE_KEY|API_KEY|REDIS|JUDGE_ACCESS_CODE/.test(k)));
-  const child = fork(workerFile, [], { execArgv: ['--import', 'tsx', '--conditions=react-server'], env: { ...base, NODE_ENV: 'production', VERCEL: source === 'vercel' ? '1' : '', AGENT_IP_SOURCE: 'auto', AGENT_TRUST_PROXY: source === 'trusted-proxy' ? 'true' : 'false', AGENT_RATE_LIMIT_STORE: 'redis', REDIS_REST_URL: credentials.url, REDIS_REST_TOKEN: credentials.token, STORAGE_NAMESPACE: namespace + '-' + source }, silent: true });
+  const child = fork(workerFile, [], { execArgv: ['--import', 'tsx', '--conditions=react-server'], env: { ...base, NODE_ENV: 'production', VERCEL: source === 'vercel' ? '1' : '', AGENT_IP_SOURCE: 'auto', AGENT_TRUST_PROXY: source === 'trusted-proxy' ? 'true' : 'false', AGENT_RATE_LIMIT_STORE: 'redis', AGENT_ASK_TIMEOUT_MS: '60000', AGENT_DIAGNOSE_TIMEOUT_MS: '30000', REDIS_REST_URL: credentials.url, REDIS_REST_TOKEN: credentials.token, STORAGE_NAMESPACE: namespace + '-' + source }, silent: true });
   children.add(child);
   return await new Promise((resolve, reject) => {
     const timeout = setTimeout(() => { child.kill(); reject(new Error('Acceptance worker did not start')); }, 20_000);
@@ -35,8 +39,16 @@ async function worker(source: 'trusted-proxy' | 'vercel'): Promise<Worker> {
   });
 }
 const report: Record<string, unknown> = { checkedAt: new Date().toISOString(), backend: 'real Redis REST; atomic Lua with Redis server time', topology: 'two independent Node processes using actual Agent route handlers behind a socket-IP-overwriting loopback proxy', namespace, actualVercelIngressVerified: false, graphModelOrChainCalls: 0, modes: [] };
+function saveReport() {
+  fs.mkdirSync(dirname(output), { recursive: true });
+  fs.writeFileSync(output, JSON.stringify(report, null, 2) + '\n');
+}
 try {
+  report.stage = 'redis-preflight';
+  const clock = await new RedisRestStore(credentials.url, credentials.token, namespace).evaluate<unknown>('return redis.call("TIME")', [], []);
+  assert.ok(Array.isArray(clock) && clock.length === 2, 'Real Redis TIME must be available through EVAL');
   for (const source of ['trusted-proxy', 'vercel'] as const) {
+    report.stage = source;
     let workers = await Promise.all([worker(source), worker(source)]), next = 0;
     const seen = new Set<string>();
     const proxy = createServer((incoming, outgoing) => {
@@ -56,7 +68,7 @@ try {
         response.resume();
         response.on('end', () => {
           try {
-            assert.equal(response.headers['x-agent-ratelimit-store'], 'redis');
+            assert.equal(response.headers['x-agent-ratelimit-store'], 'redis', `Agent returned HTTP ${response.statusCode}; expected shared Redis admission`);
             assert.equal(response.headers['x-agent-ip-source'], source);
             seen.add(String(response.headers['x-test-worker']));
             resolve({ status: response.statusCode!, retry: Number(response.headers['retry-after'] ?? 0) });
@@ -92,10 +104,11 @@ try {
       console.log('PASS ' + source + ': actual 60-second window recovered');
     } finally { proxy.closeAllConnections(); await new Promise<void>(resolve => proxy.close(() => resolve())); for (const w of workers) w.child.kill(); }
   }
-  fs.mkdirSync(fileURLToPath(new URL('../.data/', import.meta.url)), { recursive: true });
-  fs.writeFileSync(output, JSON.stringify({ ...report, passed: true }, null, 2) + '\n');
+  report.stage = 'complete'; report.passed = true; saveReport();
   console.log('PASS: report saved to ' + output + '. This does not certify an undeployed Vercel ingress.');
 } catch (error) {
-  console.error(error instanceof Error ? error.message.replaceAll(credentials.token, '[redacted]').replaceAll(credentials.url, '[Redis endpoint]') : 'Rate-limit acceptance failed');
+  report.passed = false;
+  report.error = error instanceof Error ? error.message.replaceAll(credentials.token, '[redacted]').replaceAll(credentials.url, '[Redis endpoint]') : 'Rate-limit acceptance failed';
+  saveReport(); console.error(report.error);
   process.exitCode = 1;
 } finally { for (const child of children) child.kill(); }

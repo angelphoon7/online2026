@@ -35,12 +35,16 @@ group selection linked to the new hash.
 ```sh
 npm ci
 npm --prefix solver ci
+npm run setup:env
 npm run judge:setup
 npm run dev
 ```
 
-`judge:setup` adds missing judging settings to ignored `.env.local`, including a random
-access code and the exact hashes from `deployments/circle-inventory-sep12.json`. It does
+`setup:env` copies the tracked [template](../.env.example) to `.env.local` without overwriting
+an existing file. Its defaults enable public reading with empty credential fields and keep
+signing features disabled. `judge:setup` fills empty placeholders and adds missing judging
+settings to ignored `.env.local`, including a random access code and the exact hashes from
+`deployments/circle-inventory-sep12.json`. It does
 not print the code, replace existing settings, create wallets or send transactions. An
 explicit `false` remains `false`; set `JUDGE_CONTROLS_ENABLED=true` and
 `DEMO_TICKETS_ENABLED=true` if enabling those features. Restart after editing environment
@@ -67,6 +71,9 @@ READ_SOURCE=graph
 SUBGRAPH_URL=https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1
 STORAGE_BACKEND=redis
 STORAGE_NAMESPACE=reshuffle-arc-testnet
+AGENT_RATE_LIMIT_STORE=redis
+# Use vercel on Vercel; trusted-proxy requires an ingress that overwrites client IPs.
+AGENT_IP_SOURCE=trusted-proxy
 REDIS_REST_URL=<your HTTPS REST endpoint>
 REDIS_REST_TOKEN=<your private REST token>
 JUDGE_CONTROLS_ENABLED=true
@@ -97,9 +104,19 @@ The directory must survive releases/restarts and be writable by that backend. Or
 production local files are rejected unless explicitly configured. File storage is always
 rejected on Vercel. Do not point a multi-region service at unrelated local directories.
 
-Agent quotas currently protect each process; configure a shared ingress rate limit for
-multi-instance model endpoints. Enable `AGENT_TRUST_PROXY` only if the ingress overwrites
-the client-IP header. This is separate from the shared issuer, challenge and judge quotas.
+Agent admission uses atomic Redis windows shared by the same storage namespace. Redis is
+required in production even when evidence uses a persistent file volume. Set
+`AGENT_IP_SOURCE=vercel` on Vercel, or `trusted-proxy` behind an ingress that overwrites
+`X-Forwarded-For` with exactly one client IP and prevents direct app access. `auto` selects
+Vercel on that runtime or the trusted proxy when `AGENT_TRUST_PROXY=true`; unidentified
+production callers and unavailable Redis return `503 AgentRateLimitUnavailable` before
+Graph/model work. Development-only memory counters do not establish hosted behavior.
+[Current policy and validation scope](GRAPH_7I.md).
+
+Before claiming deployment acceptance, run the [two-process Redis and public-IP checks](GRAPH_7I.md#deployment-acceptance).
+The public-IP check needs two real networks, such as broadband and a mobile hotspot;
+changing a forwarding header does not create a second client. No Vercel deployment has
+been made as part of this rate-limit change.
 
 ## Move existing local data
 
@@ -184,7 +201,8 @@ npm start
 npm run judge:check -- https://your-public-app.example
 ```
 
-`GET /api/health` checks shared-storage write/read, live Graph data, index lag (at most 120
+`GET /api/health` checks trusted Agent client identity and Redis admission, shared-storage
+write/read, live Graph data, index lag (at most 120
 seconds for this readiness policy), group availability, judge access configuration,
 controlled signers' gas balances, unfinished signing reservations and the registered issuer. Its 0.2-USDC balance check is
 a readiness threshold, not a transaction cost estimate. It returns 503 if a required

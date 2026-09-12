@@ -26,18 +26,21 @@ npm.cmd run start -- --port 3101
 | `POST /api/agent/ask` | `{ "intentHash": "0x…", "question": "Why can't this intent settle?", "minBlock": "N" }`. Model tool selection/narration when configured, deterministic baseline diagnosis otherwise. |
 | `GET /api/evidence/{id}` | Returns the saved evidence, including source block, considered hashes, excluded candidates, chosen proposal, search caps and simulation result. |
 | `POST /api/evidence/{id}/receipt` | Accepts `{ "transactionHash": "0x…" }`. Checks chain ID, successful receipt, exact destination/calldata, `Settled` event and SETTLED registry states before attaching confirmation. |
-| `GET /api/health` | Checks storage, live Graph freshness, prepared groups, restricted judge access and testnet signer/issuer availability. Returns 503 if a required capability is unavailable. |
+| `GET /api/health` | Checks Agent IP/shared admission, storage, live Graph freshness, prepared groups, restricted judge access and testnet signer/issuer availability. Returns 503 if a required capability is unavailable. |
 | `GET /api/demo/scenarios?minBlock=N` | Current shared catalog with Graph-derived group availability, signed deadlines, exclusions and replacement hashes. Does not claim a successful match. |
 | `GET/POST/DELETE /api/demo/session` | Inspect, create and revoke a one-hour HttpOnly judge session. Login uses the private access code; writes require the same Origin. |
 
-Both Agent APIs apply bounded sliding-window quotas: ask 12/minute and diagnose 30/minute
-per client per instance. Excess requests return `429 AgentRateLimited` with `Retry-After`.
+Both Agent APIs apply sliding-window quotas: ask 12/minute and diagnose 30/minute per IP.
+Production uses atomic Redis admission across instances, retaining counters on worker
+restart. Excess requests return `429 AgentRateLimited` with `Retry-After`.
 
 Their overall deadlines are 60 and 30 seconds respectively, including body/Graph/RPC/model
-reads, solver work and fallback; timeout returns `504 AgentRequestTimeout`. Cancellation is
-propagated downstream. By default callers share an unidentified bucket; only enable
-`AGENT_TRUST_PROXY=true` behind an ingress that overwrites `X-Forwarded-For`. Multiple
-instances need shared rate-limit enforcement. [Step 7-I configuration and tests](../docs/GRAPH_7I.md).
+reads, Redis admission, solver work and fallback; timeout returns `504 AgentRequestTimeout`.
+Cancellation propagates downstream. Vercel automatically uses `x-vercel-forwarded-for`;
+other production hosts need `AGENT_IP_SOURCE=trusted-proxy` and an ingress that overwrites
+`X-Forwarded-For` with one verified IP and prevents direct access. Missing identity or Redis
+returns `503 AgentRateLimitUnavailable`. Development without Redis retains local counters.
+[Step 7-I configuration and deployment acceptance](../docs/GRAPH_7I.md).
 
 Agent candidate evidence uses `counterpartyIntents: { intentHash, owner, committedTx }[]`
 instead of the earlier owner-keyed `counterpartyTx` map. Each candidate retains its actual
@@ -96,7 +99,8 @@ fallback evidence is labelled separately. [Step 7-G / H checks and live acceptan
 Budget and revoke routes require an authenticated judge session and explicit hash scope,
 including in development. Knowing an intent hash or the server having its owner's key is
 not sufficient. `JUDGE_CONTROLS_ENABLED=false` disables the controls in development too.
-`npm run judge:setup` generates missing private local access settings. Replacements inherit
+`npm run judge:setup` fills empty template placeholders or adds missing private local access
+settings, preserving existing codes and explicit false flags. Replacements inherit
 their configured root's permission; removing the root removes that permission.
 
 Issuer and judge actions coordinate by chain and signer using an expiring worker lease

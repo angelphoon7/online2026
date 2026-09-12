@@ -197,8 +197,10 @@ query InspectPool($minBlock: Int!) {
 }
 ```
 
-The application's complete [PoolSnapshot query](shared/graph/queries.ts) takes
-`{ "minBlock": 0, "first": 1000 }` and includes every signed field needed for hash binding.
+The application's [PoolSnapshot query](shared/graph/queries.ts) reads one page and includes
+every signed field needed for hash binding. Use `getPoolSnapshot({ minBlock: 0n })` for the
+complete pool: it supplies independent cursors and pins later pages to the first block hash.
+The 20-row Studio query above is only an inspection sample.
 
 ### Verified Graph solver and indexing measurement
 
@@ -255,12 +257,15 @@ Install Node.js 22 or newer, then install dependencies from the repository root:
 ```sh
 npm ci
 npm --prefix solver ci
+npm run setup:env
 ```
 
-Create `.env.local` only if it does not already exist. Copy the needed settings from
-[.env.example](.env.example); keep existing wallet credentials private. `.env.example` is a
-template, not the application's active settings. Next loads `.env.local` ahead of `.env`;
-CLI scripts may load `.env` explicitly, so keep shared selections consistent.
+`setup:env` copies the tracked [.env.example](.env.example) to `.env.local` only when the
+destination does not exist. Existing settings are preserved. The template contains public
+testnet settings and empty credential fields; it is not loaded by the application itself.
+Next loads `.env.local` ahead of `.env`; CLI writers may load `.env` and `.env.seed`
+explicitly, so keep shared selections consistent. Teammates can read the market without
+receiving your private files; signing features need separately configured credentials.
 
 For public Graph reads and no-model diagnosis, these settings suffice; no wallet key is needed:
 
@@ -298,7 +303,7 @@ Each question selects one indexed block N. USDC balances and allowances are read
 must belong to the same N across the baseline and every what-if. Unavailable historical
 state returns an error instead of substituting newer data. [Step 7-A / D implementation
 and live checks](docs/GRAPH_7A_7D.md).
-The built app returned HTTP 200 with `SETTLEABLE` at block 61756153 in the current
+The built app returned HTTP 200 with `SETTLEABLE` at block 61756153 in the recorded
 [live diagnosis check](docs/checks/step-11-diagnose.json), without invoking a model or signing.
 For a production server use `npm run build` and `npm start`; configure shared Redis REST
 storage or an explicitly enabled persistent volume. [Hosting and data migration](docs/JUDGING_SETUP.md).
@@ -311,7 +316,7 @@ storage or an explicitly enabled persistent volume. [Hosting and data migration]
 | `NEXT_PUBLIC_DEPLOYMENT` | Next frontend and backend chain configuration | Selects generated public deployment record at build time; keep equal to `DEPLOYMENT` |
 | `SUBGRAPH_URL` | Backend and shared Graph client | Required for Graph reads; set to the versioned query endpoint above |
 | `SUBGRAPH_API_KEY` | Backend | Optional query credential; never a `NEXT_PUBLIC_` value |
-| `SUBGRAPH_DEPLOY_KEY` | Deployment CLI | Publishing only; not needed to run the app or query the existing subgraph |
+| `SUBGRAPH_DEPLOY_KEY` | Deployment CLI | Deploying versions to Studio; not needed to run the app or query the existing subgraph |
 | `READ_SOURCE` | Backend market and solver discovery | `graph` or `rpc`; defaults to `graph` when `SUBGRAPH_URL` is set, otherwise `rpc`. Local Anvil uses `rpc` |
 | `ARC_RPC` | Backend and CLI | RPC used for chain verification, capacity and simulation; defaults to selected deployment RPC in the backend |
 | `ARC_CHAIN_ID` | Backend consistency check / CLI | If set, must agree with the deployment; Arc Testnet is `5042002` |
@@ -320,17 +325,22 @@ storage or an explicitly enabled persistent volume. [Hosting and data migration]
 | `AGENT_MODEL` | Agent narration | Defaults to `claude-sonnet-5`; verify access for the hosted account |
 | `AGENT_ASK_TIMEOUT_MS` | Agent request control | Overall ask deadline; default/max `60000`, positive integer overrides may shorten it |
 | `AGENT_DIAGNOSE_TIMEOUT_MS` | Agent request control | Overall diagnosis deadline; default/max `30000`, positive integer overrides may shorten it |
-| `AGENT_TRUST_PROXY` | Agent client identity | Default off, callers share a bucket. Set `true` only behind an ingress that overwrites `X-Forwarded-For` with the client IP |
+| `AGENT_TRUST_PROXY` | Legacy Agent proxy option | `true` selects a controlled proxy in non-Vercel `auto` mode; Vercel automatically uses its own header |
+| `AGENT_RATE_LIMIT_STORE` | Agent admission | `auto` selects Redis in production or when its URL is set; memory is development-only. Production requires Redis even with persistent file storage |
+| `AGENT_IP_SOURCE` | Agent client identity | `auto` uses Vercel's platform IP. Other production hosts require `trusted-proxy` and an ingress that overwrites `X-Forwarded-For` with one verified IP |
 | `BUDGET_CAP_USDC` | Deterministic diagnosis | BUDGET relaxation ceiling, default `100`; USDC has 6 settlement decimals |
 | `JUDGE_CONTROLS_ENABLED` | Testnet judge routes | `true` enables hosted budget/revoke controls; enabled by default in development. Requires controlled participant keys |
 | `JUDGE_ACCESS_CODE` | Judge session route | Private access code of at least 24 characters; setup generates one. Sessions expire after one hour |
 | `JUDGE_ALLOWED_INTENT_HASHES` | Judge authorization | Comma-separated exact editable intent hashes; recorded budget replacements inherit their root's permission |
 | `STORAGE_BACKEND` | Evidence, claims, sessions, signing jobs and demo catalog | `redis` for hosted instances; `file` for development or an explicit persistent-volume backend |
-| `REDIS_REST_URL`, `REDIS_REST_TOKEN` | Server storage | HTTPS Redis REST endpoint and private bearer token; never exposed to the browser |
+| `REDIS_REST_URL`, `REDIS_REST_TOKEN` | Server storage and Agent admission | HTTPS Redis REST endpoint and private bearer token; required for production Agent APIs, including persistent-file hosts; never exposed to the browser |
 | `STORAGE_NAMESPACE` | Server storage | Stable namespace across releases; default `reshuffle-arc-testnet` |
 | `STORAGE_DIRECTORY`, `ALLOW_PERSISTENT_FILE_STORAGE` | File backend only | Explicit persistent directory and `true` opt-in for a production Node host; file storage is rejected on Vercel |
 | `DEMO_TICKETS_ENABLED` | Testnet issuer route | Enables hosted free-ticket claims; enabled by default in development |
 | `DEMO_ISSUER_PRIVATE_KEY`, `PRIVATE_KEY`, `SEED_*_PRIVATE_KEY` | Optional issuer/judge/local transaction tooling | Signing credentials, never public. Seed keys are read from `.env.seed`; none is required for ordinary public reads or diagnosis |
+| `USDC_ADDRESS`, `DEPLOYER_ADDRESS` | Legacy Arc transaction CLI | USDC must agree with the deployment; deployer address must match `PRIVATE_KEY`. They do not replace the Next app's contract manifest |
+| `NEXT_PUBLIC_SESSION_0_START`, `NEXT_PUBLIC_SESSION_1_START` | Browser event schedule | Demo sessions from the template; deadlines are eight hours before the selected session |
+| `ARC_MAINNET_RPC`, `ARC_MAINNET_PRIVATE_KEY` | Separate mainnet CLI only | Empty for testnet; configure only after the mainnet release gates are reviewed |
 
 The plan's `GRAPH_API_KEY`, `ARC_RPC_URL` and `NEXT_PUBLIC_READ_SOURCE` are examples; this
 implementation uses **`SUBGRAPH_API_KEY`, `ARC_RPC` and `READ_SOURCE`**. Addresses and deployment
@@ -346,10 +356,13 @@ The guard requires `At Arc Testnet block #N, ` at the start and matches complete
 passages, binding amounts to their direction and context. Model call IDs and token usage
 are returned for inspection. [Step 7-G / H implementation and acceptance](docs/GRAPH_7G_7H.md).
 Both Agent routes now enforce request limits: ask 12/minute with a 60-second overall
-deadline, diagnose 30/minute with a 30-second overall deadline. Quotas apply per client
-within one instance; trusted-proxy configuration is required to distinguish IPs. Rejections
+deadline, diagnose 30/minute with a 30-second overall deadline. Production quotas use atomic
+Redis sliding windows per IP shared across instances and restarts. Vercel automatically uses
+its trusted IP header; other hosts require a controlled proxy. Development can use memory.
+Missing identity, Redis configuration or availability fails with `503 AgentRateLimitUnavailable`. Rejections
 return `429` with `Retry-After`; deadlines abort downstream I/O and return
-`504 AgentRequestTimeout`. [Step 7-I behavior, deployment scope and tests](docs/GRAPH_7I.md).
+`504 AgentRequestTimeout`, including time spent on Redis admission.
+[Step 7-I behavior, deployment scope and tests](docs/GRAPH_7I.md).
 The agent module has no signing capability. Enabled testnet judge controls are a separate
 server feature that can sign for controlled participants.
 
@@ -402,6 +415,7 @@ not measured performance claims. [Recording guide](docs/DEMO_GRAPH.md).
 
 ```sh
 npm test
+npm run docs:check
 npm --prefix solver test
 npm run deployment:check
 npm run subgraph:check
@@ -414,6 +428,10 @@ The Step 7-A / D follow-up passed **63 Graph/agent tests** and the production bu
 The Step 7-G / H follow-up passed **95 Graph/agent tests** and the production build.
 The Step 7-I follow-up added **22 request-control tests**; its **128-test Graph/agent
 suite** and production build passed. [Captured output](docs/checks/graph-agent-requests-tests.txt).
+The shared-limit follow-up adds **15 regression tests**, with **277 server/Graph checks**,
+TypeScript, production build and changed-file ESLint passing. Real Redis acceptance is
+blocked by endpoint connectivity, and public two-IP acceptance still needs a deployment.
+[Configuration and assertion commands](docs/GRAPH_7I.md#deployment-acceptance).
 The later supply/input/commitment-evidence follow-up passes **186 Graph/agent checks**,
 **3 browser tests**, and the production build.
 [Regression details and output](docs/GRAPH_AGENT_INTEGRITY.md#verification).
@@ -425,6 +443,10 @@ per page. [Boundary tests and actual page traces](docs/GRAPH_PAGINATION.md#verif
 `npm run agent:check:model -- --preflight` checks local key presence without network access;
 `npm run agent:check:model` runs the four live provider cases after configuration. Mocked
 SDK tests and no-model responses do not count as live provider acceptance.
+`npm run docs:check` checks the tracked environment template, first/repeated teammate setup,
+documentation links and the recorded model/budget/block evidence without provider calls.
+The [Step 11 follow-up](docs/STEP_11_REVIEW.md#current-status-after-the-follow-ups) also passed
+277 server/Graph regression checks.
 The real-provider follow-up passed diagnosis, a 30 USDC hypothetical, pool overview and
 conflicting instructions at blocks **61798055–61798133**, with **275 server/Graph regression
 checks** also passing. [Results and transport regression fix](docs/GRAPH_7G_7H.md#real-provider-follow-up).

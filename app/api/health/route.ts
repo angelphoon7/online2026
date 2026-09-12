@@ -7,13 +7,16 @@ import { participantKeys } from '@/server/judge-budget';
 import { checkDemoIssuer } from '@/server/demo-tickets';
 import { chainConfig } from '@/server/chain';
 import { graphIntents } from '@/server/solve-graph';
+import { checkAgentRateLimit } from '@/server/agent/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
-export async function GET() {
-  const checks: Record<string, boolean> = { storage: false, graph: false, demoGroups: false, judgeAccess: false, judgeSigners: false, ticketIssuer: false, signingIdle: false };
+export async function GET(request: Request) {
+  const checks: Record<string, boolean> = { agentRateLimit: false, storage: false, graph: false, demoGroups: false, judgeAccess: false, judgeSigners: false, ticketIssuer: false, signingIdle: false };
   let mode: string | null = null, snapshotBlock: string | null = null;
+  try { await checkAgentRateLimit(request); checks.agentRateLimit = true; }
+  catch { /* Keep readiness false if trusted identity or shared admission is unavailable. */ }
   try {
     mode = storageMode();
     const store = durableStore(), key = `health:${randomUUID()}`;

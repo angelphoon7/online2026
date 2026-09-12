@@ -1,6 +1,7 @@
 import test, { type TestContext } from 'node:test';
 import assert from 'node:assert/strict';
-import { agentClient, agentIpSource, agentRateLimitStore, AgentRateLimitUnavailable, SharedAgentRateLimiter } from '../agent/rate-limit';
+import { agentClient, agentIpSource, agentRateLimitStore, checkAgentRateLimit, AgentRateLimitUnavailable, SharedAgentRateLimiter } from '../agent/rate-limit';
+import { StorageUnavailable } from '../durable-store';
 import { POST } from '../../app/api/agent/ask/route';
 import { GET } from '../../app/api/agent/diagnose/[hash]/route';
 
@@ -117,4 +118,25 @@ test('each admission has a distinct Redis member even when multiple workers requ
   const a = new SharedAgentRateLimiter(store), b = new SharedAgentRateLimiter(store);
   await Promise.all([a.consume('ask', 'client'), b.consume('ask', 'client')]);
   assert.equal(new Set(ids).size, 2);
+});
+test('health checks the real Lua path in a separate bounded bucket and accepts either valid admission result', async t => {
+  env(t);
+  const keys: unknown[] = [];
+  t.mock.method(globalThis, 'fetch', async (_url: RequestInfo | URL, init?: RequestInit) => {
+    const command = JSON.parse(init!.body as string);
+    assert.equal(command[0], 'EVAL'); keys.push(command[3]);
+    return Response.json({ result: keys.length === 1 ? [1, 0] : [0, 60] });
+  });
+  await checkAgentRateLimit(request());
+  await checkAgentRateLimit(request({ 'x-vercel-forwarded-for': '192.0.2.2' }));
+  assert.equal(new Set(keys).size, 1, 'Health does not create a new Redis key per visitor');
+  await new SharedAgentRateLimiter().consume('diagnose', '192.0.2.1');
+  assert.notEqual(keys[2], keys[0], 'Health cannot consume the visitor diagnosis quota');
+});
+test('health cannot pass with unavailable Redis or missing production client identity', async t => {
+  env(t);
+  const fetch = t.mock.method(globalThis, 'fetch', async () => Response.json({ error: 'unavailable' }, { status: 503 }));
+  await assert.rejects(() => checkAgentRateLimit(request()), StorageUnavailable);
+  await assert.rejects(() => checkAgentRateLimit(request({ 'x-vercel-forwarded-for': '' })), AgentRateLimitUnavailable);
+  assert.equal(fetch.mock.callCount(), 1);
 });

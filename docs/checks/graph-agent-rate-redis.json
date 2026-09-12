@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-09-12T22:28:57.062Z",
+  "backend": "real Redis REST; atomic Lua with Redis server time",
+  "topology": "two independent Node processes using actual Agent route handlers behind a socket-IP-overwriting loopback proxy",
+  "namespace": "rate-acceptance-37a639663be141879a01fef1545f35c5",
+  "actualVercelIngressVerified": false,
+  "graphModelOrChainCalls": 0,
+  "modes": [],
+  "stage": "redis-preflight",
+  "passed": false,
+  "error": "Shared storage is unavailable. Retry after the operator checks storage configuration."
+}

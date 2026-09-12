@@ -96,3 +96,13 @@ export async function admitAgent(request: Request, route: AgentRoute, signal: Ab
   signal.throwIfAborted();
   return { ...admission, store, source: agentIpSource() };
 }
+
+/** Check identity configuration and the real Lua path without consuming a visitor's quota. */
+export async function checkAgentRateLimit(request: Request): Promise<void> {
+  agentClient(request);
+  if (agentRateLimitStore() === 'redis') {
+    // A stable, non-IP identity bounds the probe to one expiring key. Either admission
+    // result proves the limiter ran; a full probe bucket is not a storage failure.
+    await new SharedAgentRateLimiter().consume('diagnose', 'health-probe');
+  }
+}

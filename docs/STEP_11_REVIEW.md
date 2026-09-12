@@ -4,6 +4,38 @@ Reviewed 2026-09-12 against the supplied [Graph plan](RESHUFFLE_GRAPH_PLAN.md), 
 tracked deployment records and live read-only parity. This is a readiness review, not a
 security audit or confirmation that every historical UI interaction has been replayed.
 
+## Current status after the follow-ups
+
+This table supersedes the original findings. The dated measurements below remain historical
+evidence; they are not a new replay of transactions, a hosted deployment or a submission.
+
+| Steps | Current result | Evidence |
+| --- | --- | --- |
+| 11-B setup | `.env.example` exists and is tracked; `npm run setup:env` creates `.env.local` without overwriting it. Public reads need no shared private files | [Template](../.env.example), [local setup](../README.md#run-locally) |
+| 7-A / D | Pool, USDC balance/allowance and closed-intent lookup share the exact diagnosis block; missing history fails explicitly | [Block traces](checks/graph-diagnosis-block.json), [behavior](GRAPH_7A_7D.md) |
+| 7-G / H | Four real-provider scenarios PASS, eight Anthropic calls, no guard fallback. Amounts and answer prefixes are checked against tool evidence | [Provider receipts](checks/graph-agent-model.json), [275 regression checks](checks/graph-agent-model-regressions.txt) |
+| 6-D / 8 / 10-B | Real revoke and replacement commit verified; drawer followed the new hash and retained the receipt floor | [Two receipts, indexed states and captures](GRAPH_APPLY_BUDGET.md) |
+| 6-B / 8 | Post-write floor and stale-response rejection implemented and asserted | [Freshness checks](GRAPH_6B_8.md) |
+| 5-C / D / 6-A | UI, solver and Agent paginate at one block hash; limits/errors cannot return a partial pool | [Boundary and real-page checks](GRAPH_PAGINATION.md) |
+| 7-D / E / F / H; 8 | Bounded supply claims, strict hypothetical inputs, per-intent commitment links and drawer identity checks implemented | [Integrity](GRAPH_AGENT_INTEGRITY.md), [drawer](GRAPH_8_EVIDENCE.md) |
+| 7-I | Both routes have overall deadlines; production admission requires shared Redis and trusted client identity | [Current policy and test scope](GRAPH_7I.md) |
+| 4-A / 6-C | Public health/parity, transaction indexing delay and Graph solver source evidence recorded; authenticated Studio review remains open | [Measured results](GRAPH_4A_6C.md), [remaining panel checks](GRAPH_STUDIO_REVIEW.md) |
+| 11-A / C | README and submission draft now link these results and distinguish local proof from hosted acceptance | [Draft](THE_GRAPH_SUBMISSION.md) |
+
+Run `npm run docs:check` before sharing the repo. It checks the tracked template, safe setup,
+documentation links and recorded completion evidence without reading private environment files
+or contacting any provider.
+
+This documentation/setup follow-up passed the isolated first-run and repeat-run setup
+checks, changed-script ESLint and TypeScript. The [full server/Graph regression output](checks/step-11-followup-tests.txt)
+records **277 passed, zero failed**, retaining the earlier guard, snapshot, input, commitment,
+drawer and pagination cases. [Documentation/setup check output](checks/step-11-docs.txt).
+
+The template was already tracked when this follow-up began. The fix makes that fact explicit,
+adds a non-overwriting copy command and fills empty judge placeholders during `judge:setup`.
+Existing nonempty settings, access codes and explicit false flags are preserved. The real
+workspace's `.env`, `.env.local` and `.env.seed` were not modified by these checks.
+
 ## Completed documentation
 
 - README: explicit Graph target, indexed events/entities, trust model, public endpoint,
@@ -16,7 +48,7 @@ security audit or confirmation that every historical UI interaction has been rep
   both original UI prompts. Original files are retained as historical inputs; their sample
   commands and superseded requirements are not new execution instructions.
 
-## Checks run
+## Original Step 11 checks (historical)
 
 | Check | Result / scope |
 |---|---|
@@ -51,56 +83,29 @@ historical gas-report measurements.
 | 2–4: Studio, mappings, acceptance | Live `reshuffle` v0.1.1 endpoint, three actual entities/data sources, fresh parity. The slug is not the plan's example `reshuffle-arc-testnet` |
 | 5–6: Graph reads and solver | Shared hash/snapshot client, freshness floor, Graph market/solver adapters, RPC execution checks. Actual APIs start with `/api`; read selector is server-side `READ_SOURCE` |
 | 6: judge writes | Budget/revoke routes sign real transactions only for locally controlled demo participants. No write was triggered by this review |
-| 7–8: agent and drawer | Deterministic diagnosis, single-condition solver reruns, optional Claude tools, guard/template and drawer. Limitations below qualify the plan's snapshot and narration claims |
-| 9: testing | Regression suites and live parity passed. The wait script logs cases but lacks assertions; its process passing is not proof of every printed expectation |
-| 10: live recording | Read-only rehearsal script and run of show exist. Rehearsal tries hypothetical budgets; it cannot prove real revoke/commit, receipt-to-index timing or browser transitions |
+| 7–8: agent and drawer | Exact-block diagnosis, strict tool inputs, evidence-bound guard and drawer; real-provider acceptance now passed, with bounded-search limitations retained |
+| 9: testing | Named wait/freshness assertions and later regression suites pass; see the dated follow-up records above |
+| 10: live recording | Rehearsal remains read-only; separate real Apply budget receipts and browser captures now establish the N-to-M transition |
 | 11: submission package | Local documentation and draft prepared. Hosted URL, public publication, final video and actual form submission remain external deliverables |
 
-## Open findings
+## Remaining external checks
 
-Further follow-up: [Step 6-B / 8](GRAPH_6B_8.md) fixes receipt floors, stale market/agent
-responses and retry behavior. Its 47 assertion-based tests and two mocked-browser tests pass;
-the wait tests now assert named outcomes. The historical test qualifications above describe
-the earlier run. Separate Step 7 and live recording findings remain as noted below.
+1. **4-A:** authenticated Studio sync status and full available warning/error history still
+   need review. Public `_meta.hasIndexingErrors=false` does not prove the private log history.
+2. **Hosted acceptance:** local real-provider calls and local production-server persistence
+   do not establish a public deployment with the developer's laptop off. Verify the hosted
+   URL, Redis persistence, actual ingress identity and model calls there.
+   [Hosting checklist and recorded scope](JUDGING_SETUP.md).
+   The Step 7-I rate-limit follow-up adds 15 passing regression tests for trusted IPs,
+   shared admission wiring, Redis failures/deadlines and health readiness (277 total
+   server/Graph checks pass). The real Redis run failed its connectivity preflight, and
+   public two-IP checks still require deployment. These remain unaccepted under 7-I / 11-C.
+   [Assertion scripts and recorded deployment status](GRAPH_7I.md#deployment-acceptance).
+3. **11-C:** the team must confirm Start Fresh eligibility, full AI/asset attribution,
+   public repository access, final video/presentation and actual form/prize selections.
+   The draft has not been submitted by this documentation update.
+4. **12:** Arc Mainnet deployment and release gates remain separate and incomplete.
+   [Readiness package](MAINNET_READINESS.md).
 
-Follow-up on 12 September: [Step 4-A / 6-C](GRAPH_4A_6C.md) now records a real transfer's
-7.294-second receipt-to-index observation and successful HTTP Graph solver responses with
-matching source logs. This closes the missing transaction-latency / solver-run evidence;
-it does not close the budget-write, browser-recording or Studio full-status checks below.
-
-1. **Resolved in the Step 7-A / D follow-up (12 September 2026).** USDC balances/allowances
-   and closed-intent lookup now use the exact pool block. Capacity carries its block and
-   mismatched reuse is rejected. Unavailable historical reads fail rather than substituting
-   newer state; pruned Graph history is distinguished from indexing lag.
-   [Implementation, 63 passing tests and real request traces](GRAPH_7A_7D.md).
-2. **Resolved for supported passages in Step 7-G / H (12 September 2026).** The guard now
-   requires the exact opening and rejects conflicting blocks. It matches complete
-   evidence-rendered passages, including amounts, payment direction, counts and hypothetical
-   qualifications. It does not certify arbitrary prose or tool relevance. [95 passing
-   tests, implementation and remaining live-provider requirement](GRAPH_7G_7H.md).
-3. **Pagination gap resolved in Steps 5-C / 5-D / 6-A.** UI, solver and Agent discovery now
-   share independent ID cursors and pin all pages to one block hash. Resource limits and
-   malformed/truncated pages fail explicitly rather than returning a prefix. The service's
-   256-intent search cap remains separate. [Boundary tests and live page traces](GRAPH_PAGINATION.md).
-4. **No live-model run is established by this review.** The configured default model exists
-   in [Anthropic's model documentation](https://platform.claude.com/docs/en/models/sonnet-5/whats-new-sonnet-5),
-   but account access, hosted key configuration and narration still need an end-to-end check.
-   Step 7-G / H added `npm run agent:check:model`; its local preflight records `BLOCKED`
-   because the key is missing. Automatic review also requires approval to send public
-   intent/address evidence to Anthropic. No SDK fixture is presented as a live provider run.
-   **Request-control gap resolved in Step 7-I:** both routes now have bounded per-client
-   quotas and one overall cancellation budget across Graph/RPC/model/search work. The
-   limiter remains instance-local; trusted-proxy and multi-instance requirements are
-   documented. [Implementation, 22 new tests and 128 passing suite checks](GRAPH_7I.md).
-5. **Step 10 evidence needs real writes and UI capture.** The rehearsal is explicitly read-only.
-   Its -4/-3 USDC example is pool-specific, not a fixed benchmark. No fresh revoke/commit
-   receipts, browser recording or receipt-to-index duration were produced in this review.
-   Earlier lag measurements are head-distance samples, not transaction latency.
-6. **Submission provenance remains a team declaration.** Current files and recent commits
-   cannot establish all prior AI usage, third-party asset provenance or Start Fresh eligibility.
-   The disclosure names confirmed assistance and retains the supplied specs; complete any
-   additional provenance before submitting.
-
-Existing uncommitted solver/agent work and the rehearsal guide were preserved. No contract
-redeployment, new inventory, signed budget change, settlement or sponsor submission was
-performed as part of step 11.
+Updating this review reuses the linked proof. It does not resend budget transactions,
+replace signed intents, renew inventory or change the deployment/domain configuration.

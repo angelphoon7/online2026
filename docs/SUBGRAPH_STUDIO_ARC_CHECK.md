@@ -2,7 +2,11 @@
 
 Checked: **2026-09-09**.
 
-**Result: Studio is serving indexed Arc Testnet data. Continue the Arc subgraph implementation; do not redeploy the contracts to another chain on the assumption that Arc indexing is unsupported.** Creating and deploying a new subgraph under the project's Studio account remains a separate, unverified step.
+**Result: Studio is serving indexed Arc Testnet data.** This initial support check used a
+third-party subgraph. RESHUFFLE subsequently deployed its own `reshuffle` v0.1.1; see
+[our deployment and public acceptance](graph-acceptance.md). Authenticated Studio status
+and complete available log review remain [open](GRAPH_STUDIO_REVIEW.md). The measurements
+below are retained as the original feasibility evidence, not our deployment acceptance.
 
 ## What was actually checked
 
