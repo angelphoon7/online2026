@@ -27,9 +27,9 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
 
     // Load base ticket asset and mask
     const img = new window.Image();
-    img.src = '/ticket-darkblue.png?v=14';
+    img.src = '/ticket-darkblue.png?v=16';
     const mask = new window.Image();
-    mask.src = '/ticket-mask.png?v=14';
+    mask.src = '/ticket-mask.png?v=16';
 
     let loadedCount = 0;
     const onAssetLoad = () => {
@@ -53,6 +53,9 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
       const baseCtx = baseCanvas.getContext('2d');
       if (baseCtx) {
         baseCtx.drawImage(img, 0, 0);
+        baseCtx.globalCompositeOperation = 'destination-in';
+        baseCtx.drawImage(mask, 0, 0);
+        baseCtx.globalCompositeOperation = 'source-over';
       }
 
       // Pre-render bright canvas strictly using transparent ticket ribbon
@@ -61,9 +64,12 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
       brightCanvas.height = 380;
       const bCtx = brightCanvas.getContext('2d');
       if (bCtx) {
-        bCtx.filter = 'brightness(1.22) contrast(1.08) saturate(1.1)';
+        bCtx.filter = 'brightness(1.15) contrast(1.04) saturate(1.05)';
         bCtx.drawImage(img, 0, 0);
         bCtx.filter = 'none';
+        bCtx.globalCompositeOperation = 'destination-in';
+        bCtx.drawImage(mask, 0, 0);
+        bCtx.globalCompositeOperation = 'source-over';
       }
 
       // Pre-render luminous crimson/coral sheen canvas strictly masked to the ticket ribbon
@@ -209,11 +215,11 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
           object-fit: contain;
           user-select: none;
           pointer-events: none;
-          mask-image: url('/ticket-mask.png');
+          mask-image: url('/ticket-mask.png?v=16');
           mask-size: 100% 100%;
-          -webkit-mask-image: url('/ticket-mask.png');
+          -webkit-mask-image: url('/ticket-mask.png?v=16');
           -webkit-mask-size: 100% 100%;
-          filter: drop-shadow(0 0 24px rgba(220, 38, 38, 0.45));
+          filter: drop-shadow(0 0 22px rgba(225, 29, 72, 0.22));
         }
 
         .ticket-wave-canvas {
@@ -225,7 +231,7 @@ export default function AnimatedTicketIcon({ className = '' }: AnimatedTicketIco
           transition: opacity 0.3s ease;
           user-select: none;
           pointer-events: none;
-          filter: drop-shadow(0 0 24px rgba(220, 38, 38, 0.45));
+          filter: drop-shadow(0 0 22px rgba(225, 29, 72, 0.22));
         }
 
         .ticket-wave-canvas.visible {
