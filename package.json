@@ -18,6 +18,8 @@
     "subgraph:codegen": "npm run subgraph:abis && npm run subgraph:config && npm --prefix subgraph run codegen",
     "subgraph:check": "node scripts/check-subgraph-manifest.mjs",
     "subgraph:deploy": "node scripts/deploy-subgraph.mjs",
+    "subgraph:parity": "node scripts/check-subgraph-parity.mjs",
+    "subgraph:lag": "node scripts/measure-subgraph-lag.mjs",
     "mainnet:check": "node scripts/mainnet.mjs check",
     "mainnet:plan": "node scripts/mainnet.mjs plan",
     "mainnet:deploy": "node scripts/mainnet.mjs deploy",
