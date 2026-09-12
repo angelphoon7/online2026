@@ -14,9 +14,18 @@ async function readJson<T>(url: string): Promise<T> {
   if (!response.ok) throw new Error(body.error ?? 'Public chain reads unavailable');
   return body;
 }
-export async function getMarketSnapshot(fresh = false): Promise<MarketSnapshot> {
+export async function getMarketSnapshot(fresh = false, minBlock?: bigint): Promise<MarketSnapshot> {
   if (fresh && pending) await pending.catch(() => {});
-  if (!pending) pending = readJson<MarketSnapshot>(fresh ? '/api/market?fresh=1' : '/api/market').finally(() => { pending = null; });
+  if (!pending) {
+    // minBlock is the freshness floor (trust rule 2): the server refuses to answer from a
+    // block older than the transaction the user just sent, rather than returning a stale
+    // market in which their own action has not happened yet.
+    const query = new URLSearchParams();
+    if (fresh) query.set('fresh', '1');
+    if (minBlock !== undefined && minBlock > 0n) query.set('minBlock', minBlock.toString());
+    const suffix = query.size > 0 ? `?${query}` : '';
+    pending = readJson<MarketSnapshot>(`/api/market${suffix}`).finally(() => { pending = null; });
+  }
   return pending;
 }
 export const ticketHolder = (t: ChainTicket) => t.depositor !== '0x0000000000000000000000000000000000000000' ? t.depositor : t.owner;

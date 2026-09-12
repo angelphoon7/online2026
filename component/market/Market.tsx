@@ -27,6 +27,7 @@ import Validation from './Validation';
 import MatchingStatus from './MatchingStatus';
 import PoolDialog from './PoolDialog';
 import { automaticSelection, latestRequest } from '@/lib/matching-status';
+import { waitForIndexed, SubgraphLagTimeout } from '@/shared/graph';
 import { getMarketSnapshot, getIntentPool, getTicketsFor, getSettlements, getTicketsApproved, getTicketDepositor, getUSDCAllowance, getUnusedNonce, getSettlementReceipt, waitForReceipt, waitForSuccess, ticketHolder as holder } from '@/lib/chain-reads';
 import { nextRecordedNonce } from '@/lib/intent-draft';
 import rejectionDemo from '@/deployments/act-three.json';
@@ -67,6 +68,8 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
   const [notice, setNotice] = useState('');
   const [restartError, setRestartError] = useState('');
   const [txHash, setTxHash] = useState<Hex>();
+  // Non-null while waiting for the subgraph to reach a confirmed transaction's block.
+  const [indexingBlock, setIndexingBlock] = useState<bigint | null>(null);
   const [status, setStatus] = useState('idle');
   const [rejection, setRejection] = useState<NamedRejection | null>(null);
   const [receipt, setReceipt] = useState<ChainReceipt | null>(null);
@@ -94,9 +97,9 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
     } catch (e) { if (version === searchVersion.current) { setProposal(null); setEvidence(null); setSolverError(e instanceof Error && /^(Select|Live pool exceeds)/.test(e.message) ? e.message : 'Solver unreachable. Public chain reads remain available. Retry the solver.'); } }
     finally { if (version === searchVersion.current) { searchInFlight.current = false; setSolving(false); } }
   }, []);
-  const refresh = useCallback(async (fresh = false) => {
+  const refresh = useCallback(async (fresh = false, minBlock?: bigint) => {
     try {
-      const data = await getMarketSnapshot(fresh);
+      const data = await getMarketSnapshot(fresh, minBlock);
       setMarket(data); setReadError('');
     } catch (e) { setReadError(e instanceof Error ? e.message : 'Chain reads unavailable'); }
   }, []);
@@ -127,7 +130,29 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
     catch (e) { setNotice(walletActionMessage(e)); }
     finally { setBusy(''); activeAction.current = false; }
   };
-  const track = async (hash: Hex) => { setTxHash(hash); await waitForSuccess(hash); };
+  // Every write goes through track(), so the indexing wait lives here rather than at each of
+  // the eight call sites. Without it the refresh that follows can read a pool that predates
+  // the user's own transaction, and their deposit or revocation appears not to have happened.
+  //
+  // waitForIndexed is given the RECEIPT's block, never getBlockNumber(): Arc's public RPC is
+  // load balanced and its reported head can lag the subgraph (see docs/graph-acceptance.md).
+  const track = async (hash: Hex) => {
+    setTxHash(hash);
+    const receipt = await waitForSuccess(hash);
+    setIndexingBlock(receipt.blockNumber);
+    try {
+      await waitForIndexed(receipt.blockNumber);
+    } catch (error) {
+      // Indexing lag must not discard a confirmed transaction: it is already on-chain and the
+      // receipt panel still shows it. Surface the delay and let the read proceed.
+      setReadError(error instanceof SubgraphLagTimeout
+        ? `The indexer is behind (${error.indexed} of ${error.target}). Chain state is confirmed; the pool view may lag.`
+        : 'Indexer unavailable; the pool view may lag behind your transaction.');
+    } finally {
+      setIndexingBlock(null);
+    }
+    return receipt;
+  };
   const claimDemo = () => action(FREE_TICKETS_LABEL, async address => {
     const { message } = await jsonFetch<{ message: string }>(`/api/demo/tickets?address=${address}`);
     const signature = await getWalletClient().signMessage({ account: address, message });
@@ -319,7 +344,7 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
         <button className="poster poster-live" disabled={!market} aria-busy={!market && !readError} aria-describedby="event-preload-status" aria-expanded={opened} aria-controls="workspace" onClick={() => { setOpened(true); setTimeout(() => scrollTo(workspace.current), 40); }}><span className="poster-top mono">RESHUFFLE PRESENTS / EVENT 1</span><span className="poster-photo"><Image src={maydayPoster} alt="Mayday concert poster" fill sizes="(max-width: 720px) 84vw, 28vw" /></span><span className="poster-title">AFTER<br />HOURS</span><span className="poster-sub">Demo concert · issuer-native tickets</span><span className="poster-dates mono">{sessions.length ? sessions.map(n => `SESSION ${n}`).join(' / ') : 'READING SESSIONS'}</span><span className="poster-status"><span className="mono">{market ? `${live.length} ${POOL_LABEL}` : 'Reading live intents…'}</span><span>Open workspace ↗</span></span></button>
         {[{ name: 'INTERLUDE', photo: sarahPoster, alt: 'Sarah Kang in Seoul concert poster' }, { name: 'ENCORE', photo: taylorPoster, alt: 'Taylor Swift The Eras Tour concert poster' }].map(({ name, photo, alt }, n) => <div key={name} className="poster poster-inert" aria-disabled="true"><span className="poster-top mono">UPCOMING PROGRAMME / 0{n + 2}</span><span className="poster-photo"><Image src={photo} alt={alt} fill sizes="(max-width: 720px) 84vw, 28vw" /></span><span className="poster-title">{name}</span><span className="poster-sub">Event details to be announced</span><span className="poster-dates mono">VENUE & DATES UNANNOUNCED</span><span className="poster-status">No live intents</span></div>)}
       </div><p id="event-preload-status" className="quiet" role="status" aria-live="polite">{market ? `Ticket positions and intent commitments loaded for all deployed events / Arc block ${market.blockNumber}.` : readError ? 'Event data could not be loaded. Retry the public reads below.' : 'Preloading public ticket positions and intent commitments for all deployed events. The event opens as soon as its data is ready.'}</p><p className="quiet">Event names are demo presentation labels. Session IDs and ticket metadata come from the deployed contracts; no venue dates or prices are recorded on-chain.</p>{readError && <p role="alert" className="read-error">{readError} <button onClick={() => void refresh(true)}>Retry public reads</button></p>}</section>
-      {market && <section id="workspace" hidden={!opened} ref={workspace} className="workspace-section"><div className="section-heading"><div><span className="eyebrow">The workspace / Event 1</span><h2>Keep the ticket.<br />Change the outcome.</h2></div><div><p className="mono">{market ? `ARC BLOCK ${market.blockNumber}` : 'READING ARC'}</p><button className="text-button" onClick={() => void refresh(true)}>Refresh public state ↻</button></div></div>
+      {market && <section id="workspace" hidden={!opened} ref={workspace} className="workspace-section"><div className="section-heading"><div><span className="eyebrow">The workspace / Event 1</span><h2>Keep the ticket.<br />Change the outcome.</h2></div><div><p className="mono" role="status" aria-live="polite">{indexingBlock !== null ? `INDEXING BLOCK ${indexingBlock}…` : market ? `ARC BLOCK ${market.blockNumber} / VIA THE GRAPH` : 'READING ARC'}</p><button className="text-button" onClick={() => void refresh(true)}>Refresh public state ↻</button></div></div>
         <div className="network-note">USDC pays for both settlement and native gas on Arc. You don’t need a second token.</div>
         <div className="workspace-tools"><button className="secondary pool-toggle" aria-haspopup="dialog" aria-expanded={poolOpen} onClick={() => setPoolOpen(true)}>Intent pool ({live.length})</button><p className="quiet">See what others offer and want. Opening the list is optional; matching runs automatically.</p></div>
         <PoolDialog open={poolOpen} onClose={() => setPoolOpen(false)}>
