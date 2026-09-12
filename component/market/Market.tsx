@@ -21,7 +21,6 @@ import { formatUSDC, truncateAddress } from '@/lib/format';
 import { restoreIntent, type MarketSnapshot, type ChainReceipt, type ChainTicket } from '@/lib/market-types';
 import { HERO_TITLE_LINES, EMPTY_RESULT, POOL_NOTE, condition, EXPLORER, POOL_LABEL, RANKING_RULE, SOLVER_NOTE } from '@/lib/ui-copy';
 import { dishonestProposal, namedRejection, simulate, type Attack, type NamedRejection } from '@/lib/proposal-controls';
-import ArcWalletBalance from '@/component/reshuffle/ArcWalletBalance';
 import AnimatedTicketIcon from './AnimatedTicketIcon';
 import IntentBuilder from './IntentBuilder';
 import Validation from './Validation';
@@ -51,13 +50,8 @@ async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export default function Market() {
-  const [session, setSession] = useState(0);
-  return <MarketSession key={session} onStartOver={() => setSession(value => value + 1)} />;
-}
-
-function MarketSession({ onStartOver }: { onStartOver: () => void }) {
   const wallet = useWallet();
-  const { account, chainId, runWithWallet } = wallet;
+  const { account, runWithWallet } = wallet;
   const [market, setMarket] = useState<MarketSnapshot | null>(null);
   const [readError, setReadError] = useState('');
   const [opened, setOpened] = useState(false);
@@ -72,7 +66,6 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
   const [solving, setSolving] = useState(false);
   const [busy, setBusy] = useState('');
   const [notice, setNotice] = useState('');
-  const [restartError, setRestartError] = useState('');
   const [txHash, setTxHash] = useState<Hex>();
   // Non-null while waiting for the subgraph to reach a confirmed transaction's block.
   const [indexingBlock, setIndexingBlock] = useState<bigint | null>(null);
@@ -412,20 +405,6 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
   const participants = [...new Set(market?.intents.map(i => i.owner.toLowerCase()) ?? [])].sort();
   const walletLabel = (address: string) => equal(address, account) ? 'You' : participants.includes(address.toLowerCase()) ? `Wallet ${participants.indexOf(address.toLowerCase()) + 1}` : truncateAddress(address);
   const disabled = !!busy || wallet.isConnecting;
-  const startOver = async () => {
-    if (activeAction.current || disabled) return;
-    activeAction.current = true;
-    setRestartError('');
-    try {
-      await wallet.disconnect();
-      onStartOver();
-      window.scrollTo({ top: 0, behavior: 'instant' });
-    } catch (error) {
-      setRestartError(error instanceof Error ? error.message : 'Could not disconnect the wallet.');
-    } finally {
-      activeAction.current = false;
-    }
-  };
   const replacementIds = receipt && account ? receivedTickets(receipt, account) : [];
   const selectIntent = (hash: Hex) => { setAutomatic(false); searchVersion.current++; searchInFlight.current = false; setSolving(false); setSelected(s => s.includes(hash) ? s.filter(h => h !== hash) : [...s, hash]); setProposal(null); setEvidence(null); setSolverError(''); };
 
@@ -459,12 +438,9 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
         </button>
       </nav>
       <div className="header-actions">
-        {account && <div className="wallet-meta"><span className="mono">{truncateAddress(account)}</span><ArcWalletBalance account={account} walletChainId={chainId} compact />{chainId !== 5042002 && <button disabled={disabled} onClick={() => void action('Switch network', async () => {})}>Wrong network · switch</button>}</div>}
         <ConnectWalletButton />
-        {account && <button className="text-button" disabled={disabled} onClick={() => void startOver()} title="Clear the form and disconnect this site. On-chain tickets, deposits and signed intents remain.">Start over</button>}
       </div>
     </header>
-    {restartError && <p role="alert" className="read-error">{restartError}</p>}
     <main>
       {currentView === 'home' && (
         <section className="hero">
@@ -518,7 +494,7 @@ function MarketSession({ onStartOver }: { onStartOver: () => void }) {
                 </button>
                 <h2>Choose a night.<br />Keep your options.</h2>
               </div>
-              <p>One live demo event.<br />An outcome pool, not a ticket shop.</p>
+              <p><br /></p>
             </div>
             <div className="posters">
               <button className="poster poster-live" disabled={!market} aria-busy={!market && !readError} aria-describedby="event-preload-status" aria-expanded={opened} aria-controls="workspace" onClick={() => { setOpened(true); setTimeout(() => scrollTo(workspace.current), 40); }}><span className="poster-top mono">RESHUFFLE PRESENTS / EVENT 1</span><span className="poster-photo"><Image src={maydayPoster} alt="Mayday concert poster" fill sizes="(max-width: 720px) 84vw, 28vw" /></span><span className="poster-title">AFTER<br />HOURS</span><span className="poster-sub">Demo concert · issuer-native tickets</span><span className="poster-dates mono">{sessions.length ? sessions.map(n => `SESSION ${n}`).join(' / ') : 'READING SESSIONS'}</span><span className="poster-status"><span className="mono">{market ? `${live.length} ${POOL_LABEL}` : 'Reading live intents…'}</span><span>Open workspace ↗</span></span></button>
