@@ -5,6 +5,7 @@ import Image from 'next/image';
 import sarahPoster from '@/lib/sarah_concert_poster.jpg';
 import maydayPoster from '@/lib/mayday_concert_poster.jpg';
 import taylorPoster from '@/lib/taylor_concert_poster.png';
+import logoImg from '@/public/logo.png';
 import { type Address, type Hex } from 'viem';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { validateNewIntentTiming, selectedClass } from '@/lib/event-schedule';
@@ -252,14 +253,29 @@ export default function Market() {
     <header className="site-header">
       <div className="header-brand">
         <Image
-          src="/logo.png"
+          src={logoImg}
           alt="RESHUFFLE"
-          width={150}
-          height={50}
+          height={48}
           priority
           className="header-logo"
         />
       </div>
+      <nav className="two-line-nav" aria-label="Main navigation">
+        <button
+          type="button"
+          className="two-line-nav-item"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        >
+          Home
+        </button>
+        <button
+          type="button"
+          className="two-line-nav-item"
+          onClick={() => document.getElementById('events')?.scrollIntoView({ behavior: 'smooth' })}
+        >
+          Market
+        </button>
+      </nav>
       <div className="header-actions">
         <ConnectWalletButton />
       </div>
@@ -270,12 +286,17 @@ export default function Market() {
           <div className="hero-text-block">
             <div className="eyebrow">An outcome market for tickets</div>
             <h1>{HERO_TITLE_LINES[0]}<br /><span>{HERO_TITLE_LINES[1]}</span></h1>
-            <div className="hero-bottom">
-              <p>{HERO_SUBTITLE}</p>
-              <div className="hero-actions">
-                <button className="primary" onClick={() => scrollTo(document.getElementById('events'))}>See it settle <span>↓</span></button>
-                <a className="secondary" href={`${EXPLORER}/address/${CONTRACTS.settlement}`} target="_blank" rel="noreferrer">Contracts on Arc ↗</a>
-              </div>
+            <div className="hero-cta-wrap">
+              <button
+                type="button"
+                className="select-event-btn"
+                onClick={() => document.getElementById('events')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                <span>Select Event</span>
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="btn-arrow" aria-hidden="true">
+                  <path d="M8 3.5V12.5M8 12.5L12.5 8M8 12.5L3.5 8" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
             </div>
           </div>
           <div className="hero-visual">
@@ -284,7 +305,6 @@ export default function Market() {
             </div>
           </div>
         </div>
-        <div className="hero-foot mono">SIGN ONCE. LEAVE. EVERY SIGNED CONDITION CHECKED ON-CHAIN.</div>
       </section>
       <section id="events" className="event-section"><div className="section-heading"><h2>Choose a night.<br />Keep your options.</h2><p>One live demo event.<br />An outcome pool, not a ticket shop.</p></div><div className="posters">
         <button className="poster poster-live" disabled={!market} aria-busy={!market && !readError} aria-describedby="event-preload-status" aria-expanded={opened} aria-controls="workspace" onClick={() => { setOpened(true); setTimeout(() => scrollTo(workspace.current), 40); }}><span className="poster-top mono">RESHUFFLE PRESENTS / EVENT 1</span><span className="poster-photo"><Image src={maydayPoster} alt="Mayday concert poster" fill sizes="(max-width: 720px) 84vw, 28vw" /></span><span className="poster-title">AFTER<br />HOURS</span><span className="poster-sub">Demo concert · issuer-native tickets</span><span className="poster-dates mono">{sessions.length ? sessions.map(n => `SESSION ${n}`).join(' / ') : 'READING SESSIONS'}</span><span className="poster-status"><span className="mono">{market ? `${live.length} ${POOL_LABEL}` : 'Reading live intents…'}</span><span>Open workspace ↗</span></span></button>

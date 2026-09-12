@@ -39,11 +39,11 @@ export default function ConnectWalletButton() {
         type="button"
         onClick={connect}
         disabled={isConnecting}
-        className="flex h-9 items-center justify-center gap-2 rounded-full bg-white px-4 text-xs font-semibold tracking-tight text-[#180a10] transition-all hover:bg-zinc-200 hover:shadow-[0_0_16px_rgba(255,255,255,0.25)] active:scale-95 disabled:opacity-60"
+        className="flex h-9 items-center justify-center gap-2 rounded-full bg-white px-4 text-xs font-semibold tracking-tight text-[#08080a] transition-all hover:bg-zinc-200 hover:shadow-[0_0_16px_rgba(255,255,255,0.25)] active:scale-95 disabled:opacity-60"
       >
         {isConnecting ? (
           <>
-            <span className="h-3 w-3 animate-spin rounded-full border-2 border-[#180a10] border-t-transparent" />
+            <span className="h-3 w-3 animate-spin rounded-full border-2 border-[#08080a] border-t-transparent" />
             <span>Connecting...</span>
           </>
         ) : (
