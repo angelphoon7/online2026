@@ -15,7 +15,7 @@
 // validation code out of any bundle that only needs the hash.
 
 export { hashIntent, hashOffered, INTENT_TYPEHASH } from '@/solver/dist/hash.js';
-export type { Intent, Hex, Address } from '@/solver/dist/types.js';
+export type { Intent, TicketMeta, Hex, Address } from '@/solver/dist/types.js';
 
 import type { Intent } from '@/solver/dist/types.js';
 
