@@ -209,15 +209,10 @@ export async function signAndCommitIntent(
   });
 }
 
-export async function hashIntent(intent: IntentParams): Promise<Hex> {
-  const client = getPublicClient();
-  return client.readContract({
-    address: CONTRACTS.intentRegistry,
-    abi: intentRegistryAbi,
-    functionName: 'hashIntent',
-    args: [intent],
-  }) as Promise<Hex>;
-}
+// hashIntent used to live here as an eth_call to IntentRegistry.hashIntent. It had no callers
+// and was a trap: it looks like a local hash but costs a round-trip, and it cannot be used to
+// verify subgraph output independently of the chain. Import the pure implementation from
+// shared/intent.ts instead — one definition, shared with the solver and the backend.
 
 export async function revokeIntent(account: Address, intentHash: Hex) {
   const wallet = getWalletClient();
