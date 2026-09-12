@@ -37,3 +37,6 @@ The public market reader spaces historical log queries to avoid Arc RPC rate lim
 The app backend public scan also passed at block **61619336**: 100 total issued tickets and at least eight live offered tickets in every configured section/session. [Public section counts](../deployments/section-inventory-public-state.json). Session 1 / Section 0 also includes two pre-existing offers, for ten tickets offered at that block.
 
 Second batch verified at Arc block **61622739**: token IDs **100 through 163**, **32 additional live offers**, and **104 successful transactions**. Its receipt gas fees total **0.254122616 test USDC**. The two batches minted **128 distinct tickets** in total; the original batch manifest and journal were preserved.
+
+For the 12 September batches with varied one-, two- and three-ticket requests, see
+[demo replacement inventory](DEMO_REPLACEMENT_INVENTORY.md).

@@ -95,10 +95,16 @@ export const META = /* GraphQL */ `
 /**
  * One intent regardless of state — used by the agent to explain an intent that has left the
  * live pool, where REVOKED or SETTLED with a transaction hash is itself the answer.
+ * The caller must pass the pool's exact block; a freshness floor could include a later revoke.
  */
 export const INTENT_BY_ID = /* GraphQL */ `
-  query IntentById($id: ID!) {
-    intent(id: $id) {
+  query IntentById($id: ID!, $block: Int!) {
+    _meta(block: { number: $block }) {
+      block { number }
+      hasIndexingErrors
+      deployment
+    }
+    intent(id: $id, block: { number: $block }) {
       id
       owner
       state

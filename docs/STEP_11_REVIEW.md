@@ -68,10 +68,11 @@ Follow-up on 12 September: [Step 4-A / 6-C](GRAPH_4A_6C.md) now records a real t
 matching source logs. This closes the missing transaction-latency / solver-run evidence;
 it does not close the budget-write, browser-recording or Studio full-status checks below.
 
-1. **Diagnosis is not completely pinned.** `server/solve-hypothetical.ts:readCapacity` reads
-   balances/allowances at latest, and `server/agent/diagnose.ts` uses an unpinned closed-intent
-   lookup. The Graph pool has a named block, but these additional facts may describe another
-   moment. Pin those reads or report their individual blocks before making the stronger claim.
+1. **Resolved in the Step 7-A / D follow-up (12 September 2026).** USDC balances/allowances
+   and closed-intent lookup now use the exact pool block. Capacity carries its block and
+   mismatched reuse is rejected. Unavailable historical reads fail rather than substituting
+   newer state; pruned Graph history is distinguished from indexing lag.
+   [Implementation, 63 passing tests and real request traces](GRAPH_7A_7D.md).
 2. **Narration guard is partial.** `checkAnswer` requires the expected block somewhere in
    the text, so it can also accept additional inconsistent block references. It checks full
    identifiers and banned words, not all amounts, ticket IDs or causal claims. Passing guard

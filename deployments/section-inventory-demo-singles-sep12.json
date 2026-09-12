@@ -1,0 +1,529 @@
+{
+  "batch": "demo-singles-sep12",
+  "bundleCount": 1,
+  "varied": true,
+  "chainId": 5042002,
+  "issuer": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+  "contracts": {
+    "TicketNFT": "0xb2490568bb27c9c38588e3b5511ee3980892cce4",
+    "Escrow": "0x07ab57380db7df630fab2d3d3a1019a5a890b018",
+    "IntentRegistry": "0x479b4455f494679dcdd6f6f32e93e08682deda75",
+    "Settlement": "0x75872168f2d6ae13c7d9258159e59025fd9b5eae"
+  },
+  "checkedBlock": "61774388",
+  "checkedAt": "2026-09-12T18:52:05.812Z",
+  "deadline": "1789790400",
+  "cells": [
+    {
+      "session": 0,
+      "section": 0,
+      "minted": 1,
+      "offered": 1
+    },
+    {
+      "session": 0,
+      "section": 1,
+      "minted": 1,
+      "offered": 1
+    },
+    {
+      "session": 0,
+      "section": 2,
+      "minted": 1,
+      "offered": 1
+    },
+    {
+      "session": 0,
+      "section": 3,
+      "minted": 1,
+      "offered": 1
+    },
+    {
+      "session": 1,
+      "section": 0,
+      "minted": 1,
+      "offered": 1
+    },
+    {
+      "session": 1,
+      "section": 1,
+      "minted": 1,
+      "offered": 1
+    },
+    {
+      "session": 1,
+      "section": 2,
+      "minted": 1,
+      "offered": 1
+    },
+    {
+      "session": 1,
+      "section": 3,
+      "minted": 1,
+      "offered": 1
+    }
+  ],
+  "tickets": [
+    {
+      "label": "mint:0:0:1",
+      "tokenId": "228",
+      "eventId": 1,
+      "sessionId": 0,
+      "sectionId": 0,
+      "row": 20228,
+      "seat": 1,
+      "mintTx": "0xed9bb8fd31606d426207577513b63aa1ff2f524094bb2f451103f36b43ffd892",
+      "owner": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+      "depositor": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+      "status": 0
+    },
+    {
+      "label": "mint:0:1:1",
+      "tokenId": "229",
+      "eventId": 1,
+      "sessionId": 0,
+      "sectionId": 1,
+      "row": 20229,
+      "seat": 1,
+      "mintTx": "0x0213e74fc3f24bb72fc5999461b4efbac118d727b92f5a1b1a8a14c8f5903816",
+      "owner": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+      "depositor": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+      "status": 0
+    },
+    {
+      "label": "mint:0:2:1",
+      "tokenId": "230",
+      "eventId": 1,
+      "sessionId": 0,
+      "sectionId": 2,
+      "row": 20230,
+      "seat": 1,
+      "mintTx": "0xb0eb691b0345749db64446e929c39acf36f459f17fd4bb7f122b739e85f48a9c",
+      "owner": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+      "depositor": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+      "status": 0
+    },
+    {
+      "label": "mint:0:3:1",
+      "tokenId": "231",
+      "eventId": 1,
+      "sessionId": 0,
+      "sectionId": 3,
+      "row": 20231,
+      "seat": 1,
+      "mintTx": "0x2aca22ac8111ef4f01df3ea7b8062d7ad5306cb315e9349d4e8b60687f48450d",
+      "owner": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+      "depositor": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+      "status": 0
+    },
+    {
+      "label": "mint:1:0:1",
+      "tokenId": "232",
+      "eventId": 1,
+      "sessionId": 1,
+      "sectionId": 0,
+      "row": 20232,
+      "seat": 1,
+      "mintTx": "0x1d5454da1fde80a6f6cfd648db86dc7341baed24e8471de8840c7760335c00db",
+      "owner": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+      "depositor": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+      "status": 0
+    },
+    {
+      "label": "mint:1:1:1",
+      "tokenId": "233",
+      "eventId": 1,
+      "sessionId": 1,
+      "sectionId": 1,
+      "row": 20233,
+      "seat": 1,
+      "mintTx": "0x8f66e03f582e7fe0e75b4ec4665728db311e4804de52367ffa6b859559fac314",
+      "owner": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+      "depositor": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+      "status": 0
+    },
+    {
+      "label": "mint:1:2:1",
+      "tokenId": "234",
+      "eventId": 1,
+      "sessionId": 1,
+      "sectionId": 2,
+      "row": 20234,
+      "seat": 1,
+      "mintTx": "0x0935193028fb1c3c6be81e44394a3d74d7d1b923dbdd3d8e7508116145527659",
+      "owner": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+      "depositor": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+      "status": 0
+    },
+    {
+      "label": "mint:1:3:1",
+      "tokenId": "235",
+      "eventId": 1,
+      "sessionId": 1,
+      "sectionId": 3,
+      "row": 20235,
+      "seat": 1,
+      "mintTx": "0xf62abacde742ecac089fd48f15bcd71ed5c75c1e151c45529140ccea7b029b7c",
+      "owner": "0x07AB57380DB7Df630fAb2D3d3a1019A5a890b018",
+      "depositor": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+      "status": 0
+    }
+  ],
+  "intents": [
+    {
+      "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+      "offered": [
+        "228"
+      ],
+      "eventId": 1,
+      "sessionMask": "2",
+      "sectionMask": "1",
+      "exactCount": 1,
+      "mustShareSession": true,
+      "mustShareSection": true,
+      "mustBeAdjacent": false,
+      "maxNetPay": "0",
+      "deadline": "1789790400",
+      "nonce": "20228000",
+      "hash": "0xd2865be214a0e42c02b87af800f466dc40f95ae1952b248f23937e9e81787f1a",
+      "state": 1,
+      "available": true,
+      "commitTx": "0x73a50d02f49f153a9e4bc8e3728d3aa5c86b0ae052787a132ac3dacec75f3ecd"
+    },
+    {
+      "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+      "offered": [
+        "229"
+      ],
+      "eventId": 1,
+      "sessionMask": "2",
+      "sectionMask": "2",
+      "exactCount": 1,
+      "mustShareSession": true,
+      "mustShareSection": true,
+      "mustBeAdjacent": false,
+      "maxNetPay": "0",
+      "deadline": "1789790400",
+      "nonce": "20228001",
+      "hash": "0xee78792e2a83a7c1edbf0dbbdfa0715fd796a272073e794ed1d9524bba6a3a98",
+      "state": 1,
+      "available": true,
+      "commitTx": "0x4ce700d889f56dec52e51a5eed024a27428910e507b8e0f24f933058c14ce72c"
+    },
+    {
+      "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+      "offered": [
+        "230"
+      ],
+      "eventId": 1,
+      "sessionMask": "2",
+      "sectionMask": "4",
+      "exactCount": 1,
+      "mustShareSession": true,
+      "mustShareSection": true,
+      "mustBeAdjacent": false,
+      "maxNetPay": "0",
+      "deadline": "1789790400",
+      "nonce": "20228002",
+      "hash": "0xa25c00cada84483f747f0a34f8e76261c32c89c1271630f1f69f1640b41c6b0a",
+      "state": 1,
+      "available": true,
+      "commitTx": "0xb588e857d1b508afe96672185438468777c5e8d603f67cb2bf59c9dcc45239cc"
+    },
+    {
+      "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+      "offered": [
+        "231"
+      ],
+      "eventId": 1,
+      "sessionMask": "2",
+      "sectionMask": "8",
+      "exactCount": 1,
+      "mustShareSession": true,
+      "mustShareSection": true,
+      "mustBeAdjacent": false,
+      "maxNetPay": "0",
+      "deadline": "1789790400",
+      "nonce": "20228003",
+      "hash": "0x551dbc73455181fa790c3b3a5def71c1a4f20aec2f5ece434d4be984d11a9ab9",
+      "state": 1,
+      "available": true,
+      "commitTx": "0xc8bfa9bc55f6154c243323e2c9f0c288b26af462917c4af14a560017cc935441"
+    },
+    {
+      "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+      "offered": [
+        "232"
+      ],
+      "eventId": 1,
+      "sessionMask": "1",
+      "sectionMask": "1",
+      "exactCount": 1,
+      "mustShareSession": true,
+      "mustShareSection": true,
+      "mustBeAdjacent": false,
+      "maxNetPay": "0",
+      "deadline": "1789790400",
+      "nonce": "20228004",
+      "hash": "0x1e0cca059470414ff04c9cba186e3eb21c42f3fa5cf6f0f94c845ba2f966d07d",
+      "state": 1,
+      "available": true,
+      "commitTx": "0x7fd4f823eb1ba19601334669007820ed33efb9fc0fb9b23bc479dd9641dac065"
+    },
+    {
+      "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+      "offered": [
+        "233"
+      ],
+      "eventId": 1,
+      "sessionMask": "1",
+      "sectionMask": "2",
+      "exactCount": 1,
+      "mustShareSession": true,
+      "mustShareSection": true,
+      "mustBeAdjacent": false,
+      "maxNetPay": "0",
+      "deadline": "1789790400",
+      "nonce": "20228005",
+      "hash": "0x058575d827bfbd572aaf4d1c1c319e124ea6bff367aaa7d71bf3ceb2dace5a7d",
+      "state": 1,
+      "available": true,
+      "commitTx": "0x8d46528147673802a484b6ee47942ec8e828b775c969a5b6fd29552a4a6e599c"
+    },
+    {
+      "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+      "offered": [
+        "234"
+      ],
+      "eventId": 1,
+      "sessionMask": "1",
+      "sectionMask": "4",
+      "exactCount": 1,
+      "mustShareSession": true,
+      "mustShareSection": true,
+      "mustBeAdjacent": false,
+      "maxNetPay": "0",
+      "deadline": "1789790400",
+      "nonce": "20228006",
+      "hash": "0x82265f5b172396bbdddd34dc19db48e5f3fcce9b2343b3075b3d65df71ec95f0",
+      "state": 1,
+      "available": true,
+      "commitTx": "0x9fe5c6f055ab62fc9d91b1fd4b4ae2f4653f4c92b21b0a4098e993625f39f490"
+    },
+    {
+      "owner": "0xa8dae73BdE3a5C0E412884C9be2039a79dfB31fD",
+      "offered": [
+        "235"
+      ],
+      "eventId": 1,
+      "sessionMask": "1",
+      "sectionMask": "8",
+      "exactCount": 1,
+      "mustShareSession": true,
+      "mustShareSection": true,
+      "mustBeAdjacent": false,
+      "maxNetPay": "0",
+      "deadline": "1789790400",
+      "nonce": "20228007",
+      "hash": "0xf54781d97bec1bd1739c97aef796cc8774bf42815000a522fb5db6b28625fba5",
+      "state": 1,
+      "available": true,
+      "commitTx": "0xa4ffa65e29ec1fa8f3be7db6406c364894de800415ab018aa3293815662fa276"
+    }
+  ],
+  "transactions": [
+    {
+      "label": "mint:0:0:1",
+      "hash": "0xed9bb8fd31606d426207577513b63aa1ff2f524094bb2f451103f36b43ffd892",
+      "status": "success",
+      "blockNumber": "61774200",
+      "gasUsed": "85189",
+      "feePaid": "1725077250000000"
+    },
+    {
+      "label": "deposit:0:0",
+      "hash": "0x3f45d1d16a0b974d39c6c4f4f7ad8c51c8667cd6f019d94641255d21408f5d52",
+      "status": "success",
+      "blockNumber": "61774203",
+      "gasUsed": "74330",
+      "feePaid": "1505182500000000"
+    },
+    {
+      "label": "commit:0:0:0",
+      "hash": "0x73a50d02f49f153a9e4bc8e3728d3aa5c86b0ae052787a132ac3dacec75f3ecd",
+      "status": "success",
+      "blockNumber": "61774207",
+      "gasUsed": "104120",
+      "feePaid": "2108430000000000"
+    },
+    {
+      "label": "mint:0:1:1",
+      "hash": "0x0213e74fc3f24bb72fc5999461b4efbac118d727b92f5a1b1a8a14c8f5903816",
+      "status": "success",
+      "blockNumber": "61774210",
+      "gasUsed": "85201",
+      "feePaid": "1725320250000000"
+    },
+    {
+      "label": "deposit:0:1",
+      "hash": "0x5ebc4d977c4d12edc226ec56ba4d8442f2b2cd515a1396415d503a05f39a472a",
+      "status": "success",
+      "blockNumber": "61774213",
+      "gasUsed": "74330",
+      "feePaid": "1505182500000000"
+    },
+    {
+      "label": "commit:0:1:0",
+      "hash": "0x4ce700d889f56dec52e51a5eed024a27428910e507b8e0f24f933058c14ce72c",
+      "status": "success",
+      "blockNumber": "61774216",
+      "gasUsed": "104132",
+      "feePaid": "2108673000000000"
+    },
+    {
+      "label": "mint:0:2:1",
+      "hash": "0xb0eb691b0345749db64446e929c39acf36f459f17fd4bb7f122b739e85f48a9c",
+      "status": "success",
+      "blockNumber": "61774219",
+      "gasUsed": "85201",
+      "feePaid": "1725320250000000"
+    },
+    {
+      "label": "deposit:0:2",
+      "hash": "0xc1607d12ba3cd4d04989b136448835e5ed61579939583c0119dba9880d11e030",
+      "status": "success",
+      "blockNumber": "61774222",
+      "gasUsed": "74330",
+      "feePaid": "1505182500000000"
+    },
+    {
+      "label": "commit:0:2:0",
+      "hash": "0xb588e857d1b508afe96672185438468777c5e8d603f67cb2bf59c9dcc45239cc",
+      "status": "success",
+      "blockNumber": "61774226",
+      "gasUsed": "104132",
+      "feePaid": "2108673000000000"
+    },
+    {
+      "label": "mint:0:3:1",
+      "hash": "0x2aca22ac8111ef4f01df3ea7b8062d7ad5306cb315e9349d4e8b60687f48450d",
+      "status": "success",
+      "blockNumber": "61774229",
+      "gasUsed": "85201",
+      "feePaid": "1725320250000000"
+    },
+    {
+      "label": "deposit:0:3",
+      "hash": "0xa592eeaacaeb528b45b593d4d581b3f8a2f5b75b89063165385a4972ca98c2bb",
+      "status": "success",
+      "blockNumber": "61774232",
+      "gasUsed": "74330",
+      "feePaid": "1505182500000000"
+    },
+    {
+      "label": "commit:0:3:0",
+      "hash": "0xc8bfa9bc55f6154c243323e2c9f0c288b26af462917c4af14a560017cc935441",
+      "status": "success",
+      "blockNumber": "61774235",
+      "gasUsed": "104132",
+      "feePaid": "2108673000000000"
+    },
+    {
+      "label": "mint:1:0:1",
+      "hash": "0x1d5454da1fde80a6f6cfd648db86dc7341baed24e8471de8840c7760335c00db",
+      "status": "success",
+      "blockNumber": "61774350",
+      "gasUsed": "85201",
+      "feePaid": "1725320250000000"
+    },
+    {
+      "label": "deposit:1:0",
+      "hash": "0x06f202b393a72e97288168dab5d5950558d591c9195c49d73e72141dd88bafa3",
+      "status": "success",
+      "blockNumber": "61774353",
+      "gasUsed": "74330",
+      "feePaid": "1505182500000000"
+    },
+    {
+      "label": "commit:1:0:0",
+      "hash": "0x7fd4f823eb1ba19601334669007820ed33efb9fc0fb9b23bc479dd9641dac065",
+      "status": "success",
+      "blockNumber": "61774357",
+      "gasUsed": "104132",
+      "feePaid": "2108673000000000"
+    },
+    {
+      "label": "mint:1:1:1",
+      "hash": "0x8f66e03f582e7fe0e75b4ec4665728db311e4804de52367ffa6b859559fac314",
+      "status": "success",
+      "blockNumber": "61774360",
+      "gasUsed": "85213",
+      "feePaid": "1725563250000000"
+    },
+    {
+      "label": "deposit:1:1",
+      "hash": "0x43cbc85dd17464bc1f0b31dfbb7ff3b04101c1ee3366b1705132c11755487a14",
+      "status": "success",
+      "blockNumber": "61774364",
+      "gasUsed": "74330",
+      "feePaid": "1505182500000000"
+    },
+    {
+      "label": "commit:1:1:0",
+      "hash": "0x8d46528147673802a484b6ee47942ec8e828b775c969a5b6fd29552a4a6e599c",
+      "status": "success",
+      "blockNumber": "61774367",
+      "gasUsed": "104132",
+      "feePaid": "2108673000000000"
+    },
+    {
+      "label": "mint:1:2:1",
+      "hash": "0x0935193028fb1c3c6be81e44394a3d74d7d1b923dbdd3d8e7508116145527659",
+      "status": "success",
+      "blockNumber": "61774370",
+      "gasUsed": "85213",
+      "feePaid": "1725563250000000"
+    },
+    {
+      "label": "deposit:1:2",
+      "hash": "0x983da81b4240dc64a2d586f50afee6174655cbf079c12792d293990a1117716d",
+      "status": "success",
+      "blockNumber": "61774374",
+      "gasUsed": "74330",
+      "feePaid": "1505182500000000"
+    },
+    {
+      "label": "commit:1:2:0",
+      "hash": "0x9fe5c6f055ab62fc9d91b1fd4b4ae2f4653f4c92b21b0a4098e993625f39f490",
+      "status": "success",
+      "blockNumber": "61774377",
+      "gasUsed": "104132",
+      "feePaid": "2108673000000000"
+    },
+    {
+      "label": "mint:1:3:1",
+      "hash": "0xf62abacde742ecac089fd48f15bcd71ed5c75c1e151c45529140ccea7b029b7c",
+      "status": "success",
+      "blockNumber": "61774380",
+      "gasUsed": "85213",
+      "feePaid": "1725563250000000"
+    },
+    {
+      "label": "deposit:1:3",
+      "hash": "0x330e7fd40731ca24cabc7bf48525e3ca24341a3234de1d0b9a62d9d4c07046b0",
+      "status": "success",
+      "blockNumber": "61774384",
+      "gasUsed": "74330",
+      "feePaid": "1505182500000000"
+    },
+    {
+      "label": "commit:1:3:0",
+      "hash": "0xa4ffa65e29ec1fa8f3be7db6406c364894de800415ab018aa3293815662fa276",
+      "status": "success",
+      "blockNumber": "61774387",
+      "gasUsed": "104132",
+      "feePaid": "2108673000000000"
+    }
+  ],
+  "totalFeeUSDC": "0.042713649"
+}

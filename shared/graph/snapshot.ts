@@ -242,16 +242,36 @@ export type IntentStatus = {
   settlement: { id: string; txHash: string; blockNumber: string; participantCount: string } | null;
 };
 
+export class IntentSnapshotMismatch extends Error {
+  constructor(detail: string) {
+    super(`IntentSnapshotMismatch: ${detail}`);
+    this.name = 'IntentSnapshotMismatch';
+  }
+}
+
 /**
  * Look up one intent regardless of state.
  *
  * Needed because the pool snapshot only carries LIVE intents: an intent the user asks about may
  * have been revoked or settled, and that — with its transaction hash — is the answer.
+ * The snapshot is mandatory: historical state is checked at its exact block and deployment.
  */
 export async function getIntentById(
   id: Hex,
+  snapshot: Pick<Snapshot, 'block' | 'deployment'>,
   options: GqlOptions = {}
 ): Promise<IntentStatus | null> {
-  const data = await gql<{ intent: IntentStatus | null }>(INTENT_BY_ID, { id }, options);
+  const data = await gql<{
+    _meta: { block: { number: number }; deployment: string; hasIndexingErrors: boolean };
+    intent: IntentStatus | null;
+  }>(INTENT_BY_ID, { id: id.toLowerCase(), block: Number(snapshot.block) }, options);
+  if (data._meta.hasIndexingErrors) throw new SubgraphIndexingError();
+  if (BigInt(data._meta.block.number) !== snapshot.block || data._meta.deployment !== snapshot.deployment) {
+    throw new IntentSnapshotMismatch(`lookup must use deployment ${snapshot.deployment} at block ${snapshot.block}`);
+  }
+  if (data.intent && (
+    data.intent.id.toLowerCase() !== id.toLowerCase() ||
+    (data.intent.closedAtBlock !== null && BigInt(data.intent.closedAtBlock) > snapshot.block)
+  )) throw new IntentSnapshotMismatch('returned intent does not belong to the requested snapshot');
   return data.intent;
 }

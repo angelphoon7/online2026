@@ -50,8 +50,9 @@ Questions use at least the currently displayed evidence block. An answer's diagn
 to its answer block; an unrelated earlier diagnosis is not retained as its evidence. The judge
 participant list also sends the same floor and waits before reloading after a change.
 
-This fixes post-confirmation freshness. It does not address the separate Step 7 findings about
-pinning all payment-capacity reads or validating every model-generated numerical claim.
+This fixes post-confirmation freshness. The separate payment-capacity and closed-intent
+block-pinning gap is now covered by [Step 7-A / D](GRAPH_7A_7D.md). Validating every
+model-generated numerical claim remains a separate guard limitation.
 
 ## Validation and reproduction
 

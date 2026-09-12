@@ -3,10 +3,9 @@ import type { Address, Hex } from 'viem';
 import { checkReceivedBundle, combinations } from '../../solver/dist/index.js';
 import type { ChainState, Intent, TicketMeta } from '../../solver/src/types';
 import type { Snapshot, LiveIntent, ExclusionReason } from '@/shared/graph';
-import { gql } from '@/shared/graph/client';
-import { INTENT_BY_ID } from '@/shared/graph/queries';
+import { getIntentById } from '@/shared/graph';
 import { SEARCH_CONFIG } from '../solve';
-import { readCapacity, solveHypothetical, type Capacity, type HypotheticalResult } from '../solve-hypothetical';
+import { readCapacity, requireCapacityBlock, solveHypothetical, type Capacity, type HypotheticalResult } from '../solve-hypothetical';
 
 // Deterministic diagnosis - step 7-D of docs/RESHUFFLE_GRAPH_PLAN.md.
 //
@@ -64,9 +63,8 @@ export type Evidence = {
   /** Present for CLOSED: revoked or already settled, with the transaction that did it. */
   closed?: { state: 'REVOKED' | 'SETTLED'; tx: string | null; block: string | null };
   /**
-   * Set on UNKNOWN when the registry lookup itself failed. "Not found" and "could not check"
-   * are different answers, and reporting the second as the first would state as fact that an
-   * intent was never committed when the indexer was simply unreachable.
+   * Retained for older saved evidence. New requests propagate lookup failures to the API
+   * instead of producing an UNKNOWN diagnosis from an unavailable historical snapshot.
    */
   lookupFailed?: boolean;
   /** Present for SETTLEABLE: a candidate containing this intent exists right now. */
@@ -243,6 +241,7 @@ const asRelaxation = (change: string, result: HypotheticalResult): Relaxation =>
  * `capacity` is optional so a caller running several diagnoses can read USDC balances once.
  */
 export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: Capacity): Promise<Evidence> {
+  if (capacity) requireCapacityBlock(capacity, snapshot.block);
   const started = performance.now();
   const target = lower(intentHash);
   const bounds = { ...SEARCH_CONFIG, budgetCapUsdc: budgetCapUsdc(), groupSearchCap: GROUP_SEARCH_CAP };
@@ -268,22 +267,17 @@ export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: C
       return done({ ...base, status: 'EXCLUDED', exclusion: { reason: excluded.reason, detail: excluded.detail } });
     }
     // Not live and not excluded: it was revoked, already settled, or never committed here.
-    let lookupFailed = false;
-    const found = await gql<{ intent: { state: string; closedTx: string | null; closedAtBlock: string | null } | null }>(
-      INTENT_BY_ID,
-      { id: intentHash.toLowerCase() }
-    ).catch(() => {
-      lookupFailed = true;
-      return { intent: null };
-    });
-    if (found.intent && (found.intent.state === 'REVOKED' || found.intent.state === 'SETTLED')) {
+    // Exact snapshot block, not a freshness floor: a later revoke is not true at this block.
+    // Failed historical reads propagate to the API; they must not become UNKNOWN or latest.
+    const found = await getIntentById(intentHash, snapshot);
+    if (found && (found.state === 'REVOKED' || found.state === 'SETTLED')) {
       return done({
         ...base,
         status: 'CLOSED',
-        closed: { state: found.intent.state, tx: found.intent.closedTx, block: found.intent.closedAtBlock },
+        closed: { state: found.state, tx: found.closedTx, block: found.closedAtBlock },
       });
     }
-    return done({ ...base, status: 'UNKNOWN', ...(lookupFailed ? { lookupFailed } : {}) });
+    return done({ ...base, status: 'UNKNOWN' });
   }
 
   const counterpartyTx: Record<string, string> = {};
@@ -293,7 +287,7 @@ export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: C
   // of validity, so a relaxation that ignored it could promise a settlement the contract
   // would reject.
   const owners = snapshot.intents.map((i) => i.owner as Address);
-  const funds = capacity ?? (await readCapacity(owners));
+  const funds = capacity ?? (await readCapacity(owners, snapshot.block));
   const unchanged: Intent = { ...intent };
   const hypothetical = (variation: Partial<Intent>) =>
     solveHypothetical(snapshot, { replaceHash: intent.hash, intent: { ...unchanged, ...variation } }, funds);

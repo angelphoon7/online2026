@@ -65,6 +65,9 @@ The demo opens without a wallet and automatically searches all live event intent
 
 For broader wishlist inventory, `npm run demo:inventory -- --broadcast` prepares 64 additional tickets across both sessions and all four sections, deposits them and commits 32 adjacent-pair swap offers. Reruns resume the same batch. Additional batches use a name, e.g. `npm run demo:inventory -- --broadcast batch-2`. A new name adds 64 tickets; an existing name resumes its saved batch. [Inventory setup and verification](docs/DEMO_INVENTORY.md) | [Public ticket IDs and transaction hashes](deployments/section-inventory.json).
 
+For seeded one-, two- and three-ticket requests with varied session/section conditions, see
+[demo replacement inventory and matching checks](docs/DEMO_REPLACEMENT_INVENTORY.md).
+
 For asynchronous judging, host the Next.js frontend **and backend** and share its `/demo` URL. Seed before publishing the public manifest. A shared on-chain round can be consumed once; reseed and redeploy the updated manifest for the next round on hosts with immutable files. See [setup, recovery and hosting details](docs/DEMO_SETUP.md).
 
 ## The Graph
@@ -239,6 +242,11 @@ GET http://localhost:3000/api/agent/diagnose/<committed-intent-hash>?minBlock=<r
 Use a full hash from the live pool. The endpoint returns named status, evidence, bounds,
 runtime and a deterministic sentence. `/api/agent/ask` also falls back to deterministic
 diagnosis when no model key is set. Free-form tool selection and narration require the key.
+Each question selects one indexed block N. USDC balances and allowances are read with
+`blockNumber: N`; closed-intent lookup uses exact `block: { number: N }`. Cached capacity
+must belong to the same N across the baseline and every what-if. Unavailable historical
+state returns an error instead of substituting newer data. [Step 7-A / D implementation
+and live checks](docs/GRAPH_7A_7D.md).
 The built app returned HTTP 200 with `SETTLEABLE` at block 61756153 in the current
 [live diagnosis check](docs/checks/step-11-diagnose.json), without invoking a model or signing.
 For a production server use `npm run build` and `npm start`; mount persistent storage for
@@ -293,9 +301,10 @@ not measured performance claims. [Recording guide](docs/DEMO_GRAPH.md).
 
 - No result means none found within the search bound. Single-condition trials do not
   establish whether a combination of changes would work.
-- The pool and its timestamp come from one indexed response, but USDC balances/allowances
-  are separate latest-RPC reads. Closed-intent lookup is also a separate unpinned query.
-  The current diagnosis is therefore not a historical proof of every fact at one block.
+- Diagnosis fixes USDC and closed-intent reads to its pool block. Historical availability
+  depends on RPC/Graph retention: a pruned Graph block returns `SubgraphHistoryUnavailable`
+  (503), and a failed historical USDC read returns `SnapshotCapacityReadError` (503).
+  Retry starts a new diagnosis; missing history is never replaced with `latest`.
 - Snapshot lists are capped at 1,000 with no pagination yet. Large markets need pagination
   before the entire pool can be claimed as searched.
 - The narration guard rejects banned wording, unsupported full identifiers and a missing
@@ -318,7 +327,9 @@ npm run subgraph:parity
 npx tsc --noEmit
 ```
 
-The current run passed 32 Solidity tests, 32 Graph/agent checks, 29 solver tests, 11 deployment checks,
+The Step 7-A / D follow-up passed **63 Graph/agent tests** and the production build, with
+[real Graph/RPC block traces](docs/checks/graph-diagnosis-block.json).
+The earlier Step 11 run passed 32 Solidity tests, 32 Graph/agent checks, 29 solver tests, 11 deployment checks,
 36 manifest checks and 1,719 live parity checks. [Review scope and remaining gaps](docs/STEP_11_REVIEW.md).
 To rebuild the subgraph, install its dependencies with `npm --prefix subgraph ci`, then run
 `npm run subgraph:codegen` and `npm --prefix subgraph run build`. Querying the existing deployment

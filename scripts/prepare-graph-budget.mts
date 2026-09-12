@@ -13,7 +13,7 @@ const { getPoolSnapshot } = await import('../shared/graph/index.js');
 const { diagnose } = await import('../server/agent/diagnose.js');
 const { readCapacity, solveHypothetical } = await import('../server/solve-hypothetical.js');
 const snapshot = await getPoolSnapshot();
-const capacity = await readCapacity(snapshot.intents.map(intent => intent.owner));
+const capacity = await readCapacity(snapshot.intents.map(intent => intent.owner), snapshot.block);
 const candidates = snapshot.intents.filter(intent => intent.owner.toLowerCase() === deployment.deployer.toLowerCase());
 const { SEARCH_CONFIG } = await import('../server/solve.js');
 console.log(`Public pool @ block ${snapshot.block}; ${candidates.length} intents owned by the deployment operator.`);

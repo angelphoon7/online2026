@@ -1,5 +1,6 @@
 import { getPoolSnapshot } from '@/shared/graph';
-import { SubgraphLagError } from '@/shared/graph/client';
+import { SubgraphLagError, SubgraphHistoryUnavailable } from '@/shared/graph/client';
+import { SnapshotCapacityReadError } from '@/server/solve-hypothetical';
 import { diagnose } from '@/server/agent/diagnose';
 import { renderEvidence } from '@/server/agent/template';
 import type { Hex } from 'viem';
@@ -38,6 +39,12 @@ export async function GET(request: Request, context: { params: Promise<{ hash: s
       { headers: { 'Cache-Control': 'no-store' } }
     );
   } catch (error) {
+    if (error instanceof SnapshotCapacityReadError) {
+      return Response.json({ error: error.message, code: error.name, snapshotBlock: String(error.block) }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+    }
+    if (error instanceof SubgraphHistoryUnavailable) {
+      return Response.json({ error: 'The subgraph no longer retains this snapshot. Retry the diagnosis to select a new snapshot.', code: error.name, oldestAvailableBlock: String(error.oldestAvailableBlock) }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+    }
     // An unmet freshness floor is a wait, not a failure: the caller asked about a block the
     // indexer has not reached, and the honest response says how far behind it is.
     if (error instanceof SubgraphLagError) {

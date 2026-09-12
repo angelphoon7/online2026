@@ -39,6 +39,14 @@ export class SubgraphIndexingError extends Error {
   }
 }
 
+/** The index has moved past this retained history; waiting cannot recover a pruned block. */
+export class SubgraphHistoryUnavailable extends Error {
+  constructor(message: string, public oldestAvailableBlock: bigint) {
+    super(message);
+    this.name = 'SubgraphHistoryUnavailable';
+  }
+}
+
 const isServer = typeof window === 'undefined';
 
 /**
@@ -112,6 +120,10 @@ export async function gql<T>(
 
   if (body.errors?.length) {
     const messages = body.errors.map((e) => e.message);
+    for (const message of messages) {
+      const retained = message.match(/only has data starting at block (?:number )?(\d+)/i);
+      if (retained) throw new SubgraphHistoryUnavailable(message, BigInt(retained[1]));
+    }
     const lag = asLagError(messages);
     if (lag) throw lag;
     throw new GraphError(body.errors, response.status);

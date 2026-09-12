@@ -1,5 +1,6 @@
 import { getPoolSnapshot } from '@/shared/graph';
-import { SubgraphLagError } from '@/shared/graph/client';
+import { SubgraphLagError, SubgraphHistoryUnavailable } from '@/shared/graph/client';
+import { SnapshotCapacityReadError } from '@/server/solve-hypothetical';
 import { ask, agentConfigured, AgentNotConfigured } from '@/server/agent/narrate';
 import { diagnose } from '@/server/agent/diagnose';
 import { renderEvidence } from '@/server/agent/template';
@@ -91,6 +92,12 @@ export async function POST(request: Request) {
         { error: 'The indexer has not reached the block of your last transaction yet.', indexedBlock: error.indexedBlock?.toString() ?? null },
         { status: 409, headers: { 'Cache-Control': 'no-store' } }
       );
+    }
+    if (error instanceof SnapshotCapacityReadError) {
+      return Response.json({ error: error.message, code: error.name, snapshotBlock: String(error.block) }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+    }
+    if (error instanceof SubgraphHistoryUnavailable) {
+      return Response.json({ error: 'The subgraph no longer retains this snapshot. Retry the question to select a new snapshot.', code: error.name, oldestAvailableBlock: String(error.oldestAvailableBlock) }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
     }
     if (error instanceof AgentNotConfigured) {
       return Response.json({ error: error.message }, { status: 501 });

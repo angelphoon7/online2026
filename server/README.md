@@ -48,7 +48,12 @@ Evidence persists under `.data/evidence` on the server filesystem. Mount persist
 
 `READ_SOURCE=graph` uses `server/market-graph.ts` and `server/solve-graph.ts` to discover the market from Studio. `READ_SOURCE=rpc` retains log-based discovery for local development. If unset, the presence of `SUBGRAPH_URL` selects Graph. Agent routes require Graph independently of this selector. Graph-mode explicit-hash solving stays within the indexed pool and never substitutes newer RPC log discovery. Receipts and execution simulation always use RPC.
 
-The agent's indexed pool is one snapshot, but payment capacity uses separate latest-RPC reads and closed-intent lookup is unpinned. See [Graph limitations](../README.md#graph-limitations) before describing the complete diagnosis as historical state. The model guard is a vocabulary/identifier/block-reference check, not complete numerical or semantic verification.
+The agent's pool, USDC balances/allowances and closed-intent lookup use the same snapshot block.
+Payment capacity is cached with its block and rejected if reused for another snapshot.
+Historical read failures return 503 without substituting `latest`; pruned Graph history is
+distinguished from indexing lag. [Step 7-A / D checks](../docs/GRAPH_7A_7D.md).
+The model guard remains a vocabulary/identifier/block-reference check, not complete numerical
+or semantic verification. See [Graph limitations](../README.md#graph-limitations).
 
 ## Testnet signing routes
 

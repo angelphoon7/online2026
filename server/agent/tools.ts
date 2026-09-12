@@ -97,8 +97,10 @@ export function dispatcher(snapshot: Snapshot, selected: Hex): Dispatcher {
   let capacity: Promise<Capacity> | undefined;
   let baseline: Promise<Evidence> | undefined;
 
-  const funds = () => (capacity ??= readCapacity(snapshot.intents.map((i) => i.owner as Address)));
-  const selectedDiagnosis = () => (baseline ??= funds().then((money) => diagnose(snapshot, selected, money)));
+  const funds = () => (capacity ??= readCapacity(snapshot.intents.map((i) => i.owner as Address), snapshot.block));
+  const liveAtSnapshot = (hash: Hex) => snapshot.intents.some(i => i.hash.toLowerCase() === hash.toLowerCase());
+  const diagnosis = async (hash: Hex) => diagnose(snapshot, hash, liveAtSnapshot(hash) ? await funds() : undefined);
+  const selectedDiagnosis = () => (baseline ??= diagnosis(selected));
 
   return {
     baseline: selectedDiagnosis,
@@ -110,11 +112,11 @@ export function dispatcher(snapshot: Snapshot, selected: Hex): Dispatcher {
       const hash = asHash(args.intentHash, selected);
 
       if (name === 'diagnose_intent') {
-        return hash === selected ? await selectedDiagnosis() : await diagnose(snapshot, hash, await funds());
+        return hash === selected ? await selectedDiagnosis() : await diagnosis(hash);
       }
       if (name === 'what_if') {
         try {
-          return await whatIf(snapshot, hash, (args.changes ?? {}) as WhatIfChanges, await funds());
+          return await whatIf(snapshot, hash, (args.changes ?? {}) as WhatIfChanges, liveAtSnapshot(hash) ? await funds() : undefined);
         } catch (error) {
           if (error instanceof WhatIfError) return { error: error.message, submittable: false };
           throw error;

@@ -33,9 +33,29 @@ import { SEARCH_CONFIG } from './solve';
 
 /** USDC balance and allowance per owner — V8 capacity, which the subgraph does not index. */
 export type Capacity = {
+  /** All balances and allowances were read at this exact block. */
+  block: bigint;
   usdcBalance: Map<Address, bigint>;
   usdcAllowance: Map<Address, bigint>;
 };
+
+export class SnapshotCapacityMismatch extends Error {
+  constructor(expected: bigint, actual: bigint) {
+    super(`SnapshotCapacityMismatch: expected block ${expected}, received ${actual}`);
+    this.name = 'SnapshotCapacityMismatch';
+  }
+}
+
+export class SnapshotCapacityReadError extends Error {
+  constructor(public block: bigint, cause: unknown) {
+    super(`SnapshotCapacityReadError: USDC state at block ${block} could not be read. Retry this snapshot; latest state was not substituted.`, { cause });
+    this.name = 'SnapshotCapacityReadError';
+  }
+}
+
+export function requireCapacityBlock(capacity: Capacity, block: bigint): void {
+  if (capacity.block !== block) throw new SnapshotCapacityMismatch(block, capacity.block);
+}
 
 /**
  * Read payment capacity for a set of owners.
@@ -43,19 +63,24 @@ export type Capacity = {
  * Separate from the search so step 7's diagnosis can read it once and reuse it across every
  * relaxation it tries, instead of re-reading the same balances for each one.
  */
-export async function readCapacity(owners: Address[]): Promise<Capacity> {
+export async function readCapacity(owners: Address[], block: bigint): Promise<Capacity> {
+  if (typeof block !== 'bigint' || block < 0n) throw new TypeError('An explicit snapshot block is required for USDC reads.');
   const { client, addresses, usdc } = chainConfig();
   const usdcBalance = new Map<Address, bigint>();
   const usdcAllowance = new Map<Address, bigint>();
-  for (const owner of [...new Set(owners.map((o) => o.toLowerCase() as Address))]) {
-    const [balance, allowance] = await Promise.all([
-      client.readContract({ address: usdc, abi: erc20Abi, functionName: 'balanceOf', args: [owner] }),
-      client.readContract({ address: usdc, abi: erc20Abi, functionName: 'allowance', args: [owner, addresses.Settlement] }),
-    ]);
-    usdcBalance.set(owner, balance);
-    usdcAllowance.set(owner, allowance);
+  try {
+    for (const owner of [...new Set(owners.map((o) => o.toLowerCase() as Address))]) {
+      const [balance, allowance] = await Promise.all([
+        client.readContract({ address: usdc, abi: erc20Abi, functionName: 'balanceOf', args: [owner], blockNumber: block }),
+        client.readContract({ address: usdc, abi: erc20Abi, functionName: 'allowance', args: [owner, addresses.Settlement], blockNumber: block }),
+      ]);
+      usdcBalance.set(owner, balance);
+      usdcAllowance.set(owner, allowance);
+    }
+  } catch (error) {
+    throw new SnapshotCapacityReadError(block, error);
   }
-  return { usdcBalance, usdcAllowance };
+  return { block, usdcBalance, usdcAllowance };
 }
 
 export type Hypothetical = {
@@ -115,7 +140,9 @@ export async function solveHypothetical(
   // The one deliberate fiction, and the whole reason this result is not submittable.
   intentState.set(hypotheticalHash, 1);
 
-  const { usdcBalance, usdcAllowance } = capacity ?? (await readCapacity(intents.map((i) => i.owner)));
+  const funds = capacity ?? (await readCapacity(intents.map((i) => i.owner), snapshot.block));
+  requireCapacityBlock(funds, snapshot.block);
+  const { usdcBalance, usdcAllowance } = funds;
 
   const state: ChainState = {
     ticketMeta: snapshot.ticketMeta,

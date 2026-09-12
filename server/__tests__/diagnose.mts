@@ -71,6 +71,7 @@ function snapshot(intents: Intent[], seats: Seat[]): Snapshot {
 }
 
 const capacity = (owners: Address[]) => ({
+  block: 61_000_000n,
   usdcBalance: new Map(owners.map((o) => [o, 1000n * USDC])),
   usdcAllowance: new Map(owners.map((o) => [o, 1000n * USDC])),
 });
@@ -265,7 +266,7 @@ test('revoked: status is CLOSED and the revoking transaction is named', async ()
   process.env.SUBGRAPH_URL = 'http://stub.invalid/graphql';
   globalThis.fetch = (async () =>
     new Response(
-      JSON.stringify({ data: { intent: { id: hashIntent(a), state: 'REVOKED', closedTx: '0xdead', closedAtBlock: '61000001' } } }),
+      JSON.stringify({ data: { _meta: { block: { number: Number(snap.block) }, deployment: snap.deployment, hasIndexingErrors: false }, intent: { id: hashIntent(a), state: 'REVOKED', closedTx: '0xdead', closedAtBlock: '60999999' } } }),
       { headers: { 'content-type': 'application/json' } }
     )) as typeof fetch;
   try {

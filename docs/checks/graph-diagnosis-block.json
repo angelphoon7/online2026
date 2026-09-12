@@ -1,0 +1,598 @@
+{
+  "checkedAt": "2026-09-12T18:52:34.312Z",
+  "status": "PASS",
+  "invocation": "API route handlers with real outbound Graph/RPC requests",
+  "chainId": 5042002,
+  "endpoint": "https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1",
+  "rpc": "https://rpc.testnet.arc.io",
+  "mocked": false,
+  "transactionsSent": 0,
+  "modelConfigured": false,
+  "records": [
+    {
+      "name": "live diagnosis",
+      "block": "61774403",
+      "evidence": {
+        "block": "61774403",
+        "timestamp": "1789239130",
+        "intent": "0xa8304a351bbbe67ffc6d767114e57eb6504f96339aec8166602de1f8ada30488",
+        "relaxations": [
+          {
+            "change": "maxNetPay->cap",
+            "found": true,
+            "counterparties": [
+              "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd"
+            ],
+            "participantCount": 2,
+            "targetNetPay": "0",
+            "receives": [
+              "36",
+              "37"
+            ],
+            "binding": true
+          },
+          {
+            "change": "mustBeAdjacent=false",
+            "found": false,
+            "counterparties": [],
+            "participantCount": null,
+            "targetNetPay": null,
+            "receives": []
+          },
+          {
+            "change": "mustShareSection=false",
+            "found": false,
+            "counterparties": [],
+            "participantCount": null,
+            "targetNetPay": null,
+            "receives": []
+          },
+          {
+            "change": "mustShareSession=false",
+            "found": false,
+            "counterparties": [],
+            "participantCount": null,
+            "targetNetPay": null,
+            "receives": []
+          }
+        ],
+        "bounds": {
+          "maxParticipants": 4,
+          "maxCandidates": 100,
+          "timeoutMs": 2000,
+          "budgetCapUsdc": 100,
+          "groupSearchCap": 40
+        },
+        "counterpartyTx": {
+          "0x4a599d033e1295e93bbfb5fea17ab44b2cbad9fd": "0x3622f7d465af2a873277fb20efe63f7fac225cd72c598efdb32c0e9550490c59",
+          "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd": "0xa4ffa65e29ec1fa8f3be7db6406c364894de800415ab018aa3293815662fa276"
+        },
+        "status": "NOT_FOUND_WITHIN_BOUND",
+        "supply": {
+          "stages": [
+            {
+              "stage": "offeredByOthers",
+              "remaining": 2
+            },
+            {
+              "stage": "eventId",
+              "remaining": 2
+            },
+            {
+              "stage": "session",
+              "remaining": 2
+            },
+            {
+              "stage": "section",
+              "remaining": 2
+            },
+            {
+              "stage": "cohesiveGroup",
+              "remaining": 2
+            }
+          ],
+          "firstZero": null,
+          "blockedAt": null,
+          "largestGroup": 2,
+          "need": 2,
+          "truncated": false
+        },
+        "demand": {
+          "perTicket": [
+            {
+              "ticket": "36",
+              "acceptingIntents": 1
+            },
+            {
+              "ticket": "37",
+              "acceptingIntents": 1
+            }
+          ],
+          "unwanted": []
+        },
+        "runtimeMs": 8644.233,
+        "sentence": "At Arc Testnet block #61774403, no settlement was found within the search bound. The smallest change among those tried: raise the signed payment limit — that produced a 2-participant reshuffle. Signing a new intent is what would make it real; nothing moves until then."
+      },
+      "reads": [
+        {
+          "kind": "graph",
+          "query": "\n  query PoolSnapshot($minBlock: Int!, $first: Int!) {\n    _meta(block: { number_gte: $minBlock }) {\n      block {\n        number\n        timestamp\n      }\n      hasIndexingErrors\n      deployment\n    }\n    intents(\n      first: $first\n      where: { state: LIVE }\n      orderBy: committedAtBlock\n      orderDirection: asc\n      block: { number_gte: $minBlock }\n    ) {\n      id\n      owner\n      eventId\n      offered\n      sessionMask\n      sectionMask\n      exactCount\n      mustShareSession\n      mustShareSection\n      mustBeAdjacent\n      maxNetPay\n      deadline\n      nonce\n      committedAtBlock\n      committedTx\n      offeredTickets {\n        id\n        escrowed\n        depositor\n        redeemed\n      }\n    }\n    tickets(\n      first: $first\n      where: { escrowed: true, redeemed: false }\n      block: { number_gte: $minBlock }\n    ) {\n      id\n      eventId\n      sessionId\n      sectionId\n      row\n      seat\n      depositor\n      redeemed\n    }\n  }\n",
+          "variables": {
+            "minBlock": 61770778,
+            "first": 1000
+          },
+          "response": {
+            "_meta": {
+              "block": {
+                "number": 61774403,
+                "timestamp": 1789239130
+              },
+              "hasIndexingErrors": false,
+              "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL"
+            }
+          },
+          "httpStatus": 200
+        },
+        {
+          "kind": "rpc",
+          "method": "eth_call",
+          "params": [
+            {
+              "data": "0xdd62ed3e0000000000000000000000004a599d033e1295e93bbfb5fea17ab44b2cbad9fd00000000000000000000000075872168f2d6ae13c7d9258159e59025fd9b5eae",
+              "to": "0x3600000000000000000000000000000000000000"
+            },
+            "0x3ae9a43"
+          ],
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "result": "0x0000000000000000000000000000000000000000000000000000000000632ea0"
+          },
+          "httpStatus": 200
+        },
+        {
+          "kind": "rpc",
+          "method": "eth_call",
+          "params": [
+            {
+              "data": "0x70a082310000000000000000000000004a599d033e1295e93bbfb5fea17ab44b2cbad9fd",
+              "to": "0x3600000000000000000000000000000000000000"
+            },
+            "0x3ae9a43"
+          ],
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 0,
+            "result": "0x000000000000000000000000000000000000000000000000000000000725fafc"
+          },
+          "httpStatus": 200
+        },
+        {
+          "kind": "rpc",
+          "method": "eth_call",
+          "params": [
+            {
+              "data": "0x70a08231000000000000000000000000a8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+              "to": "0x3600000000000000000000000000000000000000"
+            },
+            "0x3ae9a43"
+          ],
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "result": "0x000000000000000000000000000000000000000000000000000000000209ab15"
+          },
+          "httpStatus": 200
+        },
+        {
+          "kind": "rpc",
+          "method": "eth_call",
+          "params": [
+            {
+              "data": "0xdd62ed3e000000000000000000000000a8dae73bde3a5c0e412884c9be2039a79dfb31fd00000000000000000000000075872168f2d6ae13c7d9258159e59025fd9b5eae",
+              "to": "0x3600000000000000000000000000000000000000"
+            },
+            "0x3ae9a43"
+          ],
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "result": "0x0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          "httpStatus": 200
+        }
+      ]
+    },
+    {
+      "name": "no-model question",
+      "block": "61774421",
+      "evidence": {
+        "answer": "At Arc Testnet block #61774421, no settlement was found within the search bound. The smallest change among those tried: raise the signed payment limit — that produced a 2-participant reshuffle. Signing a new intent is what would make it real; nothing moves until then.",
+        "guardFallback": true,
+        "guardReason": "NO_MODEL_CONFIGURED",
+        "evidence": [
+          {
+            "tool": "diagnose_intent",
+            "input": {
+              "intentHash": "0xa8304a351bbbe67ffc6d767114e57eb6504f96339aec8166602de1f8ada30488"
+            },
+            "output": {
+              "block": "61774421",
+              "timestamp": "1789239139",
+              "intent": "0xa8304a351bbbe67ffc6d767114e57eb6504f96339aec8166602de1f8ada30488",
+              "relaxations": [
+                {
+                  "change": "maxNetPay->cap",
+                  "found": true,
+                  "counterparties": [
+                    "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd"
+                  ],
+                  "participantCount": 2,
+                  "targetNetPay": "0",
+                  "receives": [
+                    "36",
+                    "37"
+                  ],
+                  "binding": true
+                },
+                {
+                  "change": "mustBeAdjacent=false",
+                  "found": false,
+                  "counterparties": [],
+                  "participantCount": null,
+                  "targetNetPay": null,
+                  "receives": []
+                },
+                {
+                  "change": "mustShareSection=false",
+                  "found": false,
+                  "counterparties": [],
+                  "participantCount": null,
+                  "targetNetPay": null,
+                  "receives": []
+                },
+                {
+                  "change": "mustShareSession=false",
+                  "found": false,
+                  "counterparties": [],
+                  "participantCount": null,
+                  "targetNetPay": null,
+                  "receives": []
+                }
+              ],
+              "bounds": {
+                "maxParticipants": 4,
+                "maxCandidates": 100,
+                "timeoutMs": 2000,
+                "budgetCapUsdc": 100,
+                "groupSearchCap": 40
+              },
+              "counterpartyTx": {
+                "0x4a599d033e1295e93bbfb5fea17ab44b2cbad9fd": "0x3622f7d465af2a873277fb20efe63f7fac225cd72c598efdb32c0e9550490c59",
+                "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd": "0xa4ffa65e29ec1fa8f3be7db6406c364894de800415ab018aa3293815662fa276"
+              },
+              "status": "NOT_FOUND_WITHIN_BOUND",
+              "supply": {
+                "stages": [
+                  {
+                    "stage": "offeredByOthers",
+                    "remaining": 2
+                  },
+                  {
+                    "stage": "eventId",
+                    "remaining": 2
+                  },
+                  {
+                    "stage": "session",
+                    "remaining": 2
+                  },
+                  {
+                    "stage": "section",
+                    "remaining": 2
+                  },
+                  {
+                    "stage": "cohesiveGroup",
+                    "remaining": 2
+                  }
+                ],
+                "firstZero": null,
+                "blockedAt": null,
+                "largestGroup": 2,
+                "need": 2,
+                "truncated": false
+              },
+              "demand": {
+                "perTicket": [
+                  {
+                    "ticket": "36",
+                    "acceptingIntents": 1
+                  },
+                  {
+                    "ticket": "37",
+                    "acceptingIntents": 1
+                  }
+                ],
+                "unwanted": []
+              },
+              "runtimeMs": 8379.037999999999
+            }
+          }
+        ],
+        "block": "61774421",
+        "model": null
+      },
+      "reads": [
+        {
+          "kind": "graph",
+          "query": "\n  query PoolSnapshot($minBlock: Int!, $first: Int!) {\n    _meta(block: { number_gte: $minBlock }) {\n      block {\n        number\n        timestamp\n      }\n      hasIndexingErrors\n      deployment\n    }\n    intents(\n      first: $first\n      where: { state: LIVE }\n      orderBy: committedAtBlock\n      orderDirection: asc\n      block: { number_gte: $minBlock }\n    ) {\n      id\n      owner\n      eventId\n      offered\n      sessionMask\n      sectionMask\n      exactCount\n      mustShareSession\n      mustShareSection\n      mustBeAdjacent\n      maxNetPay\n      deadline\n      nonce\n      committedAtBlock\n      committedTx\n      offeredTickets {\n        id\n        escrowed\n        depositor\n        redeemed\n      }\n    }\n    tickets(\n      first: $first\n      where: { escrowed: true, redeemed: false }\n      block: { number_gte: $minBlock }\n    ) {\n      id\n      eventId\n      sessionId\n      sectionId\n      row\n      seat\n      depositor\n      redeemed\n    }\n  }\n",
+          "variables": {
+            "minBlock": 61770778,
+            "first": 1000
+          },
+          "response": {
+            "_meta": {
+              "block": {
+                "number": 61774421,
+                "timestamp": 1789239139
+              },
+              "hasIndexingErrors": false,
+              "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL"
+            }
+          },
+          "httpStatus": 200
+        },
+        {
+          "kind": "rpc",
+          "method": "eth_call",
+          "params": [
+            {
+              "data": "0x70a082310000000000000000000000004a599d033e1295e93bbfb5fea17ab44b2cbad9fd",
+              "to": "0x3600000000000000000000000000000000000000"
+            },
+            "0x3ae9a55"
+          ],
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "result": "0x000000000000000000000000000000000000000000000000000000000725fafc"
+          },
+          "httpStatus": 200
+        },
+        {
+          "kind": "rpc",
+          "method": "eth_call",
+          "params": [
+            {
+              "data": "0xdd62ed3e0000000000000000000000004a599d033e1295e93bbfb5fea17ab44b2cbad9fd00000000000000000000000075872168f2d6ae13c7d9258159e59025fd9b5eae",
+              "to": "0x3600000000000000000000000000000000000000"
+            },
+            "0x3ae9a55"
+          ],
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "result": "0x0000000000000000000000000000000000000000000000000000000000632ea0"
+          },
+          "httpStatus": 200
+        },
+        {
+          "kind": "rpc",
+          "method": "eth_call",
+          "params": [
+            {
+              "data": "0x70a08231000000000000000000000000a8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+              "to": "0x3600000000000000000000000000000000000000"
+            },
+            "0x3ae9a55"
+          ],
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 6,
+            "result": "0x000000000000000000000000000000000000000000000000000000000209ab15"
+          },
+          "httpStatus": 200
+        },
+        {
+          "kind": "rpc",
+          "method": "eth_call",
+          "params": [
+            {
+              "data": "0xdd62ed3e000000000000000000000000a8dae73bde3a5c0e412884c9be2039a79dfb31fd00000000000000000000000075872168f2d6ae13c7d9258159e59025fd9b5eae",
+              "to": "0x3600000000000000000000000000000000000000"
+            },
+            "0x3ae9a55"
+          ],
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 7,
+            "result": "0x0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          "httpStatus": 200
+        }
+      ]
+    },
+    {
+      "name": "revoked diagnosis",
+      "block": "61774437",
+      "evidence": {
+        "block": "61774437",
+        "timestamp": "1789239148",
+        "intent": "0xf7387010926792738ba5c0b1048ec46e5aa3197ba8ef81ca7976b8864d31baf0",
+        "relaxations": [],
+        "bounds": {
+          "maxParticipants": 4,
+          "maxCandidates": 100,
+          "timeoutMs": 2000,
+          "budgetCapUsdc": 100,
+          "groupSearchCap": 40
+        },
+        "counterpartyTx": {},
+        "status": "CLOSED",
+        "closed": {
+          "state": "REVOKED",
+          "tx": "0x0c477d9ea7156fb418c17464f3fb49fd83b06d14bf38bafccbc9e570284b3430",
+          "block": "61770769"
+        },
+        "runtimeMs": 167.39480000000185,
+        "sentence": "At Arc Testnet block #61774437, this intent is no longer live: it was revoked in transaction 0x0c477d9ea7156fb418c17464f3fb49fd83b06d14bf38bafccbc9e570284b3430. Commit a new intent to rejoin the pool."
+      },
+      "reads": [
+        {
+          "kind": "graph",
+          "query": "\n  query PoolSnapshot($minBlock: Int!, $first: Int!) {\n    _meta(block: { number_gte: $minBlock }) {\n      block {\n        number\n        timestamp\n      }\n      hasIndexingErrors\n      deployment\n    }\n    intents(\n      first: $first\n      where: { state: LIVE }\n      orderBy: committedAtBlock\n      orderDirection: asc\n      block: { number_gte: $minBlock }\n    ) {\n      id\n      owner\n      eventId\n      offered\n      sessionMask\n      sectionMask\n      exactCount\n      mustShareSession\n      mustShareSection\n      mustBeAdjacent\n      maxNetPay\n      deadline\n      nonce\n      committedAtBlock\n      committedTx\n      offeredTickets {\n        id\n        escrowed\n        depositor\n        redeemed\n      }\n    }\n    tickets(\n      first: $first\n      where: { escrowed: true, redeemed: false }\n      block: { number_gte: $minBlock }\n    ) {\n      id\n      eventId\n      sessionId\n      sectionId\n      row\n      seat\n      depositor\n      redeemed\n    }\n  }\n",
+          "variables": {
+            "minBlock": 61770778,
+            "first": 1000
+          },
+          "response": {
+            "_meta": {
+              "block": {
+                "number": 61774437,
+                "timestamp": 1789239148
+              },
+              "hasIndexingErrors": false,
+              "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL"
+            }
+          },
+          "httpStatus": 200
+        },
+        {
+          "kind": "graph",
+          "query": "\n  query IntentById($id: ID!, $block: Int!) {\n    _meta(block: { number: $block }) {\n      block { number }\n      hasIndexingErrors\n      deployment\n    }\n    intent(id: $id, block: { number: $block }) {\n      id\n      owner\n      state\n      committedAtBlock\n      committedTx\n      closedAtBlock\n      closedTx\n      settlement {\n        id\n        txHash\n        blockNumber\n        participantCount\n      }\n    }\n  }\n",
+          "variables": {
+            "id": "0xf7387010926792738ba5c0b1048ec46e5aa3197ba8ef81ca7976b8864d31baf0",
+            "block": 61774437
+          },
+          "response": {
+            "_meta": {
+              "block": {
+                "number": 61774437
+              },
+              "hasIndexingErrors": false,
+              "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL"
+            },
+            "intent": {
+              "id": "0xf7387010926792738ba5c0b1048ec46e5aa3197ba8ef81ca7976b8864d31baf0",
+              "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+              "state": "REVOKED",
+              "committedAtBlock": "61618113",
+              "committedTx": "0x4f0944f42612facc79a41e21785c3ca21e3029012448b46c00ce36b09badf55f",
+              "closedAtBlock": "61770769",
+              "closedTx": "0x0c477d9ea7156fb418c17464f3fb49fd83b06d14bf38bafccbc9e570284b3430",
+              "settlement": null
+            }
+          },
+          "httpStatus": 200
+        }
+      ]
+    },
+    {
+      "name": "pruned Graph history refused",
+      "block": "61770768",
+      "evidence": {
+        "error": "SubgraphHistoryUnavailable",
+        "oldestAvailableBlock": "61772205",
+        "pastStateNotReconstructed": true
+      },
+      "reads": [
+        {
+          "kind": "graph",
+          "query": "\n  query IntentById($id: ID!, $block: Int!) {\n    _meta(block: { number: $block }) {\n      block { number }\n      hasIndexingErrors\n      deployment\n    }\n    intent(id: $id, block: { number: $block }) {\n      id\n      owner\n      state\n      committedAtBlock\n      committedTx\n      closedAtBlock\n      closedTx\n      settlement {\n        id\n        txHash\n        blockNumber\n        participantCount\n      }\n    }\n  }\n",
+          "variables": {
+            "id": "0xf7387010926792738ba5c0b1048ec46e5aa3197ba8ef81ca7976b8864d31baf0",
+            "block": 61770768
+          },
+          "response": {
+            "errors": [
+              {
+                "message": "Failed to decode `block.number` value: `subgraph QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL only has data starting at block number 61772205 and data for block number 61770768 is therefore not available`"
+              }
+            ]
+          },
+          "httpStatus": 200
+        }
+      ]
+    },
+    {
+      "name": "pruned Graph history refused",
+      "block": "61770769",
+      "evidence": {
+        "error": "SubgraphHistoryUnavailable",
+        "oldestAvailableBlock": "61772205",
+        "pastStateNotReconstructed": true
+      },
+      "reads": [
+        {
+          "kind": "graph",
+          "query": "\n  query IntentById($id: ID!, $block: Int!) {\n    _meta(block: { number: $block }) {\n      block { number }\n      hasIndexingErrors\n      deployment\n    }\n    intent(id: $id, block: { number: $block }) {\n      id\n      owner\n      state\n      committedAtBlock\n      committedTx\n      closedAtBlock\n      closedTx\n      settlement {\n        id\n        txHash\n        blockNumber\n        participantCount\n      }\n    }\n  }\n",
+          "variables": {
+            "id": "0xf7387010926792738ba5c0b1048ec46e5aa3197ba8ef81ca7976b8864d31baf0",
+            "block": 61770769
+          },
+          "response": {
+            "errors": [
+              {
+                "message": "Failed to decode `block.number` value: `subgraph QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL only has data starting at block number 61772205 and data for block number 61770769 is therefore not available`"
+              }
+            ]
+          },
+          "httpStatus": 200
+        }
+      ]
+    },
+    {
+      "name": "historical USDC capacity",
+      "block": "61770753",
+      "evidence": {
+        "balances": [
+          [
+            "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+            "34467450"
+          ]
+        ],
+        "allowances": [
+          [
+            "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+            "0"
+          ]
+        ]
+      },
+      "reads": [
+        {
+          "kind": "rpc",
+          "method": "eth_call",
+          "params": [
+            {
+              "data": "0xdd62ed3e000000000000000000000000a8dae73bde3a5c0e412884c9be2039a79dfb31fd00000000000000000000000075872168f2d6ae13c7d9258159e59025fd9b5eae",
+              "to": "0x3600000000000000000000000000000000000000"
+            },
+            "0x3ae8c01"
+          ],
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 9,
+            "result": "0x0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          "httpStatus": 200
+        },
+        {
+          "kind": "rpc",
+          "method": "eth_call",
+          "params": [
+            {
+              "data": "0x70a08231000000000000000000000000a8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+              "to": "0x3600000000000000000000000000000000000000"
+            },
+            "0x3ae8c01"
+          ],
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 8,
+            "result": "0x00000000000000000000000000000000000000000000000000000000020dee7a"
+          },
+          "httpStatus": 200
+        }
+      ]
+    }
+  ]
+}
