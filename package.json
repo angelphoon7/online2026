@@ -33,6 +33,7 @@
     "arc:settle:ten": "node scripts/settle-arc-ten.mjs"
   },
   "dependencies": {
+    "motion": "^13.2.0",
     "next": "16.3.4",
     "ogl": "^1.0.11",
     "react": "19.2.8",

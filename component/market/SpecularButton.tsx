@@ -283,7 +283,10 @@ const SpecularButton = ({
           '--sb-tint': tint,
           '--sb-tint-opacity': tintOpacity,
           '--sb-blur': `${blur}px`,
-          '--sb-text-color': textColor
+          '--sb-text-color': textColor,
+          backgroundColor: tintOpacity >= 1 ? tint : tintOpacity > 0 ? `color-mix(in srgb, ${tint} ${tintOpacity * 100}%, transparent)` : 'transparent',
+          color: textColor,
+          borderRadius: `${radius}px`
         } as CSSProperties
       }
     >

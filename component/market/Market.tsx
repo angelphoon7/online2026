@@ -33,6 +33,7 @@ import rejectionDemo from '@/deployments/act-three.json';
 
 import ConnectWalletButton from '@/component/connectWallet/ConnectWalletButton';
 import SpecularButton from './SpecularButton';
+import ShinyText from './ShinyText';
 
 const scrollTo = (element: HTMLElement | null) => element?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
 const equal = (a?: string | null, b?: string | null) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
@@ -286,21 +287,43 @@ export default function Market() {
         <div className="hero-grid">
           <div className="hero-text-block">
             <div className="eyebrow">An outcome market for tickets</div>
-            <h1>{HERO_TITLE_LINES[0]}<br /><span>{HERO_TITLE_LINES[1]}</span></h1>
+            <h1>
+              <ShinyText
+                text={HERO_TITLE_LINES[0]}
+                speed={2.2}
+                delay={0}
+                color="#ffffff"
+                shineColor="#ffe2aa"
+                spread={120}
+                direction="left"
+              />
+              <br />
+              <span>
+                <ShinyText
+                  text={HERO_TITLE_LINES[1]}
+                  speed={2.2}
+                  delay={0.3}
+                  color="#a8a29e"
+                  shineColor="#ffffff"
+                  spread={120}
+                  direction="left"
+                />
+              </span>
+            </h1>
             <div className="hero-cta-wrap">
               <SpecularButton
                 size="lg"
                 radius={18}
-                tint="#eaf411"
-                tintOpacity={0}
+                tint="#ffffff"
+                tintOpacity={1}
                 blur={0}
-                textColor="#f5f5f5"
+                textColor="#08080a"
                 lineColor="#ea7833"
                 baseColor="#e66e4b"
                 intensity={1}
                 shineSize={10}
                 shineFade={40}
-                thickness={1}
+                thickness={1.5}
                 speed={0.35}
                 followMouse
                 proximity={250}
