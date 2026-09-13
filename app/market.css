@@ -410,8 +410,6 @@
 @media(max-width:768px){.agent-drawer{width:100vw;border-left:none}}
 
 /* Action updates float above the page; receipts stay behind an explicit details action. */
-.activity-history-button{display:grid;place-items:center;width:36px;height:36px;border:1px solid var(--line);border-radius:50%;color:var(--muted);background:transparent}
-.activity-history-button:hover{color:var(--ink);border-color:rgba(255,255,255,.35)}
 .activity-notifications{position:fixed;top:calc(20px + env(safe-area-inset-top,0px));right:calc(20px + env(safe-area-inset-right,0px));width:min(340px,calc(100vw - 40px));z-index:100;pointer-events:none}
 .activity-toast{position:relative;pointer-events:auto;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:#141416;box-shadow:0 12px 40px rgba(0,0,0,.4);opacity:1;transform:translateY(0);transition:opacity 240ms ease,transform 240ms ease;animation:activity-toast-enter 180ms ease-out}
 .activity-toast.is-leaving{opacity:0;transform:translateY(-8px);pointer-events:none}
@@ -1825,4 +1823,3 @@
     grid-template-columns: 1fr;
   }
 }
-

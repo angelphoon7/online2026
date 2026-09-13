@@ -66,15 +66,15 @@ try {
   console.log('Saved home_hero_view.png');
 
   // 1. Visit #tickets
-  await call('Page.navigate', { url: 'http://localhost:3000/#tickets' });
-  await delay(1500);
+  await call('Runtime.evaluate', { expression: `window.location.hash = '#tickets'` });
+  await delay(1200);
   const ticketsShot = await call('Page.captureScreenshot', { format: 'png' });
   await writeFile(path.join(folder, 'tickets_view.png'), Buffer.from(ticketsShot.data, 'base64'));
   console.log('Saved tickets_view.png');
 
   // 2. Visit #events
-  await call('Page.navigate', { url: 'http://localhost:3000/#events' });
-  await delay(1500);
+  await call('Runtime.evaluate', { expression: `window.location.hash = '#events'` });
+  await delay(1200);
   const eventsShot = await call('Page.captureScreenshot', { format: 'png' });
   await writeFile(path.join(folder, 'events_view.png'), Buffer.from(eventsShot.data, 'base64'));
   console.log('Saved events_view.png');

@@ -519,9 +519,6 @@ export default function Market() {
         </button>
       </nav>
       <div className="header-actions">
-        {(busy || notice || txHash || confirmedWrite) && <button type="button" className="activity-history-button" aria-label="Open latest activity" title="Latest activity" aria-haspopup="dialog" onClick={() => setActivityOpen(true)}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2.6 7M3 4v7h7M12 7v5l3 2" /></svg>
-        </button>}
         <ConnectWalletButton />
       </div>
     </header>
@@ -552,11 +549,7 @@ export default function Market() {
                       followMouse
                       proximity={250}
                       autoAnimate={false}
-                      onClick={() => {
-                        const el = document.getElementById('events');
-                        if (el) el.scrollIntoView({ behavior: 'smooth' });
-                        else navigateTo('events');
-                      }}
+                      onClick={() => navigateTo('events')}
                     >
                       Explore Events
                     </SpecularButton>
@@ -570,7 +563,7 @@ export default function Market() {
               </div>
             </section>
           )}
-          <section id="events" className="event-section">
+          {currentView === 'events' && <section id="events" className="event-section">
             <div className="section-heading">
               <div>
                 {currentView === 'events' ? (
@@ -606,7 +599,7 @@ export default function Market() {
               {[{ name: 'INTERLUDE', photo: sarahPoster, alt: 'Sarah Kang in Seoul concert poster' }, { name: 'ENCORE', photo: taylorPoster, alt: 'Taylor Swift The Eras Tour concert poster' }].map(({ name, photo, alt }, n) => <div key={name} className="poster poster-inert" aria-disabled="true"><span className="poster-top mono">UPCOMING PROGRAMME / 0{n + 2}</span><span className="poster-photo"><Image src={photo} alt={alt} fill sizes="(max-width: 720px) 84vw, 28vw" /></span><span className="poster-title">{name}</span><span className="poster-sub">Event details to be announced</span><span className="poster-dates mono">VENUE & DATES UNANNOUNCED</span><span className="poster-status">No live intents</span></div>)}
             </div>
             {readError && <p role="alert" className="read-error">{readError} <button onClick={() => void refresh(true)}>Retry public reads</button></p>}
-          </section>
+          </section>}
         </>
       )}
       {currentView === 'workspace' && (
@@ -887,9 +880,6 @@ export default function Market() {
                 <span className="tickets-network-tag">ARC TESTNET</span>
               </div>
               <h1>My Tickets</h1>
-              <p className="tickets-view-sub">
-                Any tickets in your wallet or held in the reshuffle escrow pool appear here.
-              </p>
             </div>
             <div className="tickets-view-actions">
               <button
