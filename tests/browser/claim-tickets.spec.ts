@@ -290,19 +290,19 @@ test('a search completed after an account switch cannot restore the old account 
 test('the receipt shows USDC amount transferred and each payer and recipient, not event count or net sum', async ({ page }) => {
   const { claim } = await fixture(page, { paymentAmounts: ['60000', '-60000', '0'] });
   await expect(claim).not.toContainText('Your tickets were delivered');
-  await expect(page.locator('.receipt-count')).toContainText('0.06 USDC transferred');
+  await expect(page.locator('.receipt-count')).toContainText('0.0600 USDC transferred');
   await expect(page.locator('.receipt-count')).not.toContainText('2 USDC');
   const rows = page.locator('.receipt-table tbody tr');
-  await expect(rows.nth(0)).toContainText('Paid 0.06 USDC');
-  await expect(rows.nth(1)).toContainText('Received 0.06 USDC');
-  await expect(page.locator('.receipt-table tfoot')).toHaveText('Total transferred0.06 USDC');
+  await expect(rows.nth(0)).toContainText('Paid 0.0600 USDC');
+  await expect(rows.nth(1)).toContainText('Received 0.0600 USDC');
+  await expect(page.locator('.receipt-table tfoot')).toHaveText('Total transferred0.0600 USDC');
   await page.locator('.receipt-section').screenshot({ path: '.data/browser-tests/receipt-usdc-amount.png' });
 });
 
 test('a zero-payment receipt never substitutes an approved upgrade limit for an actual payment', async ({ page }) => {
   await fixture(page, { paymentAmounts: ['0', '0', '0'] });
-  await expect(page.locator('.receipt-count')).toContainText('0 USDC transferred');
-  await expect(page.locator('.receipt-table tfoot')).toHaveText('Total transferred0 USDC');
+  await expect(page.locator('.receipt-count')).toContainText('0.0000 USDC transferred');
+  await expect(page.locator('.receipt-table tfoot')).toHaveText('Total transferred0.0000 USDC');
   await expect(page.locator('.receipt-table')).not.toContainText('Paid');
 });
 

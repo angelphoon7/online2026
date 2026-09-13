@@ -12,6 +12,14 @@ export function formatUSDC(amount: bigint): string {
   return `${sign}${whole}.${fracStr}`;
 }
 
+export function formatUSDCPayment(amount: bigint): string {
+  // Round only the display; on-chain amounts retain all six USDC decimals.
+  const abs = amount < 0n ? -amount : amount;
+  const rounded = (abs + 50n) / 100n;
+  const sign = amount < 0n && rounded !== 0n ? '-' : '';
+  return `${sign}${rounded / 10_000n}.${(rounded % 10_000n).toString().padStart(4, '0')}`;
+}
+
 export function parseUSDC(value: string): bigint {
   const parts = value.split('.');
   const whole = BigInt(parts[0] || '0') * 1_000_000n;

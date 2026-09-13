@@ -18,7 +18,7 @@ import { CONTRACTS, CHAIN } from '@/lib/config';
 import { getWalletClient, approveNFTsForEscrow, depositTickets, withdrawTickets, signAndCommitIntent, revokeIntent, submitSettlement, approveUSDC, redeemTicket, type IntentParams } from '@/lib/contracts';
 import { findSettlement, findPoolSettlement, type SettlementProposal, type SolveEvidence } from '@/lib/solve-api';
 import { SolveRequestError, solverErrorMessage } from '@/lib/solve-errors';
-import { formatUSDC, truncateAddress } from '@/lib/format';
+import { formatUSDC, formatUSDCPayment, truncateAddress } from '@/lib/format';
 import { restoreIntent, type ChainReceipt, type ChainTicket } from '@/lib/market-types';
 import { HERO_TITLE_LINES, EMPTY_RESULT, POOL_NOTE, condition, EXPLORER, POOL_LABEL, RANKING_RULE, SOLVER_NOTE, maskClasses } from '@/lib/ui-copy';
 import { dishonestProposal, namedRejection, isSimulationRejection, simulate, type Attack, type NamedRejection } from '@/lib/proposal-controls';
@@ -1144,11 +1144,11 @@ export default function Market() {
               </div>
             )}
             <a className="hash" href={`${EXPLORER}/tx/${receipt.hash}`} target="_blank" rel="noreferrer">{receipt.hash} ↗</a>
-            <p className="receipt-count mono">{receipt.ticketTransfers} ticket transfers · {receipt.payments ? `${formatUSDC(BigInt(receipt.payments.totalTransferred))} USDC transferred` : 'USDC amount unavailable'} · 1 transaction</p>
+            <p className="receipt-count mono">{receipt.ticketTransfers} ticket transfers · {receipt.payments ? `${formatUSDCPayment(BigInt(receipt.payments.totalTransferred))} USDC transferred` : 'USDC amount unavailable'} · 1 transaction</p>
             <table className="receipt-table">
               <thead><tr><th>Participant</th><th>Before / offered</th><th>After / received</th><th>USDC payment</th></tr></thead>
-              <tbody>{receiptRows.map((p, n) => <tr key={`${p.owner}:${n}`}><td><a href={`${EXPLORER}/address/${p.owner}`} title={p.owner} target="_blank" rel="noreferrer">{walletLabel(p.owner)} · {truncateAddress(p.owner)}</a></td><td className="mono">{p.offered.map(id => `#${id}`).join(', ') || '—'}</td><td className="mono">{p.receives.map(id => `#${id}`).join(', ') || '—'}</td><td className="mono">{(() => { const payment = receipt.payments?.wallets.find(item => equal(item.owner, p.owner)); return !payment ? 'Unavailable' : BigInt(payment.paid) > 0n ? `Paid ${formatUSDC(BigInt(payment.paid))} USDC` : BigInt(payment.received) > 0n ? `Received ${formatUSDC(BigInt(payment.received))} USDC` : '0 USDC'; })()}</td></tr>)}</tbody>
-              <tfoot><tr><td colSpan={3}>Total transferred</td><td className="mono passed">{receipt.payments ? `${formatUSDC(BigInt(receipt.payments.totalTransferred))} USDC` : 'Unavailable'}</td></tr></tfoot>
+              <tbody>{receiptRows.map((p, n) => <tr key={`${p.owner}:${n}`}><td><a href={`${EXPLORER}/address/${p.owner}`} title={p.owner} target="_blank" rel="noreferrer">{walletLabel(p.owner)} · {truncateAddress(p.owner)}</a></td><td className="mono">{p.offered.map(id => `#${id}`).join(', ') || '—'}</td><td className="mono">{p.receives.map(id => `#${id}`).join(', ') || '—'}</td><td className="mono">{(() => { const payment = receipt.payments?.wallets.find(item => equal(item.owner, p.owner)); return !payment ? 'Unavailable' : BigInt(payment.paid) > 0n ? `Paid ${formatUSDCPayment(BigInt(payment.paid))} USDC` : BigInt(payment.received) > 0n ? `Received ${formatUSDCPayment(BigInt(payment.received))} USDC` : `${formatUSDCPayment(0n)} USDC`; })()}</td></tr>)}</tbody>
+              <tfoot><tr><td colSpan={3}>Total transferred</td><td className="mono passed">{receipt.payments ? `${formatUSDCPayment(BigInt(receipt.payments.totalTransferred))} USDC` : 'Unavailable'}</td></tr></tfoot>
             </table>
             <details className="receipt-validation-details" open>
               <summary>Contract validation verified (9/9 checks passed)</summary>
