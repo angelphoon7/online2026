@@ -50,6 +50,12 @@ explicit `false` remains `false`; set `JUDGE_CONTROLS_ENABLED=true` and
 `DEMO_TICKETS_ENABLED=true` if enabling those features. Restart after editing environment
 settings. Existing `.env` and `.env.seed` wallet keys remain private.
 
+Install solver dependencies with `npm --prefix solver ci` on each machine. Generated
+`solver/node_modules` is ignored and removed from Git tracking; previously committed
+macOS binaries prevented the Windows test command from starting. Keep the lockfile in Git,
+and let npm install the binaries for the current OS. `docs:check` rejects tracked solver
+dependencies so they cannot silently return to the submission.
+
 ## Hosted backend and shared storage
 
 Run the repository's Next.js Node service on a host that supports `npm run build` and

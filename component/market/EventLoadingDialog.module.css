@@ -1,0 +1,67 @@
+.dialog {
+  margin: auto;
+  width: min(440px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 36px 28px 28px;
+  border: 1px solid rgba(239, 150, 117, 0.25);
+  border-radius: 20px;
+  background: #171116;
+  color: var(--ink);
+  text-align: center;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+}
+
+.dialog::backdrop {
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+}
+
+.eyebrow {
+  display: block;
+  color: #cbb9b5;
+  margin-bottom: 28px;
+}
+
+.spinner {
+  width: 56px;
+  height: 56px;
+  color: #ef9675;
+  margin-bottom: 20px;
+}
+
+.dialog h2 {
+  font-size: 26px;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  margin: 0 0 14px;
+}
+
+.description {
+  color: #cbb9b5;
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.error {
+  color: var(--fail);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  margin-top: 16px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none !important;
+  }
+}

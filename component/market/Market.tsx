@@ -30,6 +30,7 @@ import JudgeControls, { type BudgetChange, type Revocation } from './JudgeContro
 import JudgingGuide from './JudgingGuide';
 import AgentDrawer from './AgentDrawer';
 import ActivityNotification from './ActivityNotification';
+import EventLoadingDialog from './EventLoadingDialog';
 import { automaticSelection, latestRequest } from '@/lib/matching-status';
 import { waitForIndexed } from '@/shared/graph';
 import { MarketFreshness } from '@/lib/market-freshness';
@@ -515,9 +516,8 @@ export default function Market() {
           </div>
           <div className="posters">
             <button
+              type="button"
               className="poster poster-live"
-              disabled={!market}
-              aria-busy={!market && !readError}
               aria-describedby="event-preload-status"
               onClick={() => navigateTo('workspace')}
             >
@@ -530,7 +530,7 @@ export default function Market() {
             </button>
             {[{ name: 'INTERLUDE', photo: sarahPoster, alt: 'Sarah Kang in Seoul concert poster' }, { name: 'ENCORE', photo: taylorPoster, alt: 'Taylor Swift The Eras Tour concert poster' }].map(({ name, photo, alt }, n) => <div key={name} className="poster poster-inert" aria-disabled="true"><span className="poster-top mono">UPCOMING PROGRAMME / 0{n + 2}</span><span className="poster-photo"><Image src={photo} alt={alt} fill sizes="(max-width: 720px) 84vw, 28vw" /></span><span className="poster-title">{name}</span><span className="poster-sub">Event details to be announced</span><span className="poster-dates mono">VENUE & DATES UNANNOUNCED</span><span className="poster-status">No live intents</span></div>)}
           </div>
-          <p id="event-preload-status" className="quiet" role="status" aria-live="polite">{market ? `Ticket positions and intent commitments loaded for all deployed events / Arc block ${market.blockNumber}.` : readError ? 'Event data could not be loaded. Retry the public reads below.' : 'Preloading public ticket positions and intent commitments for all deployed events. The event opens as soon as its data is ready.'}</p>
+          <p id="event-preload-status" className="quiet" role="status" aria-live="polite">{market ? `Ticket positions and intent commitments loaded for all deployed events / Arc block ${market.blockNumber}.` : readError ? 'Event data could not be loaded. Open the event or retry the public reads below.' : 'Loading public ticket positions and intent commitments. You can open the event while its data loads.'}</p>
           <p className="quiet">Event names are demo presentation labels. Session IDs and ticket metadata come from the deployed contracts; no venue dates or prices are recorded on-chain.</p>
           {readError && <p role="alert" className="read-error">{readError} <button onClick={() => void refresh(true)}>Retry public reads</button></p>}
         </section>
@@ -592,8 +592,8 @@ export default function Market() {
           ) : (
             <section className="workspace-section">
               <button type="button" className="back-nav-btn" onClick={() => navigateTo('events')}>← Back to Events</button>
-              <p className="quiet">{readError || 'Loading event workspace…'}</p>
-              {readError && <button onClick={() => void refresh(true)}>Retry public reads</button>}
+              <div className="section-heading"><div><span className="eyebrow">The workspace / Event 1</span><h2>Keep the ticket.<br />Change the outcome.</h2></div></div>
+              <EventLoadingDialog error={readError} onRetry={() => refresh(true)} onBack={() => navigateTo('events')} />
             </section>
           )}
           {receipt && <section ref={receiptPanel} className="receipt-section"><div className="section-heading"><div><span className="eyebrow passed">Settlement confirmed</span><h2>Different tickets.<br />Every condition met.</h2></div><span className="receipt-stamp passed">✓</span></div><a className="hash" href={`${EXPLORER}/tx/${receipt.hash}`} target="_blank" rel="noreferrer">{receipt.hash} ↗</a><p className="receipt-count mono">{receipt.ticketTransfers} ticket transfers · {receipt.usdcTransfers} USDC transfers · 1 transaction</p><table className="receipt-table"><thead><tr><th>Participant</th><th>Before / offered</th><th>After / received</th><th>USDC net</th></tr></thead><tbody>{receipt.participants.map((p, n) => <tr key={`${p.owner}:${n}`}><td><a href={`${EXPLORER}/address/${p.owner}`} title={p.owner} target="_blank" rel="noreferrer">{walletLabel(p.owner)}</a></td><td className="mono">{p.offered.map(id => `#${id}`).join(', ') || '—'}</td><td className="mono">{p.receives.map(id => `#${id}`).join(', ') || '—'}</td><td className="mono">{BigInt(p.netPayment) > 0n ? '−' : BigInt(p.netPayment) < 0n ? '+' : ''}{formatUSDC(BigInt(p.netPayment) < 0n ? -BigInt(p.netPayment) : BigInt(p.netPayment))}</td></tr>)}</tbody><tfoot><tr><td colSpan={3}>Σ =</td><td className="mono passed">{formatUSDC(BigInt(receipt.netSum))}</td></tr></tfoot></table><p>{receipt.independent ? SOLVER_NOTE : 'Submitted by a participant wallet.'} <a href={`${EXPLORER}/address/${receipt.proposer}`} title={receipt.proposer} target="_blank" rel="noreferrer">{walletLabel(receipt.proposer)}</a></p><p className="quiet">Ticket recipients are checked against receipt logs. USDC transfer count excludes native gas. A different proposer address alone does not establish that participant browsers were offline.</p><div className="receipt-actions"><a className="secondary" href={`${EXPLORER}/tx/${receipt.hash}`} target="_blank" rel="noreferrer">View on Arc explorer ↗</a><button className="secondary" onClick={() => void navigator.clipboard.writeText(receipt.hash).then(() => setNotice('Hash copied.')).catch(() => setNotice('Clipboard unavailable. Select and copy the displayed hash.'))}>Copy hash</button></div>{replacementIds.length > 0 && <section className="wallet-nft-import swap-nft-import">

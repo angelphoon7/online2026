@@ -14,6 +14,10 @@ let checks = 0;
 const check = (ok, message) => { assert.ok(ok, message); checks++; };
 
 try {
+  const installedDependencies = spawnSync('git', ['ls-files', 'solver/node_modules'], { cwd: root, encoding: 'utf8' });
+  check(installedDependencies.status === 0 && installedDependencies.stdout.trim() === '', 'Generated solver/node_modules must not be tracked; install from solver/package-lock.json');
+  const dependencyIgnore = spawnSync('git', ['check-ignore', '--no-index', '-q', 'solver/node_modules/.bin/vitest'], { cwd: root });
+  check(dependencyIgnore.status === 0, 'solver/node_modules must be ignored on every operating system');
   const tracked = spawnSync('git', ['ls-files', '--error-unmatch', '.env.example'], { cwd: root, encoding: 'utf8' });
   check(tracked.status === 0, '.env.example must be tracked so a teammate receives it');
   const ignored = spawnSync('git', ['check-ignore', '--no-index', '-q', '.env.example'], { cwd: root });
