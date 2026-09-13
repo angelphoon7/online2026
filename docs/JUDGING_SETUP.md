@@ -1,8 +1,10 @@
 # Judging setup
 
 The app can serve live matching and saved evidence without the developer's laptop once its
-Next.js backend and storage are hosted. These changes prepare that path; they do not create
-a hosting account, deploy to Vercel or provision a database.
+Next.js backend and storage are hosted. Persistent Upstash Redis is now connected to the
+existing Vercel project's production environment and its real connection/admission checks
+pass. Operator credentials, business-state migration, deployment and complete public
+acceptance remain pending; see [current configuration](checks/hosting-configuration.json).
 
 ## What a judge needs
 
@@ -289,7 +291,7 @@ requests also received HTTP 429 from the Studio provider. These are separate fai
 
 The fix uses the selected public deployment record when `SUBGRAPH_URL` or `ARC_RPC` is
 absent/blank. Arc Testnet discovery defaults to Graph even without environment overrides;
-the browser RPC proxy uses the same resolved RPC URL as the server. Explicit overrides
+the browser RPC proxy starts with the same resolved RPC URL as the server. Explicit overrides
 remain supported. Public browsing needs no wallet private key. Agent admission, evidence
 storage and judge controls retain their separate configuration requirements above.
 
@@ -305,6 +307,22 @@ SUBGRAPH_URL=https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1
 Keep API keys in server-only variables. Deploy the updated repository to receive the
 fallback and throttling fixes; editing local `.env` cannot update the public website.
 [Vercel applies environment changes to new deployments](https://vercel.com/docs/environment-variables).
+
+`Arc RPC is rate-limited` means the provider refused further requests, not that the intent
+is too large. For Circle's public Arc Testnet endpoint, `/api/rpc` can continue a failed read
+through the [official dRPC and QuickNode endpoints](https://docs.arc.io/arc/references/rpc-endpoints).
+It checks an alternate provider's chain ID before using it, respects each provider's
+cooldown, and shares identical reads only while they are in flight. Custom/private RPC
+overrides remain exclusive. The chain, deployed contracts and EIP-712 domain stay the same;
+wallet signing and transaction submission remain in the connected wallet.
+
+Intent creation checks at most two nonce candidates, using a random uint256 candidate when
+the indexed candidate is already consumed. The registry still checks and reserves the nonce
+at commit. Payment approval waits for a successful receipt, then proceeds to signing without
+waiting for The Graph; the approval block floor is retained, and the commit read-back must
+reach both transactions. If every available provider is throttled, browser retries respect
+`Retry-After` and stop after two retries. A persistent limit still requires retrying later or
+configuring a dedicated `ARC_RPC` endpoint.
 
 `SubgraphRateLimited` / HTTP 429 means The Graph refused further queries. The client and
 proxy now preserve `Retry-After`, return readable JSON even if the provider returned HTML,

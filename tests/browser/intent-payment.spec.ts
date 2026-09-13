@@ -11,8 +11,8 @@ const word = (value: bigint) => `0x${value.toString(16).padStart(64, '0')}`;
 type Transaction = { to: string; data: Hex; value?: Hex };
 type WalletRequest = { method: string; params?: unknown[] };
 
-async function fixture(page: Page, options: { offeredSection?: number; allowance?: bigint; deposited?: boolean; cancelApproval?: boolean; throttle?: 'once' | 'always' } = {}) {
-  const control = { transactions: [] as Transaction[], calls: [] as string[], throttledReads: 0, signed: null as { message: { maxNetPay: string; offered: string[] } } | null };
+async function fixture(page: Page, options: { offeredSection?: number; allowance?: bigint; deposited?: boolean; cancelApproval?: boolean; cancelSignature?: boolean; throttle?: 'once' | 'always'; retryAfter?: number; usedNonces?: bigint } = {}) {
+  const control = { transactions: [] as Transaction[], calls: [] as string[], throttledReads: 0, blockReadTimes: [] as number[], nonceReads: [] as bigint[], preSignGraphReads: 0, signed: null as { message: { maxNetPay: string; offered: string[]; nonce: string } } | null };
   const tickets = [1, 2].map(id => ({ tokenId: String(id), eventId: 1, sessionId: 0, sectionId: options.offeredSection ?? 0, row: 1, seat: id, status: 0,
     owner: options.deposited === false ? owner : deployment.contracts.Escrow, depositor: options.deposited === false ? zero : owner }));
   await page.exposeFunction('paymentWalletRequest', async ({ method, params = [] }: WalletRequest) => {
@@ -20,6 +20,7 @@ async function fixture(page: Page, options: { offeredSection?: number; allowance
     if (method === 'eth_accounts' || method === 'eth_requestAccounts') return [owner];
     if (method === 'eth_chainId') return '0x4cef52';
     if (method === 'eth_signTypedData_v4') {
+      if (options.cancelSignature) throw Object.assign(new Error('User rejected signature'), { code: 4001 });
       control.signed = JSON.parse(params[1] as string);
       return `0x${'1'.repeat(130)}`;
     }
@@ -41,13 +42,17 @@ async function fixture(page: Page, options: { offeredSection?: number; allowance
     if (path === '/api/market') return json({ blockNumber: '100', timestamp: '1789232809', source: 'graph', tickets, intents: [], settlements: [], defaultHashes: [], hashMismatched: [] });
     if (path === '/api/demo/reset' || path === '/api/demo/session') return json({ enabled: false, authenticated: false });
     if (path === '/api/demo/scenarios') return json({ batch: 'fixture', snapshotBlock: '100', lagSeconds: 0, groups: [] });
-    if (path === '/api/graph') return json({ data: { _meta: { block: { number: 100, timestamp: '1789232809' }, hasIndexingErrors: false } } });
+    if (path === '/api/graph') {
+      if (!control.signed) control.preSignGraphReads++;
+      return json({ data: { _meta: { block: { number: 100, timestamp: '1789232809' }, hasIndexingErrors: false } } });
+    }
     if (path === '/api/solve/pool') return json({ id: 'fixture', proposal: null, source: { kind: 'subgraph', blockNumber: '100', snapshotBlock: '100' }, candidatesFound: 0, candidatesExcluded: [], intentsConsidered: 0, chosen: null });
     if (path === '/api/rpc') {
       const body = route.request().postDataJSON();
+      if (body.method === 'eth_getBlockByNumber') control.blockReadTimes.push(Date.now());
       if (body.method === 'eth_getBlockByNumber' && options.throttle && (options.throttle === 'always' || control.throttledReads === 0)) {
         control.throttledReads++;
-        return route.fulfill({ status: 429, headers: { 'Retry-After': '1' }, json: { jsonrpc: '2.0', id: body.id, error: { code: -32005, message: 'Arc RPC is rate-limited. Wait 1 second, then retry.' } } });
+        return route.fulfill({ status: 429, headers: { 'Retry-After': String(options.retryAfter ?? 1) }, json: { jsonrpc: '2.0', id: body.id, error: { code: -32005, message: 'Arc RPC is rate-limited. Wait 1 second, then retry.' } } });
       }
       let result: unknown;
       if (body.method === 'eth_chainId') result = '0x4cef52';
@@ -57,7 +62,11 @@ async function fixture(page: Page, options: { offeredSection?: number; allowance
       else if (body.method === 'eth_call') {
         const selector = body.params[0].data.slice(0, 10);
         if (selector === toFunctionSelector('isApprovedForAll(address,address)')) result = word(1n);
-        else if (selector === toFunctionSelector('usedNonce(address,uint256)')) result = word(0n);
+        else if (selector === toFunctionSelector('usedNonce(address,uint256)')) {
+          const nonce = BigInt(`0x${body.params[0].data.slice(-64)}`);
+          control.nonceReads.push(nonce);
+          result = word(nonce < (options.usedNonces ?? 0n) ? 1n : 0n);
+        }
         else if (selector === toFunctionSelector('depositor(uint256)')) result = `0x${(options.deposited === false ? zero : owner).slice(2).padStart(64, '0')}`;
         else if (selector === toFunctionSelector('allowance(address,address)')) result = word(options.allowance ?? 0n);
         else throw new Error(`Unexpected contract read: ${selector}`);
@@ -100,6 +109,7 @@ test('fixed upgrade difference is approved and included unchanged in the committ
   expect(control.signed?.message).toEqual(preview.message);
   expect(BigInt(control.signed!.message.maxNetPay)).toBe(40000n);
   expect(control.calls.indexOf('eth_sendTransaction')).toBeLessThan(control.calls.indexOf('eth_signTypedData_v4'));
+  expect(control.preSignGraphReads).toBe(0);
   expect(commit.to.toLowerCase()).toBe(deployment.contracts.IntentRegistry.toLowerCase());
   const committed = decodeFunctionData({ abi: intentRegistryAbi, data: commit.data });
   expect(committed.functionName).toBe('commit');
@@ -182,4 +192,37 @@ test('persistent Arc throttling stops after two retries without approving or sig
   expect(control.throttledReads).toBe(3);
   expect(control.transactions).toHaveLength(0);
   expect(control.signed).toBeNull();
+});
+
+test('a stale nonce preview skips consumed history and signs the checked unused nonce', async ({ page }) => {
+  const control = await fixture(page, { usedNonces: 1_000_000n, allowance: 40000n });
+  await selectTickets(page, 2);
+  await page.locator('.sign-intent').click();
+  await expect.poll(() => control.transactions.length).toBe(1);
+  expect(control.nonceReads).toHaveLength(2);
+  expect(control.nonceReads[0]).toBe(0n);
+  expect(BigInt(control.signed!.message.nonce)).toBe(control.nonceReads[1]);
+  expect(control.nonceReads[1]).toBeGreaterThanOrEqual(1_000_000n);
+});
+
+test('cancelling signing after approval immediately reads back its receipt floor and unlocks the form', async ({ page }) => {
+  const control = await fixture(page, { cancelSignature: true });
+  await selectTickets(page, 2);
+  await page.locator('.sign-intent').click();
+  await expect.poll(() => control.calls.includes('eth_signTypedData_v4')).toBe(true);
+  await expect.poll(() => control.preSignGraphReads).toBeGreaterThan(0);
+  await expect(page.locator('.sign-intent')).toBeEnabled();
+  expect(control.transactions).toHaveLength(1);
+  expect(control.transactions[0].to.toLowerCase()).toBe(deployment.usdc.toLowerCase());
+  expect(control.signed).toBeNull();
+});
+
+test('JSON-RPC throttling honors Retry-After before retrying and never repeats the wallet approval', async ({ page }) => {
+  const control = await fixture(page, { throttle: 'once', retryAfter: 3 });
+  await selectTickets(page, 2);
+  await page.locator('.sign-intent').click();
+  await expect.poll(() => control.transactions.length, { timeout: 15000 }).toBe(2);
+  expect(control.blockReadTimes[1] - control.blockReadTimes[0]).toBeGreaterThanOrEqual(3000);
+  expect(control.throttledReads).toBe(1);
+  expect(control.calls.filter(method => method === 'eth_signTypedData_v4')).toHaveLength(1);
 });

@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-09-13T02:10:09.832Z",
+  "status": "PASS_REDIS_CONNECTION",
+  "project": "online2026",
+  "environment": "production",
+  "resource": "reshuffle-arc-testnet",
+  "resourceId": "store_ZouXGkQpMx0Rp3AF",
+  "plan": "free",
+  "ownership": "owned",
+  "verification": {
+    "configuration": "PASS",
+    "redisWriteAndLua": "PASS",
+    "redisSettings": [
+      "KV_REST_API_URL",
+      "KV_REST_API_TOKEN"
+    ],
+    "hostedAcceptance": "NOT_RUN"
+  },
+  "scope": "Actual Redis REST EVAL/TIME/write/read/delete probe using cloud-injected configuration; not full hosted app acceptance.",
+  "localWalletOrApiCredentialsTransferred": false,
+  "transactionsSent": 0
+}

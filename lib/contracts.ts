@@ -5,6 +5,7 @@ import {
   createWalletClient,
   custom,
   http,
+  HttpRequestError,
   encodeFunctionData,
   decodeFunctionResult,
   parseAbiItem,
@@ -29,12 +30,23 @@ function getProvider() {
   return window.ethereum;
 }
 
-export function getPublicClient() {
+function createReadClient() {
   return createPublicClient({
     chain: NETWORK,
-    transport: http('/api/rpc', { timeout: 20000, retryCount: 2, retryDelay: 1000 }),
+    transport: http('/api/rpc', {
+      timeout: 15000, retryCount: 2, retryDelay: 500,
+      onFetchResponse: async response => {
+        if (response.status !== 429) return;
+        const body = await response.clone().json().catch(() => null);
+        // viem otherwise unwraps a JSON-RPC 429 and loses the Retry-After header.
+        throw new HttpRequestError({ url: '/api/rpc', status: 429, headers: response.headers,
+          cause: new Error(body?.error?.message ?? 'Arc RPC is rate-limited. Retry shortly.') });
+      },
+    }),
   });
 }
+let publicClient: ReturnType<typeof createReadClient> | undefined;
+export function getPublicClient() { return publicClient ??= createReadClient(); }
 
 // Direct chain discovery for the deployment demo; this is not subgraph evidence.
 export async function getCommittedIntents() {

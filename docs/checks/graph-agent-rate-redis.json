@@ -1,12 +1,56 @@
 {
-  "checkedAt": "2026-09-12T22:28:57.062Z",
+  "checkedAt": "2026-09-13T02:10:33.636Z",
   "backend": "real Redis REST; atomic Lua with Redis server time",
   "topology": "two independent Node processes using actual Agent route handlers behind a socket-IP-overwriting loopback proxy",
-  "namespace": "rate-acceptance-37a639663be141879a01fef1545f35c5",
+  "namespace": "rate-acceptance-0f2c858db1a84fd4a0816eebde8b0d20",
   "actualVercelIngressVerified": false,
   "graphModelOrChainCalls": 0,
-  "modes": [],
-  "stage": "redis-preflight",
-  "passed": false,
-  "error": "Shared storage is unavailable. Retry after the operator checks storage configuration."
+  "modes": [
+    {
+      "source": "trusted-proxy",
+      "routes": [
+        {
+          "route": "ask",
+          "allowed": 12,
+          "blocked": 8,
+          "secondIpAllowed": true
+        },
+        {
+          "route": "diagnose",
+          "allowed": 30,
+          "blocked": 8,
+          "secondIpAllowed": true
+        }
+      ],
+      "independentWorkers": 2,
+      "spoofedHeadersDidNotResetQuota": true,
+      "restartPreservedQuota": true,
+      "expiredWindowRecovered": true,
+      "pass": true
+    },
+    {
+      "source": "vercel",
+      "routes": [
+        {
+          "route": "ask",
+          "allowed": 12,
+          "blocked": 8,
+          "secondIpAllowed": true
+        },
+        {
+          "route": "diagnose",
+          "allowed": 30,
+          "blocked": 8,
+          "secondIpAllowed": true
+        }
+      ],
+      "independentWorkers": 2,
+      "spoofedHeadersDidNotResetQuota": true,
+      "restartPreservedQuota": true,
+      "expiredWindowRecovered": true,
+      "pass": true
+    }
+  ],
+  "stage": "complete",
+  "passed": true
 }

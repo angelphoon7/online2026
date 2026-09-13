@@ -1,9 +1,9 @@
 # Step 7-I: Agent admission and request deadlines
 
-Updated on 12 September 2026. Both Agent APIs enforce a request quota before reading the
+Updated on 13 September 2026. Both Agent APIs enforce a request quota before reading the
 body, route parameters, Graph, RPC or model. Production uses shared Redis admission and
 trusted per-IP identity. A single monotonic deadline includes admission and response work.
-Code checks pass; real Redis and public deployment acceptance remain unverified below.
+Code checks and real two-process Redis acceptance pass; public ingress acceptance remains separate.
 
 | Route | Sliding window per IP across production instances | Default overall deadline | Next `maxDuration` |
 | --- | --- | --- | --- |
@@ -217,17 +217,23 @@ baseline for the independent-IP check. Two tabs or forged headers on one network
 two real public IPs. Public reports do not establish how many platform instances served
 them; retain the separate multi-process Redis report as well.
 
-**Recorded status:** an isolated temporary Redis database was created for acceptance,
-but its endpoint could not be reached from this environment (TCP connection timeout).
-The [actual run report](checks/graph-agent-rate-redis.json) records `passed: false` at
-`redis-preflight`, with no mode accepted. Application credentials and business data were
-not changed. A public Vercel deployment was not requested and has not been performed.
-Steps 7-I / 11-C therefore have the shared implementation and assertion scripts, but real
-Redis and deployed two-IP acceptance must remain pending until those checks pass.
+**Recorded status:** the [actual run report](checks/graph-agent-rate-redis.json) now records
+`passed: true` using the team's persistent free Upstash Redis database. Both the controlled
+proxy and simulated Vercel modes passed: ask/diagnose quotas shared across two independent
+processes, separate socket IPs, spoofed-header resistance, persistence after restarting both
+workers, and recovery after the actual 60-second window. The test used isolated expiring
+keys, with zero Graph/model calls or transactions. The earlier temporary endpoint failed
+connectivity; that earlier failure is superseded by this new run, not relabelled as a PASS.
+
+The database is connected only to `online2026` Production. Its injected REST credentials
+also passed the [actual write/Lua/TIME probe](checks/redis-connection.json). No local wallet
+or model credentials have been uploaded, and no business journals have been migrated.
+Actual public Vercel ingress/two-network checks and full hosted acceptance remain pending.
+The loopback test's `actualVercelIngressVerified` field correctly remains `false`.
 
 The 13 September hosting follow-up shares provider-variable resolution between storage,
 Agent admission and this acceptance script. Vercel builds now stop when the actual Redis
 write/Lua probe fails, with setting names rather than secret/provider payloads in errors.
 The combinatorial-search timeout regression uses an injected monotonic clock after the
 search has started; separate stalled-I/O tests still exercise actual deadline timers.
-These changes do not turn the earlier failed Redis acceptance into a PASS.
+The successful Redis record above comes from the subsequent persistent-database run.

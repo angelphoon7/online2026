@@ -100,8 +100,9 @@ historical gas-report measurements.
    [Hosting checklist and recorded scope](JUDGING_SETUP.md).
    The Step 7-I rate-limit follow-up adds 15 passing regression tests for trusted IPs,
    shared admission wiring, Redis failures/deadlines and health readiness (277 total
-   server/Graph checks pass). The real Redis run failed its connectivity preflight, and
-   public two-IP checks still require deployment. These remain unaccepted under 7-I / 11-C.
+   server/Graph checks pass). The subsequent real Redis run passed two independent workers,
+   distinct socket IPs, spoof resistance, restart persistence and real window recovery.
+   Actual public ingress/two-network and full hosted checks remain open under 7-I / 11-C.
    [Assertion scripts and recorded deployment status](GRAPH_7I.md#deployment-acceptance).
 3. **11-C:** the team must confirm Start Fresh eligibility, full AI/asset attribution,
    public repository access, final video/presentation and actual form/prize selections.

@@ -6,6 +6,7 @@ import { CONTRACTS } from './config';
 import { escrowAbi, settlementAbi } from './abi';
 import type { ChainReceipt, ChainTicket, MarketSnapshot } from './market-types';
 import type { SettlementProposal } from './solve-api';
+import { findUnusedIntentNonce } from './intent-nonce';
 
 export { getMarketSnapshot } from './market-snapshot';
 async function readJson<T>(url: string): Promise<T> {
@@ -36,9 +37,8 @@ export const getChainBlockNumber = () => getPublicClient().getBlockNumber();
 export const getTicketDepositor = (tokenId: bigint) => getPublicClient().readContract({ address: CONTRACTS.escrow, abi: escrowAbi, functionName: 'depositor', args: [tokenId] });
 export const getUSDCAllowance = (address: Address) => getPublicClient().readContract({ address: CONTRACTS.usdc, abi: erc20Abi, functionName: 'allowance', args: [address, CONTRACTS.settlement] });
 export async function getUnusedNonce(address: Address, minimum: bigint) {
-  let nonce = minimum;
-  while (await getPublicClient().readContract({ address: CONTRACTS.intentRegistry, abi: [{ type: 'function', name: 'usedNonce', stateMutability: 'view', inputs: [{ type: 'address' }, { type: 'uint256' }], outputs: [{ type: 'bool' }] }], functionName: 'usedNonce', args: [address, nonce] })) nonce++;
-  return nonce;
+  const client = getPublicClient();
+  return findUnusedIntentNonce(minimum, nonce => client.readContract({ address: CONTRACTS.intentRegistry, abi: [{ type: 'function', name: 'usedNonce', stateMutability: 'view', inputs: [{ type: 'address' }, { type: 'uint256' }], outputs: [{ type: 'bool' }] }], functionName: 'usedNonce', args: [address, nonce] }));
 }
 export async function getNativeUSDCBalance(address: Address) {
   const client = getPublicClient();

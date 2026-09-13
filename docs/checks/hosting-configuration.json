@@ -1,6 +1,6 @@
 {
-  "checkedAt": "2026-09-13 02:01:24 UTC",
-  "status": "AWAITING_OPERATOR_ACTION",
+  "checkedAt": "2026-09-13T02:14:44.307Z",
+  "status": "REDIS_VERIFIED_AWAITING_CREDENTIAL_AUTHORIZATION",
   "vercel": {
     "authenticated": true,
     "account": "angelphoon7",
@@ -17,7 +17,6 @@
   "productionConfiguration": {
     "initialVariableCount": 0,
     "addedConfigCount": 14,
-    "secretsTransferred": false,
     "keys": [
       "DEPLOYMENT",
       "NEXT_PUBLIC_DEPLOYMENT",
@@ -34,15 +33,29 @@
       "JUDGE_CONTROLS_ENABLED",
       "DEMO_TICKETS_ENABLED"
     ],
-    "signingEnabled": false
+    "signingEnabled": false,
+    "localWalletOrApiCredentialsTransferred": false,
+    "cloudDatabaseSettingsInstalled": true
   },
   "redis": {
-    "provisioned": false,
-    "requestedPlan": "free",
+    "termsAccepted": true,
+    "provisioned": true,
+    "resource": "reshuffle-arc-testnet",
+    "resourceId": "store_ZouXGkQpMx0Rp3AF",
+    "installationId": "icfg_TZ5MAAJV6jGDXVzZSiemRi2b",
+    "plan": "free",
+    "ownership": "owned",
+    "connectedEnvironment": "production",
     "requestedRegion": "iad1",
     "requestedAutoUpgrade": false,
     "requestedEviction": false,
-    "pending": "Provider requires browser acceptance of Upstash/Vercel terms"
+    "restSettings": [
+      "KV_REST_API_URL",
+      "KV_REST_API_TOKEN"
+    ],
+    "connection": "PASS",
+    "sharedAdmission": "PASS",
+    "actualVercelIngressVerified": false
   },
   "migration": {
     "checked": true,
@@ -51,9 +64,8 @@
     "localFilesDeleted": false
   },
   "pending": [
-    "Operator acceptance of provider terms",
     "Explicit authorization before transferring local wallet keys, API keys and judge access code to Vercel Production Secret",
-    "Persistent Redis connection, journal migration, deployment and real public acceptance"
+    "Business journal migration after stopping writers, followed by deployment and real public acceptance"
   ],
   "transactionsSent": 0,
   "deployedInThisFollowup": false

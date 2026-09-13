@@ -63,8 +63,9 @@ local build, 292 server/Graph checks, 29 solver checks, 24 hosting fixtures and 
 checks. Redis provider-variable compatibility, a real Redis dependency gate before Vercel
 builds and the GitHub regression workflow are implemented. Generated solver dependencies
 are no longer tracked; the installed files and lockfile are preserved. These local fixes
-do not certify the public app: the latest actual hosted check still returns health 503,
-and the isolated real Redis acceptance retry still fails its connectivity preflight.
+do not certify the public app: the last actual hosted check returned health 503. The
+subsequent persistent Redis [connection check](checks/redis-connection.json) and
+[two-process admission run](checks/graph-agent-rate-redis.json) now pass.
 
 The subsequent [authenticated configuration check](checks/hosting-configuration.json)
 confirmed login to the existing Vercel project and read the actual failure logs. Production
@@ -79,12 +80,15 @@ false checks. `/api/demo/scenarios` also returned HTTP 503. In the checked sourc
 those false flags do not establish separate failures of every service.
 
 **Confirmed in Vercel logs:** deployment `dpl_EXvEqECVfDDEjQ7um3mEjiV1jwGn` stopped because
-`hosting:check` found no Redis REST URL/token pair. Storage selection and Agent settings are
-now configured; a persistent database connection and secret credentials are still missing.
-The requested Upstash plan is free, in `iad1`, with eviction and automatic paid upgrades
-disabled. Provisioning is waiting for the account holder's browser acceptance of provider
-terms. No database was created. Uploading existing local signing/model credentials also
-awaits explicit operator authorization; no local secrets have been transferred.
+`hosting:check` found no Redis REST URL/token pair. The account holder has now accepted
+Upstash's terms; the free persistent `reshuffle-arc-testnet` database is provisioned and
+connected only to Production. Creation requested `iad1`, eviction disabled and automatic
+paid upgrades disabled; live inspection confirms the free plan and owned resource.
+Its cloud-injected `KV_REST_API_URL` / `KV_REST_API_TOKEN` pair passed actual Redis
+EVAL/TIME/write/read/delete and the two-process admission acceptance. This resolves the
+database-connection gap, while credential setup and complete hosted acceptance remain open.
+Uploading existing local signing/model credentials still awaits explicit operator
+authorization; no local wallet keys, API keys or access codes have been transferred.
 The read-only migration check found 459 records to preserve, with no active migration lock
 reported. Migration has not been applied. Stop writers and rerun the check immediately
 before transferring any evidence, claims or signing journals.

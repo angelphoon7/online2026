@@ -68,7 +68,8 @@ Setup adds missing private access settings to ignored `.env.local` and preserves
 settings. Hosting still requires a running Next.js backend and persistent storage: use
 `STORAGE_BACKEND=redis` with `REDIS_REST_URL` / `REDIS_REST_TOKEN`, or explicitly configure
 one backend with a persistent volume. Ordinary production local-file storage fails closed.
-There is no Vercel deployment or provisioned database included in this change.
+Persistent Upstash Redis is now connected to the existing Vercel project's production
+environment. Credential setup, state migration and full hosted acceptance remain pending.
 
 Before sharing the public URL, migrate existing local claims/evidence with
 `npm run storage:migrate`, publish fresh prepared groups with `npm run demo:catalog`, and
@@ -84,7 +85,8 @@ September 12 validation: production build and type check passed; 228 server/Grap
 11 browser tests passed. Live checks verified 12 pair rejections and four three-user
 simulations, with all 16 evidence records unchanged after restarting the local production
 server. No settlement was broadcast. [Readiness evidence and verification limits](docs/checks/judging-readiness.json).
-Hosted Redis and the external laptop-off check remain unverified until the services are configured.
+Redis connectivity and two-process admission are now verified in the later follow-up below.
+Full hosted application acceptance and the external laptop-off check remain unverified.
 
 ## Ready-to-settle demo
 
@@ -433,8 +435,10 @@ The Step 7-G / H follow-up passed **95 Graph/agent tests** and the production bu
 The Step 7-I follow-up added **22 request-control tests**; its **128-test Graph/agent
 suite** and production build passed. [Captured output](docs/checks/graph-agent-requests-tests.txt).
 The shared-limit follow-up adds **15 regression tests**, with **277 server/Graph checks**,
-TypeScript, production build and changed-file ESLint passing. Real Redis acceptance is
-blocked by endpoint connectivity, and public two-IP acceptance still needs a deployment.
+TypeScript, production build and changed-file ESLint passing. The later real Redis run
+passed shared quotas across two independent processes, separate IPs, spoof resistance,
+restart persistence and actual window recovery. Public two-IP acceptance remains separate.
+[Real Redis acceptance](docs/checks/graph-agent-rate-redis.json).
 [Configuration and assertion commands](docs/GRAPH_7I.md#deployment-acceptance).
 The later supply/input/commitment-evidence follow-up passes **186 Graph/agent checks**,
 **3 browser tests**, and the production build.

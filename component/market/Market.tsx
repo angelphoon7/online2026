@@ -334,13 +334,23 @@ export default function Market() {
       const allowance = await getUSDCAllowance(address);
       if (allowance < draft.maxNetPay) {
         setNotice(`Approve ${formatUSDC(draft.maxNetPay)} USDC in your wallet. Payment is collected only when the swap succeeds.`);
-        await track(await approveUSDC(address, draft.maxNetPay));
+        const approvalHash = await approveUSDC(address, draft.maxNetPay);
+        setTxHash(approvalHash);
+        // Approval needs a successful receipt, not indexed ticket/intent data. Retain its
+        // floor immediately, then let the commit read-back catch up with both writes.
+        const approval = await waitForSuccess(approvalHash);
+        noteReceipt(approval.blockNumber, [approvalHash]);
       }
     }
     const ready = { ...draft, owner: address, nonce };
     prepared(ready);
     setNotice('Sign your intent, then confirm the transaction that submits it.');
-    await track(await signAndCommitIntent(address, ready));
+    try { await track(await signAndCommitIntent(address, ready)); }
+    catch (error) {
+      // A cancelled signature must still read back any approval already confirmed.
+      if (freshness.getSnapshot().indexingBlock !== null) void refresh(true);
+      throw error;
+    }
     committed(ready);
     searchVersion.current++; searchInFlight.current = false; setSolving(false);
     setReceipt(null); setProposal(null); setEvidence(null); setAutomatic(true);
