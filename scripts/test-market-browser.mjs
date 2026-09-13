@@ -247,8 +247,8 @@ try {
   await connectPositions();
   await assert("document.querySelector('.sign-intent').disabled && document.querySelectorAll('.position').length>0 && !window.testWallet.calls.includes('eth_sendTransaction') && !window.testWallet.calls.includes('wallet_switchEthereumChain')", 'Viewing inventory deposited tickets or switched networks');
   await evaluate("document.querySelectorAll('.position input')[0].click(); document.querySelectorAll('.position input')[1].click()");
-  await assert("document.querySelector('.quote-total dd').textContent==='1 USDC' && document.querySelector('.quote-lines').textContent.includes('3 USDC')", 'Two-ticket upgrade must use the fixed 1 USDC difference');
-  await assert("!document.getElementById('net-budget') && !document.querySelector('.suggested-limit') && document.querySelector('.sign-intent').textContent.includes('Approve 1 USDC & create intent')", 'Fixed payment must replace the slider and suggested-limit button');
+  await assert("document.querySelector('.quote-total dd').textContent==='0.02 USDC' && document.querySelector('.quote-lines').textContent.includes('2.02 USDC')", 'Two-ticket upgrade must use the fixed 0.02 USDC difference');
+  await assert("!document.getElementById('net-budget') && !document.querySelector('.suggested-limit') && document.querySelector('.sign-intent').textContent.includes('Approve 0.02 USDC & create intent')", 'Fixed payment must replace the slider and suggested-limit button');
   const flowClip=await evaluate("(()=>{const r=document.querySelector('.intent-flow').getBoundingClientRect();return {x:r.x,y:r.y+scrollY,width:r.width,height:r.height,scale:1};})()");
   const desktopFlow=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:true,clip:flowClip});
   await writeFile('.tools/intent-stepper-desktop.png',Buffer.from(desktopFlow.data,'base64'));
@@ -256,12 +256,12 @@ try {
   await assert("document.querySelectorAll('.intent-step').length===2 && document.querySelector('.step-marker').textContent==='step 2 of 2' && !!document.querySelector('.intent-step[data-step=\"2\"] .inline-intent-review .signed-sentence') && !document.querySelector('.step-continue')", 'Review must be inline in step two without another Continue');
   await evaluate("document.querySelector('[aria-label=\"Change What would you like instead?\"]').click()");
   await advance();
-  await assert("document.querySelector('.quote-total dd').textContent==='1 USDC' && document.querySelectorAll('.position input:checked').length===2", 'Change lost the selected tickets or fixed payment');
+  await assert("document.querySelector('.quote-total dd').textContent==='0.02 USDC' && document.querySelectorAll('.position input:checked').length===2", 'Change lost the selected tickets or fixed payment');
   await click('View signed struct'); await evaluate("document.querySelector('.sign-intent').click()");
   await waitFor(`window.testWallet.calls.includes('eth_signTypedData_v4')`);
   const signed=await evaluate('window.testWallet.signed');
   if(BigInt(signed.message.deadline)!==BigInt(Date.parse('2026-09-19T04:00:00Z')/1000)||BigInt(signed.message.sessionMask)!==1n||BigInt(signed.message.sectionMask)!==2n)throw Error('Signed selections or eight-hour cutoff differ from UI');
-  if(Number(signed.domain.chainId)!==5042002||signed.message.owner.toLowerCase()!==owner.toLowerCase()||BigInt(signed.message.maxNetPay)!==1000000n)throw Error('Wrong signed payload');
+  if(Number(signed.domain.chainId)!==5042002||signed.message.owner.toLowerCase()!==owner.toLowerCase()||BigInt(signed.message.maxNetPay)!==20000n)throw Error('Wrong signed payload');
   await assert("JSON.stringify(JSON.parse(document.querySelector('.raw-struct').textContent).message).toLowerCase()===JSON.stringify(window.testWallet.signed.message).toLowerCase()", 'Review differs from wallet payload');
   console.log('PASS wish-first flow, fixed payment difference, review equality and deferred signing.');
   await navigate();await offer();await evaluate('window.testWallet.expiredRead=true');await evaluate("document.querySelector('.sign-intent').click()");

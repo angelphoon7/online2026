@@ -83,33 +83,33 @@ async function selectTickets(page: Page, section: number) {
 test('fixed upgrade difference is approved and included unchanged in the committed intent', async ({ page }) => {
   const control = await fixture(page);
   await selectTickets(page, 2);
-  await expect(page.locator('.quote-total')).toHaveText('Upgrade payment2 USDC');
+  await expect(page.locator('.quote-total')).toHaveText('Upgrade payment0.04 USDC');
   await expect(page.locator('.intent-flow input[type="range"]')).toHaveCount(0);
   await expect(page.locator('.suggested-limit')).toHaveCount(0);
   await expect(page.locator('.price-comparison')).toContainText('USDC is charged only when the whole swap succeeds');
   await page.getByRole('button', { name: /View signed struct/ }).click();
   const preview = JSON.parse((await page.locator('.raw-struct').textContent())!);
-  await page.getByRole('button', { name: /Approve 2 USDC & create intent/ }).click();
+  await page.getByRole('button', { name: /Approve 0\.04 USDC & create intent/ }).click();
   await expect.poll(() => control.transactions.length).toBe(2);
   const [approval, commit] = control.transactions;
   expect(approval.to.toLowerCase()).toBe(deployment.usdc.toLowerCase());
   expect(BigInt(approval.value ?? '0x0')).toBe(0n);
   const payment = decodeFunctionData({ abi: erc20Abi, data: approval.data });
   expect(payment.functionName).toBe('approve');
-  expect(payment.args).toEqual([expect.stringMatching(new RegExp(`^${deployment.contracts.Settlement}$`, 'i')), 2000000n]);
+  expect(payment.args).toEqual([expect.stringMatching(new RegExp(`^${deployment.contracts.Settlement}$`, 'i')), 40000n]);
   expect(control.signed?.message).toEqual(preview.message);
-  expect(BigInt(control.signed!.message.maxNetPay)).toBe(2000000n);
+  expect(BigInt(control.signed!.message.maxNetPay)).toBe(40000n);
   expect(control.calls.indexOf('eth_sendTransaction')).toBeLessThan(control.calls.indexOf('eth_signTypedData_v4'));
   expect(commit.to.toLowerCase()).toBe(deployment.contracts.IntentRegistry.toLowerCase());
   const committed = decodeFunctionData({ abi: intentRegistryAbi, data: commit.data });
   expect(committed.functionName).toBe('commit');
-  if (committed.functionName === 'commit') expect(committed.args[0].maxNetPay).toBe(2000000n);
+  if (committed.functionName === 'commit') expect(committed.args[0].maxNetPay).toBe(40000n);
 });
 
 for (const scenario of [
-  { label: 'existing allowance', offeredSection: 0, wantedSection: 2, allowance: 2000000n, amount: 2000000n },
+  { label: 'existing allowance', offeredSection: 0, wantedSection: 2, allowance: 40000n, amount: 40000n },
   { label: 'even swap', offeredSection: 0, wantedSection: 0, allowance: 0n, amount: 0n },
-  { label: 'downgrade credit', offeredSection: 2, wantedSection: 0, allowance: 0n, amount: -2000000n },
+  { label: 'downgrade credit', offeredSection: 2, wantedSection: 0, allowance: 0n, amount: -40000n },
 ]) test(`${scenario.label} commits without a USDC approval`, async ({ page }) => {
   const control = await fixture(page, scenario);
   await selectTickets(page, scenario.wantedSection);
@@ -124,13 +124,13 @@ test('changing selections recalculates the payment and the mobile screen has no 
   await fixture(page);
   await selectTickets(page, 2);
   await page.getByRole('checkbox', { name: 'Offer ticket 2', exact: true }).uncheck();
-  await expect(page.locator('.quote-total dd')).toHaveText('3 USDC');
+  await expect(page.locator('.quote-total dd')).toHaveText('1.04 USDC');
   await page.getByRole('button', { name: 'Change What would you like instead?', exact: true }).click();
   await page.locator('[name="wanted-section"][value="1"]').check();
   await page.getByRole('button', { name: 'Increase ticket count', exact: true }).click();
   await page.locator('.step-continue').click();
-  await expect(page.locator('.quote-total dd')).toHaveText('3.5 USDC');
-  await expect(page.locator('.sign-intent')).toContainText('Approve 3.5 USDC & create intent');
+  await expect(page.locator('.quote-total dd')).toHaveText('2.03 USDC');
+  await expect(page.locator('.sign-intent')).toContainText('Approve 2.03 USDC & create intent');
   await expect(page.locator('.intent-flow input[type="range"]')).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.locator('.price-comparison').screenshot({ path: testInfo.outputPath('fixed-payment-mobile.png') });
@@ -147,7 +147,7 @@ test('unpriced tickets and tickets awaiting deposit cannot create an intent', as
 test('payment approval stays disabled until selected tickets are deposited', async ({ page }) => {
   const control = await fixture(page, { deposited: false });
   await selectTickets(page, 2);
-  await expect(page.locator('.quote-total dd')).toHaveText('2 USDC');
+  await expect(page.locator('.quote-total dd')).toHaveText('0.04 USDC');
   await expect(page.locator('.sign-intent')).toBeDisabled();
   expect(control.transactions).toHaveLength(0);
 });
@@ -168,7 +168,7 @@ test('a short Arc throttle retries the pre-sign read and completes approval and 
   await page.locator('.sign-intent').click();
   await expect.poll(() => control.transactions.length, { timeout: 15000 }).toBe(2);
   expect(control.throttledReads).toBe(1);
-  expect(BigInt(control.signed!.message.maxNetPay)).toBe(2000000n);
+  expect(BigInt(control.signed!.message.maxNetPay)).toBe(40000n);
   expect(control.transactions[0].to.toLowerCase()).toBe(deployment.usdc.toLowerCase());
   expect(control.transactions[1].to.toLowerCase()).toBe(deployment.contracts.IntentRegistry.toLowerCase());
 });

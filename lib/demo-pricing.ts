@@ -3,7 +3,7 @@ import type { ChainTicket } from './market-types';
 
 // User-requested demo reference prices, not on-chain valuations or a clearing rule.
 // Use sections, which the signed mask enforces, never an unenforceable row target.
-export const DEMO_SECTION_PRICES: Readonly<Record<number, bigint>> = { 0: 1000000n, 1: 1500000n, 2: 2000000n, 3: 2500000n };
+export const DEMO_SECTION_PRICES: Readonly<Record<number, bigint>> = { 0: 1000000n, 1: 1010000n, 2: 1020000n, 3: 1030000n };
 export function demoPriceQuote(intent: Pick<IntentParams, 'offered' | 'eventId' | 'sectionMask' | 'exactCount'>, tickets: ChainTicket[]) {
   if (!intent.offered.length || !intent.sectionMask) return null;
   const offered = intent.offered.map(id => tickets.find(t => t.tokenId === String(id) && t.eventId === intent.eventId));

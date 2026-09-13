@@ -1,0 +1,60 @@
+{
+  "checkedAt": "2026-09-13 02:01:24 UTC",
+  "status": "AWAITING_OPERATOR_ACTION",
+  "vercel": {
+    "authenticated": true,
+    "account": "angelphoon7",
+    "team": "angelphoon7s-projects",
+    "project": "online2026",
+    "projectId": "prj_so1Nv6NqCvHd4a2jeVTHhyE9NzkA",
+    "nodeVersion": "24.x"
+  },
+  "inspectedDeployment": {
+    "id": "dpl_EXvEqECVfDDEjQ7um3mEjiV1jwGn",
+    "sourceCommit": "60f75ad",
+    "failure": "hosting:check found no Redis REST URL/token pair"
+  },
+  "productionConfiguration": {
+    "initialVariableCount": 0,
+    "addedConfigCount": 14,
+    "secretsTransferred": false,
+    "keys": [
+      "DEPLOYMENT",
+      "NEXT_PUBLIC_DEPLOYMENT",
+      "ARC_CHAIN_ID",
+      "ARC_RPC",
+      "READ_SOURCE",
+      "SUBGRAPH_URL",
+      "STORAGE_BACKEND",
+      "STORAGE_NAMESPACE",
+      "AGENT_RATE_LIMIT_STORE",
+      "AGENT_IP_SOURCE",
+      "AGENT_ASK_TIMEOUT_MS",
+      "AGENT_DIAGNOSE_TIMEOUT_MS",
+      "JUDGE_CONTROLS_ENABLED",
+      "DEMO_TICKETS_ENABLED"
+    ],
+    "signingEnabled": false
+  },
+  "redis": {
+    "provisioned": false,
+    "requestedPlan": "free",
+    "requestedRegion": "iad1",
+    "requestedAutoUpgrade": false,
+    "requestedEviction": false,
+    "pending": "Provider requires browser acceptance of Upstash/Vercel terms"
+  },
+  "migration": {
+    "checked": true,
+    "records": 459,
+    "applied": false,
+    "localFilesDeleted": false
+  },
+  "pending": [
+    "Operator acceptance of provider terms",
+    "Explicit authorization before transferring local wallet keys, API keys and judge access code to Vercel Production Secret",
+    "Persistent Redis connection, journal migration, deployment and real public acceptance"
+  ],
+  "transactionsSent": 0,
+  "deployedInThisFollowup": false
+}

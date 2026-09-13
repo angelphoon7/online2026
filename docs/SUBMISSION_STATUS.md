@@ -66,22 +66,28 @@ are no longer tracked; the installed files and lockfile are preserved. These loc
 do not certify the public app: the latest actual hosted check still returns health 503,
 and the isolated real Redis acceptance retry still fails its connectivity preflight.
 
-Completing the official Vercel account login is required to inspect and correct the
-existing project's production variables, connect a persistent database, migrate state and
-deploy. No authenticated hosting session or successful deployment was obtained in this
-follow-up. Studio panel verification and team declarations remain separate external items.
+The subsequent [authenticated configuration check](checks/hosting-configuration.json)
+confirmed login to the existing Vercel project and read the actual failure logs. Production
+initially had zero environment variables. Fourteen non-secret settings are now configured,
+including the network, Graph endpoint, Redis storage mode, trusted IP source and timeouts.
+Judge and issuer signing remain disabled until migration and credential setup are verified.
+Studio panel verification and team declarations remain separate external items.
 
 The public health response has `ready: false`, `storage: null`, `snapshotBlock: null` and
 false checks. `/api/demo/scenarios` also returned HTTP 503. In the checked source, a failed
 `storageMode()` exits the main health checks before Graph, signers or issuer checks run;
 those false flags do not establish separate failures of every service.
 
-**Inference to verify in Vercel:** missing/invalid production storage selection is consistent
-with this response. This workspace has no authenticated hosting connection to inspect the
-actual variables or logs. Open the existing Vercel project's **Settings → Environment
-Variables → Production**, configure `STORAGE_BACKEND=redis`, `REDIS_REST_URL` and
-`REDIS_REST_TOKEN`, plus `AGENT_RATE_LIMIT_STORE=redis` and `AGENT_IP_SOURCE=vercel`.
-Use an actual HTTPS Redis REST endpoint and private token, not the template placeholders.
+**Confirmed in Vercel logs:** deployment `dpl_EXvEqECVfDDEjQ7um3mEjiV1jwGn` stopped because
+`hosting:check` found no Redis REST URL/token pair. Storage selection and Agent settings are
+now configured; a persistent database connection and secret credentials are still missing.
+The requested Upstash plan is free, in `iad1`, with eviction and automatic paid upgrades
+disabled. Provisioning is waiting for the account holder's browser acceptance of provider
+terms. No database was created. Uploading existing local signing/model credentials also
+awaits explicit operator authorization; no local secrets have been transferred.
+The read-only migration check found 459 records to preserve, with no active migration lock
+reported. Migration has not been applied. Stop writers and rerun the check immediately
+before transferring any evidence, claims or signing journals.
 The full judge/issuer/Graph/model settings are listed in [JUDGING_SETUP.md](JUDGING_SETUP.md).
 Redeploy after changing settings, then rerun the hosted check. Do not switch to local file
 storage or disable admission checks to make health appear ready on Vercel.
