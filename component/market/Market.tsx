@@ -597,16 +597,12 @@ export default function Market() {
                 >
                   ← Back to Events
                 </button>
-                <h2>Keep the ticket.<br />Change the outcome.</h2>
                 <p className="mono workspace-chain-status" role="status" aria-live="polite">{indexingBlock !== null ? indexingMessage(indexingBlock) : <>
                   <a className="workspace-block-link" href={`${EXPLORER}/block/${market.blockNumber}`} target="_blank" rel="noopener noreferrer" aria-label={`View Arc Testnet block ${market.blockNumber} (opens in a new tab)`}>
                     ARC BLOCK {market.blockNumber} <span aria-hidden="true">↗</span>
                   </a>
-                  <span className="workspace-block-source">/ {market.source === 'graph' ? 'VIA THE GRAPH' : 'VIA DIRECT RPC READS'}</span>
                 </>}</p>
                 <nav className="workspace-nav" aria-label="Workspace navigation">
-                  <button type="button" onClick={() => setWorkflowView('matching')}>Matching</button>
-                  <button type="button" disabled={disabled || solving} onClick={() => void refresh(true)}>Refresh market</button>
                   <button type="button" aria-haspopup="dialog" aria-expanded={poolOpen} onClick={() => setPoolOpen(true)}>{indexingBlock !== null ? 'Intent pool: indexing' : `Intent Pool (${live.length})`}</button>
                   <button type="button" aria-haspopup="dialog" aria-expanded={seatMapOpen} onClick={() => setSeatMapOpen(true)}>Seat Map</button>
                   <button type="button" aria-haspopup="dialog" aria-expanded={historyOpen} onClick={() => setHistoryOpen(true)}>Past Settlements <span className="mono">({getSettlements(market).length})</span></button>
@@ -657,7 +653,6 @@ export default function Market() {
           ) : (
             <section className="workspace-section">
               <button type="button" className="back-nav-btn" onClick={() => navigateTo('events')}>← Back to Events</button>
-              <div className="section-heading"><div><h2>Keep the ticket.<br />Change the outcome.</h2></div></div>
               <EventLoadingDialog error={readError} onRetry={() => refresh(true)} onBack={() => navigateTo('events')} />
             </section>
           )}

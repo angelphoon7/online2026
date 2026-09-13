@@ -113,11 +113,12 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
     </article>;
   };
   return <div className="intent-flow">
+    {step > 1 && !completed && <button type="button" className="back-nav-btn" onClick={() => go(step - 1)}>← Back</button>}
     {STEPS.map((title, index) => {
       const number = index + 1;
       const expanded = step === number && !completed;
       const visited = reached >= number;
-      if (!visited && !expanded) return null;
+      if (!expanded) return null;
       return <section key={title} className={`workspace-panel intent-step ${expanded ? 'is-expanded' : visited ? 'is-complete' : 'is-future'}`} data-step={number} data-expanded={expanded}>
         <div className="step-heading"><h2 ref={element => { stepTitles.current[index] = element; }} tabIndex={-1} id={`step-title-${number}`}>
           {!expanded && (number < reached || completed) && <span className="step-check" aria-label="Completed">✓</span>}{title}
