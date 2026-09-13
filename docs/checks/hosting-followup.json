@@ -1,0 +1,66 @@
+{
+  "checkedAt": "2026-09-13T01:32:30.717Z",
+  "sourceRevision": "60f75adc45bf1b6101095291ebf9b17c29c2b8fc",
+  "scope": "Local regression acceptance and actual failed hosted checks; no production deployment or transactions in this follow-up.",
+  "local": {
+    "serverGraph": {
+      "passed": 292,
+      "failed": 0
+    },
+    "solver": {
+      "passed": 29,
+      "failed": 0
+    },
+    "hostingFixtures": {
+      "passed": 24,
+      "failed": 0
+    },
+    "documentationChecks": 352,
+    "deploymentChecks": 11,
+    "manifestChecks": 36,
+    "productionBuild": "PASS",
+    "typeCheck": "PASS",
+    "changedCodeLint": "PASS",
+    "browser": {
+      "startTime": "2026-09-13T01:28:40.327Z",
+      "duration": 40423.839,
+      "expected": 20,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    }
+  },
+  "preventRecurrence": {
+    "redisProviderPairs": "One resolver for server storage, Agent admission and acceptance",
+    "vercelBuild": "Live Redis write/EVAL/TIME check before build; fails closed",
+    "ci": "Regression workflow present; actual GitHub run not verified",
+    "trackedSolverDependencyCount": 0,
+    "localSolverDependenciesPreserved": true
+  },
+  "hosted": {
+    "checkedAt": "2026-09-13T01:24:52.846Z",
+    "status": "FAILED",
+    "checks": [
+      {
+        "path": "/",
+        "httpStatus": 200
+      },
+      {
+        "path": "/api/health",
+        "httpStatus": 503
+      }
+    ],
+    "error": "/api/health: HTTP 503"
+  },
+  "realRedis": {
+    "checkedAt": "2026-09-13T01:22:45.566Z",
+    "passed": false,
+    "stage": "redis-preflight",
+    "error": "Shared storage is unavailable. Retry after the operator checks storage configuration."
+  },
+  "requiresExternalAccess": [
+    "Vercel authentication and persistent Redis configuration before deployment and public acceptance",
+    "Authenticated Studio status and complete log review",
+    "Team eligibility, actual bounty selection and asset provenance declarations"
+  ]
+}

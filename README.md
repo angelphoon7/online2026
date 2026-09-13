@@ -6,9 +6,9 @@ Swap tickets without selling first.
 
 The current demo is a single page at `/`: open the live event poster to use the workspace, then inspect receipts in place. [UI flow, contract mappings and validation](docs/UI_IMPLEMENTATION.md).
 
-**Target Arc bounties: Best DeFi / Onchain Finance · Launch on Testnet & Push to Mainnet — [category confirmation pending](#bounty-category-verification).**
+**Target Arc bounty: Best DeFi/Onchain Finance Application.** [Current category and mainnet condition](#bounty-category-verification).
 
-**Target The Graph bounty: Best AI Tooling or AI Use Case with The Graph (From Scratch) · AI Use Case path · Start Fresh pool.** See [submission draft and eligibility checks](docs/THE_GRAPH_SUBMISSION.md).
+**Target The Graph bounty: Best AI Tooling or AI Use Case with The Graph (From Scratch) · AI Use Case path.** Start Fresh requires the team's history declaration; [submission status and remaining confirmations](docs/SUBMISSION_STATUS.md).
 
 **A market for outcomes, not listings.**
 
@@ -18,12 +18,16 @@ You never give up your tickets unless the whole replacement arrives.
 
 [Mainnet readiness: deployment tooling, network configuration, verification checklist and actual admin permissions](docs/MAINNET_READINESS.md). Local deployment rehearsal passed; official mainnet parameters and production release gates remain pending.
 
-<!-- Live demo: TBD · Video: TBD -->
+**Public app:** [online2026.vercel.app](https://online2026.vercel.app/) · [Backend health](https://online2026.vercel.app/api/health).
+The first public check reached the frontend (200) but backend readiness returned 503.
+[Recorded result and production configuration follow-up](docs/SUBMISSION_STATUS.md).
+<!-- Video: TBD -->
 
 ---
 
 ## Contents
 
+- [Judge access and hosting readiness](#judge-access-and-hosting-readiness)
 - [Ready-to-settle demo](#ready-to-settle-demo)
 - [The Graph: setup, live endpoint and agent](#the-graph)
 - [AI usage and planning artifacts](#ai-usage)
@@ -41,6 +45,48 @@ You never give up your tickets unless the whole replacement arrives.
 - [Repository](#repository)
 
 ---
+
+## Judge access and hosting readiness
+
+**The backend now supports shared evidence, wallet-claim records and resumable signing jobs.**
+Hosted judge controls require an access code and an explicit list of editable demo intent
+hashes. The workspace's **Start here / judge the live demo** guide selects A+B, A+C, B+C or
+all three users from each prepared group and displays live availability and expiry.
+
+Judges need only the public URL to read live Graph data, run matching and inspect evidence.
+Give them the judging access code privately to change prepared budgets or revoke requests;
+keep all wallet keys and server credentials private. To settle or create their own request,
+they connect their own wallet on Arc Testnet and obtain test USDC from the
+[Circle faucet](https://faucet.circle.com/). No separate account registration is required.
+
+```sh
+npm run judge:setup
+npm run dev
+```
+
+Setup adds missing private access settings to ignored `.env.local` and preserves existing
+settings. Hosting still requires a running Next.js backend and persistent storage: use
+`STORAGE_BACKEND=redis` with `REDIS_REST_URL` / `REDIS_REST_TOKEN`, or explicitly configure
+one backend with a persistent volume. Ordinary production local-file storage fails closed.
+Persistent Upstash Redis is now connected to the existing Vercel project's production
+environment. Credential setup, state migration and full hosted acceptance remain pending.
+
+Before sharing the public URL, migrate existing local claims/evidence with
+`npm run storage:migrate`, publish fresh prepared groups with `npm run demo:catalog`, and
+run `npm run judge:check -- https://your-public-app.example`. The check asserts live pair
+rejections, three-user simulation, evidence retrieval and anonymous access denial without
+broadcasting a settlement. Repeat from another computer with the laptop off and after a
+host restart; those external checks require the hosted service to exist first.
+
+[Setup, secrets, migration, replenishment and recovery](docs/JUDGING_SETUP.md) ·
+[Environment template](.env.example) · [Backend routes](server/README.md).
+
+September 12 validation: production build and type check passed; 228 server/Graph tests and
+11 browser tests passed. Live checks verified 12 pair rejections and four three-user
+simulations, with all 16 evidence records unchanged after restarting the local production
+server. No settlement was broadcast. [Readiness evidence and verification limits](docs/checks/judging-readiness.json).
+Redis connectivity and two-process admission are now verified in the later follow-up below.
+Full hosted application acceptance and the external laptop-off check remain unverified.
 
 ## Ready-to-settle demo
 
@@ -65,7 +111,19 @@ The demo opens without a wallet and automatically searches all live event intent
 
 For broader wishlist inventory, `npm run demo:inventory -- --broadcast` prepares 64 additional tickets across both sessions and all four sections, deposits them and commits 32 adjacent-pair swap offers. Reruns resume the same batch. Additional batches use a name, e.g. `npm run demo:inventory -- --broadcast batch-2`. A new name adds 64 tickets; an existing name resumes its saved batch. [Inventory setup and verification](docs/DEMO_INVENTORY.md) | [Public ticket IDs and transaction hashes](deployments/section-inventory.json).
 
-For asynchronous judging, host the Next.js frontend **and backend** and share its `/demo` URL. Seed before publishing the public manifest. A shared on-chain round can be consumed once; reseed and redeploy the updated manifest for the next round on hosts with immutable files. See [setup, recovery and hosting details](docs/DEMO_SETUP.md).
+For seeded one-, two- and three-ticket requests with varied session/section conditions, see
+[demo replacement inventory and matching checks](docs/DEMO_REPLACEMENT_INVENTORY.md).
+
+For three distinct users whose selected requests require a circle, use the
+[one- and three-ticket circle groups](docs/CIRCLE_DEMO.md). Each group has verified pair
+rejections and a successful three-user simulation; settlement remains for the live demo.
+
+For asynchronous judging, host the Next.js frontend **and backend** and share its `/` URL.
+A shared on-chain round can be consumed once. Fresh circle groups can be published to the
+shared catalog without redeploying the frontend; changed event dates still require a new
+build and fresh signed intents. See [judging setup and recovery](docs/JUDGING_SETUP.md).
+The older dedicated `/demo` scene still uses its bundled manifest and
+[scene-specific setup](docs/DEMO_SETUP.md).
 
 ## The Graph
 
@@ -101,7 +159,9 @@ input and verified through RPC. They are not indexed in a `SettlementLeg` entity
    altered fields as `HASH_MISMATCH`. The registry key is the bare struct hash; the EIP-712
    domain (`chainId` and `verifyingContract`) authenticates the signature at commit.
 2. **Freshness floor:** reads following a transaction use `block: { number_gte: receiptBlock }`.
-   The UI waits for indexing rather than substituting an older pool. Indexing errors are surfaced.
+   The receipt raises a shared floor immediately, including for periodic refresh and the Agent
+   drawer. Timeouts retain **Indexing block #M** and offer retry; old responses cannot replace
+   newer state. The floor survives a same-tab reload. [Step 6-B / 8 behavior and tests](docs/GRAPH_6B_8.md).
 3. **Execution checks:** indexed discovery is followed by chain reads and `eth_call` simulation.
    Settlement checks V0–V8 again in the real transaction. Simulation does not reserve state;
    a later withdrawal can still make a proposal revert and cost its proposer gas.
@@ -142,8 +202,58 @@ query InspectPool($minBlock: Int!) {
 }
 ```
 
-The application's complete [PoolSnapshot query](shared/graph/queries.ts) takes
-`{ "minBlock": 0, "first": 1000 }` and includes every signed field needed for hash binding.
+The application's [PoolSnapshot query](shared/graph/queries.ts) reads one page and includes
+every signed field needed for hash binding. Use `getPoolSnapshot({ minBlock: 0n })` for the
+complete pool: it supplies independent cursors and pins later pages to the first block hash.
+The 20-row Studio query above is only an inspection sample.
+
+### Verified Graph solver and indexing measurement
+
+On 12 September 2026, a real ticket transfer confirmed at block **61762063** was observed in
+the index after **7.294 seconds** and five queries. This is one receipt-to-index observation
+including polling/network time, not a maximum delay. [Transaction and timing](docs/checks/graph-transfer-10.json).
+The public endpoint reports no indexing errors; the Studio screenshot's literal Synced label
+and full warning history remain unverified. [Step 4-A details](docs/graph-acceptance.md).
+
+`POST /api/solve/pool` accepts `{ "minBlock": "61762063" }`; `POST /api/solve` also takes
+two to four `intentHashes`. Both return `snapshotBlock`, `bounds`, `candidates` and `excluded`,
+alongside the chosen proposal and simulation evidence. Graph mode does not fall back to RPC
+logs for missing intents. An unmet floor returns 409; a hash unavailable in the searchable
+snapshot returns 422.
+
+```text
+pool source: subgraph @ block 61762525 — 74 searchable, 0 excluded
+pool source: subgraph @ block 61762563 — 2 of 2 requested hashes discovered
+```
+
+The live full-pool request found 100 candidates within the 4-participant / 100-candidate /
+2,000-ms bounds and simulated its chosen proposal successfully. Search took 146.233 ms;
+the whole HTTP request, including chain reads and simulation, took 19.101 seconds.
+[Full response](docs/checks/graph-solve-pool.json) · [Selected-intent response](docs/checks/graph-solve-selected.json)
+· [Server logs](docs/checks/graph-solver-server.txt) · [Reproduce Step 4-A / 6-C](docs/GRAPH_4A_6C.md).
+
+### Live Apply budget evidence (Steps 6-D / 8 / 10-B)
+
+On September 12, 2026, a real browser click changed the signed limit from **0 to −12 USDC**
+by revoking the old intent and committing a replacement with nonce **79**.
+
+| Transaction | Block | Receipt |
+|---|---:|---|
+| Revoke old intent | 61770769 | [0x0c477d9e…b3430](https://testnet.arcscan.app/tx/0x0c477d9ea7156fb418c17464f3fb49fd83b06d14bf38bafccbc9e570284b3430) |
+| Commit new intent | 61770778 | [0x3d9fd3d3…3000a](https://testnet.arcscan.app/tx/0x3d9fd3d353e564b9a48add42266480d059ad78ce820f9f07de81516b6e93000a) |
+
+New intent: `0xa8304a351bbbe67ffc6d767114e57eb6504f96339aec8166602de1f8ada30488`.
+The drawer followed this hash automatically, displayed **Indexing block #61770778** for
+**3.018 seconds**, and hid the old pool and answer until the refreshed snapshot passed its
+receipt floor. The answer changed from `SETTLEABLE` at **61770753** to
+`NOT_FOUND_WITHIN_BOUND` at **61771245**, with a working budget relaxation in its evidence.
+The latter answer was captured in a read-only retry after one HTTP 503; neither transaction
+was repeated. Both original clips run at 1× speed.
+
+[Receipts, screenshots and recording details](docs/GRAPH_APPLY_BUDGET.md) ·
+[Assertions](docs/checks/graph-budget/summary.json) ·
+[Transaction/indexing clip](docs/checks/graph-budget/apply-budget.webm) ·
+[Answer/evidence retry clip](docs/checks/graph-budget/read-only-retry.webm).
 
 ### Run locally
 
@@ -152,12 +262,15 @@ Install Node.js 22 or newer, then install dependencies from the repository root:
 ```sh
 npm ci
 npm --prefix solver ci
+npm run setup:env
 ```
 
-Create `.env.local` only if it does not already exist. Copy the needed settings from
-[.env.example](.env.example); keep existing wallet credentials private. `.env.example` is a
-template, not the application's active settings. Next loads `.env.local` ahead of `.env`;
-CLI scripts may load `.env` explicitly, so keep shared selections consistent.
+`setup:env` copies the tracked [.env.example](.env.example) to `.env.local` only when the
+destination does not exist. Existing settings are preserved. The template contains public
+testnet settings and empty credential fields; it is not loaded by the application itself.
+Next loads `.env.local` ahead of `.env`; CLI writers may load `.env` and `.env.seed`
+explicitly, so keep shared selections consistent. Teammates can read the market without
+receiving your private files; signing features need separately configured credentials.
 
 For public Graph reads and no-model diagnosis, these settings suffice; no wallet key is needed:
 
@@ -188,11 +301,17 @@ GET http://localhost:3000/api/agent/diagnose/<committed-intent-hash>?minBlock=<r
 
 Use a full hash from the live pool. The endpoint returns named status, evidence, bounds,
 runtime and a deterministic sentence. `/api/agent/ask` also falls back to deterministic
-diagnosis when no model key is set. Free-form tool selection and narration require the key.
-The built app returned HTTP 200 with `SETTLEABLE` at block 61756153 in the current
+diagnosis when no model key is set. Model tool selection requires the key; final wording is
+selected from complete passages rendered from tool evidence.
+Each question selects one indexed block N. USDC balances and allowances are read with
+`blockNumber: N`; closed-intent lookup uses exact `block: { number: N }`. Cached capacity
+must belong to the same N across the baseline and every what-if. Unavailable historical
+state returns an error instead of substituting newer data. [Step 7-A / D implementation
+and live checks](docs/GRAPH_7A_7D.md).
+The built app returned HTTP 200 with `SETTLEABLE` at block 61756153 in the recorded
 [live diagnosis check](docs/checks/step-11-diagnose.json), without invoking a model or signing.
-For a production server use `npm run build` and `npm start`; mount persistent storage for
-`.data/evidence`. [Backend routes and permissions](server/README.md).
+For a production server use `npm run build` and `npm start`; configure shared Redis REST
+storage or an explicitly enabled persistent volume. [Hosting and data migration](docs/JUDGING_SETUP.md).
 
 ### Environment variables
 
@@ -200,19 +319,34 @@ For a production server use `npm run build` and `npm start`; mount persistent st
 |---|---|---|
 | `DEPLOYMENT` | Deployment/subgraph CLI scripts | Selects `deployments/<network>.json`; default `arc-testnet` |
 | `NEXT_PUBLIC_DEPLOYMENT` | Next frontend and backend chain configuration | Selects generated public deployment record at build time; keep equal to `DEPLOYMENT` |
-| `SUBGRAPH_URL` | Backend and shared Graph client | Required for Graph reads; set to the versioned query endpoint above |
+| `SUBGRAPH_URL` | Backend and shared Graph client | Optional override of the selected deployment's recorded query endpoint; Arc Testnet defaults to the versioned Studio endpoint above |
 | `SUBGRAPH_API_KEY` | Backend | Optional query credential; never a `NEXT_PUBLIC_` value |
-| `SUBGRAPH_DEPLOY_KEY` | Deployment CLI | Publishing only; not needed to run the app or query the existing subgraph |
-| `READ_SOURCE` | Backend market and solver discovery | `graph` or `rpc`; defaults to `graph` when `SUBGRAPH_URL` is set, otherwise `rpc`. Local Anvil uses `rpc` |
+| `SUBGRAPH_DEPLOY_KEY` | Deployment CLI | Deploying versions to Studio; not needed to run the app or query the existing subgraph |
+| `READ_SOURCE` | Backend market and solver discovery | `graph` or `rpc`; defaults to `graph` when an override or recorded subgraph URL exists. Local Anvil without a subgraph uses `rpc` |
 | `ARC_RPC` | Backend and CLI | RPC used for chain verification, capacity and simulation; defaults to selected deployment RPC in the backend |
 | `ARC_CHAIN_ID` | Backend consistency check / CLI | If set, must agree with the deployment; Arc Testnet is `5042002` |
 | `NEXT_PUBLIC_RPC_URL` | Browser chain configuration | Public RPC override; browser public reads use the same-origin transport |
 | `ANTHROPIC_API_KEY` | Agent narration only | Optional; diagnose needs no model key, ask uses a template if absent |
 | `AGENT_MODEL` | Agent narration | Defaults to `claude-sonnet-5`; verify access for the hosted account |
+| `AGENT_ASK_TIMEOUT_MS` | Agent request control | Overall ask deadline; default/max `60000`, positive integer overrides may shorten it |
+| `AGENT_DIAGNOSE_TIMEOUT_MS` | Agent request control | Overall diagnosis deadline; default/max `30000`, positive integer overrides may shorten it |
+| `AGENT_TRUST_PROXY` | Legacy Agent proxy option | `true` selects a controlled proxy in non-Vercel `auto` mode; Vercel automatically uses its own header |
+| `AGENT_RATE_LIMIT_STORE` | Agent admission | `auto` selects Redis in production or when its URL is set; memory is development-only. Production requires Redis even with persistent file storage |
+| `AGENT_IP_SOURCE` | Agent client identity | `auto` uses Vercel's platform IP. Other production hosts require `trusted-proxy` and an ingress that overwrites `X-Forwarded-For` with one verified IP |
 | `BUDGET_CAP_USDC` | Deterministic diagnosis | BUDGET relaxation ceiling, default `100`; USDC has 6 settlement decimals |
 | `JUDGE_CONTROLS_ENABLED` | Testnet judge routes | `true` enables hosted budget/revoke controls; enabled by default in development. Requires controlled participant keys |
+| `JUDGE_ACCESS_CODE` | Judge session route | Private access code of at least 24 characters; setup generates one. Sessions expire after one hour |
+| `JUDGE_ALLOWED_INTENT_HASHES` | Judge authorization | Comma-separated exact editable intent hashes; recorded budget replacements inherit their root's permission |
+| `STORAGE_BACKEND` | Evidence, claims, sessions, signing jobs and demo catalog | `redis` for hosted instances; `file` for development or an explicit persistent-volume backend |
+| `REDIS_REST_URL`, `REDIS_REST_TOKEN` | Server storage and Agent admission | HTTPS Redis REST endpoint and private bearer token; required for production Agent APIs, including persistent-file hosts; never exposed to the browser |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`, or `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Provider-injected alternatives | Complete pairs recognized by storage, Agent and deployment preflight; explicit `REDIS_REST_*` takes precedence. Never mix credentials from different pairs |
+| `STORAGE_NAMESPACE` | Server storage | Stable namespace across releases; default `reshuffle-arc-testnet` |
+| `STORAGE_DIRECTORY`, `ALLOW_PERSISTENT_FILE_STORAGE` | File backend only | Explicit persistent directory and `true` opt-in for a production Node host; file storage is rejected on Vercel |
 | `DEMO_TICKETS_ENABLED` | Testnet issuer route | Enables hosted free-ticket claims; enabled by default in development |
 | `DEMO_ISSUER_PRIVATE_KEY`, `PRIVATE_KEY`, `SEED_*_PRIVATE_KEY` | Optional issuer/judge/local transaction tooling | Signing credentials, never public. Seed keys are read from `.env.seed`; none is required for ordinary public reads or diagnosis |
+| `USDC_ADDRESS`, `DEPLOYER_ADDRESS` | Legacy Arc transaction CLI | USDC must agree with the deployment; deployer address must match `PRIVATE_KEY`. They do not replace the Next app's contract manifest |
+| `NEXT_PUBLIC_SESSION_0_START`, `NEXT_PUBLIC_SESSION_1_START` | Browser event schedule | Demo sessions from the template; deadlines are eight hours before the selected session |
+| `ARC_MAINNET_RPC`, `ARC_MAINNET_PRIVATE_KEY` | Separate mainnet CLI only | Empty for testnet; configure only after the mainnet release gates are reviewed |
 
 The plan's `GRAPH_API_KEY`, `ARC_RPC_URL` and `NEXT_PUBLIC_READ_SOURCE` are examples; this
 implementation uses **`SUBGRAPH_API_KEY`, `ARC_RPC` and `READ_SOURCE`**. Addresses and deployment
@@ -223,7 +357,18 @@ testnet signatures do not authorize intents on a different chain or registry.
 ### Agent
 
 One indexed pool snapshot → deterministic supply/demand checks and solver reruns → optional
-Claude tool selection and narration. Tools are `diagnose_intent`, `what_if` and `pool_overview`.
+Claude tool selection and evidence-bound answers. Tools are `diagnose_intent`, `what_if` and `pool_overview`.
+The guard requires `At Arc Testnet block #N, ` at the start and matches complete evidence
+passages, binding amounts to their direction and context. Model call IDs and token usage
+are returned for inspection. [Step 7-G / H implementation and acceptance](docs/GRAPH_7G_7H.md).
+Both Agent routes now enforce request limits: ask 12/minute with a 60-second overall
+deadline, diagnose 30/minute with a 30-second overall deadline. Production quotas use atomic
+Redis sliding windows per IP shared across instances and restarts. Vercel automatically uses
+its trusted IP header; other hosts require a controlled proxy. Development can use memory.
+Missing identity, Redis configuration or availability fails with `503 AgentRateLimitUnavailable`. Rejections
+return `429` with `Retry-After`; deadlines abort downstream I/O and return
+`504 AgentRequestTimeout`, including time spent on Redis admission.
+[Step 7-I behavior, deployment scope and tests](docs/GRAPH_7I.md).
 The agent module has no signing capability. Enabled testnet judge controls are a separate
 server feature that can sign for controlled participants.
 
@@ -232,6 +377,16 @@ single-condition changes to payment limit, adjacency, cohesion and accepted sect
 it does not change event or exact ticket count. Hypotheticals are marked `submittable: false`
 and omit calldata. Acting on a change requires a newly signed commitment. The drawer's
 Evidence panel exposes the conditions tried and commitment transaction links.
+
+Grouping evidence identifies how many acceptable tickets were checked; a capped search is
+reported as incomplete. What-if inputs are validated at runtime. Candidate commitment links
+are bound to individual intent hashes, preserving separate commits from the same wallet.
+[Supply, input-validation and commitment-evidence fixes](docs/GRAPH_AGENT_INTEGRITY.md).
+
+The drawer validates each tool result against the selected intent and answer block. Its
+Evidence panel independently displays all what-if outcomes and pool statistics, with scoped
+input/output JSON; a pool-only answer never inherits an earlier diagnosis.
+[Step 8 evidence binding and display](docs/GRAPH_8_EVIDENCE.md).
 
 Each solver run is bounded by **4 participants, 100 candidates and a 2,000 ms timeout**.
 The real settlement service accepts at most four offered/received tickets per intent and
@@ -243,17 +398,22 @@ not measured performance claims. [Recording guide](docs/DEMO_GRAPH.md).
 
 - No result means none found within the search bound. Single-condition trials do not
   establish whether a combination of changes would work.
-- The pool and its timestamp come from one indexed response, but USDC balances/allowances
-  are separate latest-RPC reads. Closed-intent lookup is also a separate unpinned query.
-  The current diagnosis is therefore not a historical proof of every fact at one block.
-- Snapshot lists are capped at 1,000 with no pagination yet. Large markets need pagination
-  before the entire pool can be claimed as searched.
-- The narration guard rejects banned wording, unsupported full identifiers and a missing
-  expected block reference. It does not validate every amount/ticket reference or reject
-  all extra block references. Evidence JSON is the inspectable result, not proof of every
-  sentence the model might generate.
+- Diagnosis fixes USDC and closed-intent reads to its pool block. Historical availability
+  depends on RPC/Graph retention: a pruned Graph block returns `SubgraphHistoryUnavailable`
+  (503), and a failed historical USDC read returns `SnapshotCapacityReadError` (503).
+  Retry starts a new diagnosis; missing history is never replaced with `latest`.
+- UI, solver and Agent discovery paginate by entity ID, pinning every later page to the
+  first block hash. Reads stop with a named error after 100 page requests or 20 seconds,
+  never with a partial pool. Execution search retains its separate 256-intent service limit.
+  [Pagination behavior, boundary tests and live page traces](docs/GRAPH_PAGINATION.md).
+- The narration guard accepts only complete supported passages derived from tool outputs;
+  it does not validate unrestricted prose. Correct paraphrases fall back to deterministic
+  diagnosis. Guard acceptance does not prove tool selection is relevant or remove the
+  underlying indexer/solver bounds.
 - Without a model key, ask returns a baseline diagnosis rather than interpreting arbitrary
-  what-if questions. Live narration and the hosted demo need separate verification.
+  what-if questions. Live Anthropic acceptance **passed four scenarios with eight real model
+  calls**, all without guard fallback. The [record](docs/checks/graph-agent-model.json) includes
+  provider receipts and pinned evidence. The hosted demo still needs separate verification.
 - Adjacency is enforceable for issuer-native tickets with consecutive seat numbering;
   external ticket systems are outside this demo.
 
@@ -261,6 +421,7 @@ not measured performance claims. [Recording guide](docs/DEMO_GRAPH.md).
 
 ```sh
 npm test
+npm run docs:check
 npm --prefix solver test
 npm run deployment:check
 npm run subgraph:check
@@ -268,7 +429,36 @@ npm run subgraph:parity
 npx tsc --noEmit
 ```
 
-The current run passed 32 Solidity tests, 32 Graph/agent checks, 29 solver tests, 11 deployment checks,
+The Step 7-A / D follow-up passed **63 Graph/agent tests** and the production build, with
+[real Graph/RPC block traces](docs/checks/graph-diagnosis-block.json).
+The Step 7-G / H follow-up passed **95 Graph/agent tests** and the production build.
+The Step 7-I follow-up added **22 request-control tests**; its **128-test Graph/agent
+suite** and production build passed. [Captured output](docs/checks/graph-agent-requests-tests.txt).
+The shared-limit follow-up adds **15 regression tests**, with **277 server/Graph checks**,
+TypeScript, production build and changed-file ESLint passing. The later real Redis run
+passed shared quotas across two independent processes, separate IPs, spoof resistance,
+restart persistence and actual window recovery. Public two-IP acceptance remains separate.
+[Real Redis acceptance](docs/checks/graph-agent-rate-redis.json).
+[Configuration and assertion commands](docs/GRAPH_7I.md#deployment-acceptance).
+The later supply/input/commitment-evidence follow-up passes **186 Graph/agent checks**,
+**3 browser tests**, and the production build.
+[Regression details and output](docs/GRAPH_AGENT_INTEGRITY.md#verification).
+The Step 8 drawer follow-up passes **215 Graph/agent checks** (29 for drawer evidence)
+and **9 browser tests**. [Evidence scope and captured results](docs/GRAPH_8_EVIDENCE.md#verification).
+The pagination follow-up passes **258 server/Graph checks** (30 pagination cases),
+**12 browser tests** and the production build. Live Studio queries also passed with 50 rows
+per page. [Boundary tests and actual page traces](docs/GRAPH_PAGINATION.md#verification).
+`npm run agent:check:model -- --preflight` checks local key presence without network access;
+`npm run agent:check:model` runs the four live provider cases after configuration. Mocked
+SDK tests and no-model responses do not count as live provider acceptance.
+`npm run docs:check` checks the tracked environment template, first/repeated teammate setup,
+documentation links and the recorded model/budget/block evidence without provider calls.
+The [Step 11 follow-up](docs/STEP_11_REVIEW.md#current-status-after-the-follow-ups) also passed
+277 server/Graph regression checks.
+The real-provider follow-up passed diagnosis, a 30 USDC hypothetical, pool overview and
+conflicting instructions at blocks **61798055–61798133**, with **275 server/Graph regression
+checks** also passing. [Results and transport regression fix](docs/GRAPH_7G_7H.md#real-provider-follow-up).
+The earlier Step 11 run passed 32 Solidity tests, 32 Graph/agent checks, 29 solver tests, 11 deployment checks,
 36 manifest checks and 1,719 live parity checks. [Review scope and remaining gaps](docs/STEP_11_REVIEW.md).
 To rebuild the subgraph, install its dependencies with `npm --prefix subgraph ci`, then run
 `npm run subgraph:codegen` and `npm --prefix subgraph run build`. Querying the existing deployment
@@ -291,6 +481,8 @@ does not assign authorship to every earlier file: the team should complete any a
 tool/file/asset attribution before submission. The application itself optionally uses Claude
 to narrate deterministic evidence; that runtime use is distinct from coding assistance.
 [Specifications, instructions and planning artifacts](docs/PLANNING_ARTIFACTS.md).
+The [provenance inventory](docs/PROVENANCE.md) identifies confirmed assistance, reused
+dependencies, user-supplied artwork and the outstanding author/source confirmations.
 
 ---
 
@@ -438,7 +630,7 @@ flowchart TB
     subgraph ARC["ARC"]
         direction TB
         A1["Best DeFi / Onchain Finance<br/>conditional delivery plus<br/>multi-party net settlement"]
-        A2["Launch on Testnet and Mainnet<br/>escrow and stablecoin settlement<br/>added to a marketplace"]
+        A2["Arc Testnet deployment<br/>escrow and stablecoin settlement<br/>with real transaction evidence"]
         A3["USDC as native gas<br/>no separate gas token<br/>for users"]
     end
 
@@ -1049,13 +1241,18 @@ sequenceDiagram
 
 ### Bounty category verification
 
-The two Arc targets stated above are the project's originally selected categories. Checked on 2026-09-10: the [current official ETHOnline 2026 prize page](https://ethglobal.com/events/ethonline2026/prizes#arc) does not list “Launch on Testnet & Push to Mainnet”. It makes $2,500 of the Best DeFi/Onchain Finance award conditional on the same project actually deploying to Arc Mainnet by September 30; it does not state that deployment readiness substitutes for deployment. See the [readiness package and pending release gates](docs/MAINNET_READINESS.md). Confirm current category names and availability before submitting; this README does not establish eligibility or register either bounty.
+Checked on 2026-09-13: the [official prize page](https://ethglobal.com/events/ethonline2026/prizes#arc)
+lists **Best DeFi/Onchain Finance Application**. Its $2,500 mainnet portion requires actual
+deployment by September 30; the readiness package does not substitute for deployment.
+“Launch on Testnet & Push to Mainnet” is not a separate listed prize. If the team belongs in
+Continuity, the corresponding Arc category is **Best DeFi or Agentic Application**, and
+The Graph has a separate **Continuity** AI track. The [submission record](docs/SUBMISSION_STATUS.md)
+keeps team eligibility and dashboard selections unconfirmed until evidenced. [Mainnet release gates](docs/MAINNET_READINESS.md).
 
 | Sponsor | Track | Why |
 |---|---|---|
-| **Arc** | Best DeFi / Onchain Finance | Conditional delivery and multi-party net settlement for non-fungible entitlements. Ticket delivery determines whether payment is permitted; every participant's debits and credits correspond within one settlement |
-| **The Graph** | AI Use Case — From Scratch | Live indexed data drives the solver and the agent. Change a budget and the answer changes, because the pool is re-queried |
-| **Arc** | Launch on Testnet & Push to Mainnet | *Conditional.* Its examples include stablecoin settlement and escrow logic added to a marketplace. Mainnet readiness is a separate bar — confirming what qualifies before committing |
+| **Arc** | Best DeFi/Onchain Finance Application | Conditional delivery and multi-party net settlement for non-fungible entitlements. Ticket delivery determines whether payment is permitted; every participant's debits and credits correspond within one settlement |
+| **The Graph** | Best AI Tooling or AI Use Case with The Graph (From Scratch), AI Use Case path | Live indexed data drives the solver and the agent. Change a budget and the answer changes, because the pool is re-queried |
 
 ### App Kits evaluation
 

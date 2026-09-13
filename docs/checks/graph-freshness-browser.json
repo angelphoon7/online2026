@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-09-12T17:49:12.348Z",
+  "browser": "headless Google Chrome",
+  "source": "npm run test:browser",
+  "scope": "Regression tests with mocked APIs. No wallet, chain transaction or model request; this is not live-chain or video evidence.",
+  "tests": [
+    {
+      "name": "receipt floor survives errors, stale responses, agent hash changes and reload",
+      "file": "indexing.spec.ts",
+      "status": "passed"
+    },
+    {
+      "name": "partial budget failure retains revoke receipt and waits before showing the pool",
+      "file": "indexing.spec.ts",
+      "status": "passed"
+    }
+  ]
+}

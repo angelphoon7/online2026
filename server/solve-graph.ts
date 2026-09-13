@@ -3,6 +3,8 @@ import type { Hex } from 'viem';
 import type { Intent } from '../solver/src/types';
 import { getPoolSnapshot, type Snapshot, type Exclusion } from '@/shared/graph';
 import { solveOnChain, type PoolSource } from './solve';
+import { subgraphEndpoint } from '@/shared/graph/client';
+import { chainConfig } from './chain';
 
 // Solver discovery from The Graph — step 6-C of docs/RESHUFFLE_GRAPH_PLAN.md.
 //
@@ -63,7 +65,7 @@ const source = (snapshot: Snapshot, liveIntents: number, excluded: Excluded[]): 
   excluded,
   kind: 'subgraph',
   snapshotBlock: snapshot.block.toString(),
-  endpoint: process.env.SUBGRAPH_URL ?? null,
+  endpoint: subgraphEndpoint(),
 });
 
 /**
@@ -99,9 +101,8 @@ export async function graphPool(minBlock = 0n): Promise<GraphPool> {
  *   - Exclusions are filtered to the requested hashes, so the evidence explains THIS request
  *     rather than padding it with reasons about intents nobody asked about.
  *
- * A requested hash the snapshot does not carry is simply absent from the map; solveOnChain
- * then falls back to log discovery for it, so a search cannot fail merely because the indexer
- * has not caught up with a commit.
+ * A requested hash absent from this snapshot stays absent. solveOnChain rejects that request
+ * without RPC log discovery; callers can refresh or use their commit receipt as minBlock.
  */
 export async function graphIntents(hashes: Hex[], minBlock = 0n): Promise<GraphPool> {
   const snapshot = await getPoolSnapshot({ minBlock });
@@ -129,10 +130,20 @@ export async function graphIntents(hashes: Hex[], minBlock = 0n): Promise<GraphP
 }
 
 /** Solve over the whole live pool discovered from the subgraph. */
-export async function solveLivePoolFromGraph(minBlock = 0n) {
-  const { committed, source } = await graphPool(minBlock);
-  // Sorted independently of the viewing wallet or any UI selection.
-  return solveOnChain([...committed.keys()].sort(), committed, source);
+const pendingSearches = new Map<string, Promise<Awaited<ReturnType<typeof solveOnChain>>>>();
+export function solveLivePoolFromGraph(minBlock = 0n) {
+  const { rpcUrl, addresses } = chainConfig();
+  const key = JSON.stringify([subgraphEndpoint(), rpcUrl, addresses.IntentRegistry, minBlock.toString()]);
+  const pending = pendingSearches.get(key);
+  if (pending) return pending;
+  const result = (async () => {
+    const { committed, source } = await graphPool(minBlock);
+    return solveOnChain([...committed.keys()].sort(), committed, source);
+  })().finally(() => { if (pendingSearches.get(key) === result) pendingSearches.delete(key); });
+  // Share concurrent searches only. A new receipt floor always starts a separate search;
+  // completed results are never reused for a later request.
+  pendingSearches.set(key, result);
+  return result;
 }
 
 // The agent's what-if (plan 7-E) lives in server/solve-hypothetical.ts, not here.

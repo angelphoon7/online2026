@@ -61,6 +61,7 @@ function snapshot(intents: Intent[], tickets: [bigint, number, number, Address][
 }
 
 const capacity = (owners: Address[]) => ({
+  block: 61_000_000n,
   usdcBalance: new Map(owners.map((o) => [o, 1000n * USDC])),
   usdcAllowance: new Map(owners.map((o) => [o, 1000n * USDC])),
 });
@@ -136,6 +137,7 @@ test('a settlement that excludes the hypothetical is not reported as found', asy
 test('payment capacity is enforced, so a relaxation cannot promise what V8 would reject', async () => {
   const snap = snapshot([aOffers, bOffers], [[1n, 0, 1, A], [2n, 1, 1, B]]);
   const broke = {
+    block: snap.block,
     usdcBalance: new Map([[A, 1n * USDC], [B, 1000n * USDC]]),
     usdcAllowance: new Map([[A, 1000n * USDC], [B, 1000n * USDC]]),
   };

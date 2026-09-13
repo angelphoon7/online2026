@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-09-12T23:22:42.267Z",
+  "source": "https://api.github.com/repos/angelphoon7/online2026",
+  "authenticated": false,
+  "httpStatus": 200,
+  "repositoryUrl": "https://github.com/angelphoon7/online2026",
+  "private": false,
+  "visibility": "public",
+  "homepage": "https://online2026.vercel.app",
+  "defaultBranch": "main",
+  "scope": "Anonymous repository metadata and app-origin discovery. Does not establish that the local uncommitted changes are deployed or submitted."
+}

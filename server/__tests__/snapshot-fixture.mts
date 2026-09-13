@@ -41,9 +41,14 @@ const fixture = loadFixture();
 
 /** Parse a response body through the real getPoolSnapshot, with fetch stubbed. */
 async function parse(data: unknown) {
+  // Historical captures predate id-based pagination. Adapt only the response order to the
+  // current query, retaining every captured entity and its original metadata unchanged.
+  const captured = data as { intents: { id: string }[]; tickets: { id: string }[] };
+  const byId = (a: { id: string }, b: { id: string }) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  const ordered = { ...captured, intents: [...captured.intents].sort(byId), tickets: [...captured.tickets].sort(byId) };
   const original = globalThis.fetch;
   globalThis.fetch = (async () =>
-    new Response(JSON.stringify({ data }), { headers: { 'content-type': 'application/json' } })) as typeof fetch;
+    new Response(JSON.stringify({ data: ordered }), { headers: { 'content-type': 'application/json' } })) as typeof fetch;
   try {
     return await getPoolSnapshot({ url: 'http://fixture.invalid/graphql' });
   } finally {
@@ -52,7 +57,8 @@ async function parse(data: unknown) {
 }
 
 const USDC = 1_000_000n;
-const generousCapacity = (owners: Address[]) => ({
+const generousCapacity = (owners: Address[], block: bigint) => ({
+  block,
   usdcBalance: new Map(owners.map((o) => [o.toLowerCase() as Address, 10_000n * USDC])),
   usdcAllowance: new Map(owners.map((o) => [o.toLowerCase() as Address, 10_000n * USDC])),
 });
@@ -162,7 +168,7 @@ test('maxNetPay parses as signed, and a negative limit still binds to its hash',
 test('a real intent diagnoses to a named status whose sentence passes the guard', { skip: !fixture }, async () => {
   const snapshot = await parse(fixture!.body.data);
   const subject = snapshot.intents[0];
-  const capacity = generousCapacity(snapshot.intents.map((i) => i.owner as Address));
+  const capacity = generousCapacity(snapshot.intents.map((i) => i.owner as Address), snapshot.block);
 
   const evidence = await diagnose(snapshot, subject.hash, capacity);
 
@@ -205,7 +211,7 @@ test('diagnosing the same real intent twice gives the same answer', { skip: !fix
   // evidence chain proves nothing: a judge re-running a diagnosis would see it change.
   const snapshot = await parse(fixture!.body.data);
   const subject = snapshot.intents[0];
-  const capacity = generousCapacity(snapshot.intents.map((i) => i.owner as Address));
+  const capacity = generousCapacity(snapshot.intents.map((i) => i.owner as Address), snapshot.block);
 
   const first = await diagnose(snapshot, subject.hash, capacity);
   const second = await diagnose(snapshot, subject.hash, capacity);

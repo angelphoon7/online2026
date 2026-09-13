@@ -4,7 +4,7 @@ import abis from './abis.json';
 import { DEPLOYMENT } from '@/lib/deployment';
 
 export { abis };
-export function chainConfig() {
+export function chainConfig(options: { signal?: AbortSignal } = {}) {
   // Addresses, chain id and USDC come from deployments/<network>.json, never from env — one
   // deployed fact, one place. See lib/deployment.ts.
   const addresses = {
@@ -13,7 +13,7 @@ export function chainConfig() {
     IntentRegistry: DEPLOYMENT.intentRegistry,
     Settlement: DEPLOYMENT.settlement,
   };
-  const rpc = process.env.ARC_RPC ?? DEPLOYMENT.rpc;
+  const rpc = process.env.ARC_RPC?.trim() || DEPLOYMENT.rpc;
   if (!rpc || Object.values(addresses).some(a => !a || !isAddress(a)) || !isAddress(DEPLOYMENT.usdc)) {
     throw new Error('Backend Arc configuration is incomplete');
   }
@@ -23,8 +23,11 @@ export function chainConfig() {
     );
   }
   return {
+    rpcUrl: rpc,
     addresses: addresses as Record<keyof typeof addresses, Address>,
-    client: createPublicClient({ transport: http(rpc, { timeout: 15000, retryCount: 3, retryDelay: 500 }) }),
+    client: createPublicClient({ transport: http(rpc, options.signal
+      ? { timeout: 0, retryCount: 0, fetchOptions: { signal: options.signal } }
+      : { timeout: 15000, retryCount: 3, retryDelay: 500 }) }),
     usdc: DEPLOYMENT.usdc as Address,
     startBlock: DEPLOYMENT.startBlock,
     chainId: DEPLOYMENT.chainId,

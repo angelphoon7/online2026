@@ -1,0 +1,72 @@
+{
+  "checkedAt": "2026-09-13T02:14:44.307Z",
+  "status": "REDIS_VERIFIED_AWAITING_CREDENTIAL_AUTHORIZATION",
+  "vercel": {
+    "authenticated": true,
+    "account": "angelphoon7",
+    "team": "angelphoon7s-projects",
+    "project": "online2026",
+    "projectId": "prj_so1Nv6NqCvHd4a2jeVTHhyE9NzkA",
+    "nodeVersion": "24.x"
+  },
+  "inspectedDeployment": {
+    "id": "dpl_EXvEqECVfDDEjQ7um3mEjiV1jwGn",
+    "sourceCommit": "60f75ad",
+    "failure": "hosting:check found no Redis REST URL/token pair"
+  },
+  "productionConfiguration": {
+    "initialVariableCount": 0,
+    "addedConfigCount": 14,
+    "keys": [
+      "DEPLOYMENT",
+      "NEXT_PUBLIC_DEPLOYMENT",
+      "ARC_CHAIN_ID",
+      "ARC_RPC",
+      "READ_SOURCE",
+      "SUBGRAPH_URL",
+      "STORAGE_BACKEND",
+      "STORAGE_NAMESPACE",
+      "AGENT_RATE_LIMIT_STORE",
+      "AGENT_IP_SOURCE",
+      "AGENT_ASK_TIMEOUT_MS",
+      "AGENT_DIAGNOSE_TIMEOUT_MS",
+      "JUDGE_CONTROLS_ENABLED",
+      "DEMO_TICKETS_ENABLED"
+    ],
+    "signingEnabled": false,
+    "localWalletOrApiCredentialsTransferred": false,
+    "cloudDatabaseSettingsInstalled": true
+  },
+  "redis": {
+    "termsAccepted": true,
+    "provisioned": true,
+    "resource": "reshuffle-arc-testnet",
+    "resourceId": "store_ZouXGkQpMx0Rp3AF",
+    "installationId": "icfg_TZ5MAAJV6jGDXVzZSiemRi2b",
+    "plan": "free",
+    "ownership": "owned",
+    "connectedEnvironment": "production",
+    "requestedRegion": "iad1",
+    "requestedAutoUpgrade": false,
+    "requestedEviction": false,
+    "restSettings": [
+      "KV_REST_API_URL",
+      "KV_REST_API_TOKEN"
+    ],
+    "connection": "PASS",
+    "sharedAdmission": "PASS",
+    "actualVercelIngressVerified": false
+  },
+  "migration": {
+    "checked": true,
+    "records": 459,
+    "applied": false,
+    "localFilesDeleted": false
+  },
+  "pending": [
+    "Explicit authorization before transferring local wallet keys, API keys and judge access code to Vercel Production Secret",
+    "Business journal migration after stopping writers, followed by deployment and real public acceptance"
+  ],
+  "transactionsSent": 0,
+  "deployedInThisFollowup": false
+}

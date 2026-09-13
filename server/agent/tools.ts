@@ -3,10 +3,11 @@ import type Anthropic from '@anthropic-ai/sdk';
 import type { Hex } from 'viem';
 import type { Snapshot } from '@/shared/graph';
 import { diagnose, type Evidence } from './diagnose';
-import { whatIf, WhatIfError, type WhatIfChanges } from './what-if';
+import { whatIf, WhatIfError, parseWhatIfChanges } from './what-if';
 import { poolOverview } from './overview';
 import { readCapacity, type Capacity } from '../solve-hypothetical';
 import type { Address } from 'viem';
+import type { RequestBudget } from './request-budget';
 
 // Tool definitions and dispatch - step 7-F of docs/RESHUFFLE_GRAPH_PLAN.md.
 //
@@ -52,13 +53,15 @@ export const TOOLS: Anthropic.Tool[] = [
           properties: {
             maxNetPayUsdc: {
               type: 'number',
+              minimum: -1_000_000,
+              maximum: 1_000_000,
               description: 'Signed USDC. Positive is a ceiling on what they pay; negative is a floor on what they must receive.',
             },
             mustBeAdjacent: { type: 'boolean' },
             mustShareSection: { type: 'boolean' },
             mustShareSession: { type: 'boolean' },
-            addSections: { type: 'array', items: { type: 'integer' }, description: 'Section ids to also accept.' },
-            addSessions: { type: 'array', items: { type: 'integer' }, description: 'Session ids to also accept.' },
+            addSections: { type: 'array', maxItems: 256, items: { type: 'integer', minimum: 0, maximum: 255 }, description: 'Section ids to also accept.' },
+            addSessions: { type: 'array', maxItems: 256, items: { type: 'integer', minimum: 0, maximum: 255 }, description: 'Session ids to also accept.' },
           },
           additionalProperties: false,
         },
@@ -93,32 +96,46 @@ const asHash = (value: unknown, fallback: Hex): Hex =>
  * shared: a question that triggers diagnose_intent and then two what_ifs should not re-read
  * the same USDC balances three times.
  */
-export function dispatcher(snapshot: Snapshot, selected: Hex): Dispatcher {
+export function dispatcher(snapshot: Snapshot, selected: Hex, budget?: RequestBudget): Dispatcher {
   let capacity: Promise<Capacity> | undefined;
   let baseline: Promise<Evidence> | undefined;
 
-  const funds = () => (capacity ??= readCapacity(snapshot.intents.map((i) => i.owner as Address)));
-  const selectedDiagnosis = () => (baseline ??= funds().then((money) => diagnose(snapshot, selected, money)));
+  const funds = () => (capacity ??= readCapacity(snapshot.intents.map((i) => i.owner as Address), snapshot.block, budget));
+  const liveAtSnapshot = (hash: Hex) => snapshot.intents.some(i => i.hash.toLowerCase() === hash.toLowerCase());
+  const diagnosis = async (hash: Hex) => diagnose(snapshot, hash, liveAtSnapshot(hash) ? await funds() : undefined, budget);
+  const selectedDiagnosis = () => (baseline ??= diagnosis(selected));
 
   return {
     baseline: selectedDiagnosis,
 
     run: async (name, input) => {
+      budget?.checkpoint();
+      if (name === 'what_if') {
+        try {
+          if (!input || typeof input !== 'object' || Array.isArray(input)) throw new WhatIfError('what_if input must be an object.');
+          const args = input as Record<string, unknown>;
+          for (const key of Object.keys(args)) {
+            if (key !== 'intentHash' && key !== 'changes') throw new WhatIfError(`Unsupported what_if field: ${key}.`);
+          }
+          if (typeof args.intentHash !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(args.intentHash)) {
+            throw new WhatIfError('intentHash must be a committed intent hash: 0x and 64 hex characters.');
+          }
+          const hash = args.intentHash.toLowerCase() as Hex;
+          const changes = parseWhatIfChanges(args.changes);
+          // Validate before reading capacity, including fields forbidden by the tool schema.
+          return await whatIf(snapshot, hash, changes, liveAtSnapshot(hash) ? await funds() : undefined, budget);
+        } catch (error) {
+          if (error instanceof WhatIfError) return { code: error.name, error: error.message, submittable: false };
+          throw error;
+        }
+      }
       const args = (input ?? {}) as Record<string, unknown>;
-      // An intent hash the model invented cannot be diagnosed; fall back to the selected
-      // intent, which is the one the user actually has open.
+      // Malformed hashes fall back to the selected intent. Other valid hashes may be read
+      // for inspection, but the answer guard only narrates the selected intent's results.
       const hash = asHash(args.intentHash, selected);
 
       if (name === 'diagnose_intent') {
-        return hash === selected ? await selectedDiagnosis() : await diagnose(snapshot, hash, await funds());
-      }
-      if (name === 'what_if') {
-        try {
-          return await whatIf(snapshot, hash, (args.changes ?? {}) as WhatIfChanges, await funds());
-        } catch (error) {
-          if (error instanceof WhatIfError) return { error: error.message, submittable: false };
-          throw error;
-        }
+        return hash === selected ? await selectedDiagnosis() : await diagnosis(hash);
       }
       if (name === 'pool_overview') return poolOverview(snapshot);
       return { error: `unknown tool ${name}` };

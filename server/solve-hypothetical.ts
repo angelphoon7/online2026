@@ -5,6 +5,8 @@ import type { Intent, ChainState } from '../solver/src/types';
 import type { Snapshot } from '@/shared/graph';
 import { chainConfig } from './chain';
 import { SEARCH_CONFIG } from './solve';
+import type { RequestBudget } from './agent/request-budget';
+import type { CounterpartyIntent } from '@/lib/agent-evidence';
 
 // The solver's hypothetical mode — step 6-C of docs/RESHUFFLE_GRAPH_PLAN.md, used by the
 // agent's what_if in step 7.
@@ -33,9 +35,29 @@ import { SEARCH_CONFIG } from './solve';
 
 /** USDC balance and allowance per owner — V8 capacity, which the subgraph does not index. */
 export type Capacity = {
+  /** All balances and allowances were read at this exact block. */
+  block: bigint;
   usdcBalance: Map<Address, bigint>;
   usdcAllowance: Map<Address, bigint>;
 };
+
+export class SnapshotCapacityMismatch extends Error {
+  constructor(expected: bigint, actual: bigint) {
+    super(`SnapshotCapacityMismatch: expected block ${expected}, received ${actual}`);
+    this.name = 'SnapshotCapacityMismatch';
+  }
+}
+
+export class SnapshotCapacityReadError extends Error {
+  constructor(public block: bigint, cause: unknown) {
+    super(`SnapshotCapacityReadError: USDC state at block ${block} could not be read. Retry this snapshot; latest state was not substituted.`, { cause });
+    this.name = 'SnapshotCapacityReadError';
+  }
+}
+
+export function requireCapacityBlock(capacity: Capacity, block: bigint): void {
+  if (capacity.block !== block) throw new SnapshotCapacityMismatch(block, capacity.block);
+}
 
 /**
  * Read payment capacity for a set of owners.
@@ -43,19 +65,28 @@ export type Capacity = {
  * Separate from the search so step 7's diagnosis can read it once and reuse it across every
  * relaxation it tries, instead of re-reading the same balances for each one.
  */
-export async function readCapacity(owners: Address[]): Promise<Capacity> {
-  const { client, addresses, usdc } = chainConfig();
+export async function readCapacity(owners: Address[], block: bigint, budget?: RequestBudget): Promise<Capacity> {
+  budget?.checkpoint();
+  if (typeof block !== 'bigint' || block < 0n) throw new TypeError('An explicit snapshot block is required for USDC reads.');
+  const { client, addresses, usdc } = chainConfig({ signal: budget?.signal });
   const usdcBalance = new Map<Address, bigint>();
   const usdcAllowance = new Map<Address, bigint>();
-  for (const owner of [...new Set(owners.map((o) => o.toLowerCase() as Address))]) {
-    const [balance, allowance] = await Promise.all([
-      client.readContract({ address: usdc, abi: erc20Abi, functionName: 'balanceOf', args: [owner] }),
-      client.readContract({ address: usdc, abi: erc20Abi, functionName: 'allowance', args: [owner, addresses.Settlement] }),
-    ]);
-    usdcBalance.set(owner, balance);
-    usdcAllowance.set(owner, allowance);
+  try {
+    for (const owner of [...new Set(owners.map((o) => o.toLowerCase() as Address))]) {
+      budget?.checkpoint();
+      const [balance, allowance] = await Promise.all([
+        client.readContract({ address: usdc, abi: erc20Abi, functionName: 'balanceOf', args: [owner], blockNumber: block }),
+        client.readContract({ address: usdc, abi: erc20Abi, functionName: 'allowance', args: [owner, addresses.Settlement], blockNumber: block }),
+      ]);
+      budget?.checkpoint();
+      usdcBalance.set(owner, balance);
+      usdcAllowance.set(owner, allowance);
+    }
+  } catch (error) {
+    budget?.checkpoint();
+    throw new SnapshotCapacityReadError(block, error);
   }
-  return { usdcBalance, usdcAllowance };
+  return { block, usdcBalance, usdcAllowance };
 }
 
 export type Hypothetical = {
@@ -75,6 +106,7 @@ export type HypotheticalResult = {
   termination: 'complete' | 'timeout' | 'candidate-limit';
   /** Other participants in the reshuffle found, if one was. */
   counterparties: Address[];
+  counterpartyIntents: CounterpartyIntent[];
   participantCount: number | null;
   /** Signed, in contract units: what the hypothetical owner would pay (+) or receive (-). */
   targetNetPay: string | null;
@@ -97,8 +129,10 @@ export type HypotheticalResult = {
 export async function solveHypothetical(
   snapshot: Snapshot,
   { replaceHash, intent }: Hypothetical,
-  capacity?: Capacity
+  capacity?: Capacity,
+  budget?: RequestBudget
 ): Promise<HypotheticalResult> {
+  await budget?.yield();
   const target = replaceHash.toLowerCase();
   const pool = snapshot.intents.filter((i) => i.hash.toLowerCase() !== target);
   const intents: Intent[] = [...pool, intent];
@@ -115,7 +149,10 @@ export async function solveHypothetical(
   // The one deliberate fiction, and the whole reason this result is not submittable.
   intentState.set(hypotheticalHash, 1);
 
-  const { usdcBalance, usdcAllowance } = capacity ?? (await readCapacity(intents.map((i) => i.owner)));
+  const funds = capacity ?? (await readCapacity(intents.map((i) => i.owner), snapshot.block, budget));
+  budget?.checkpoint();
+  requireCapacityBlock(funds, snapshot.block);
+  const { usdcBalance, usdcAllowance } = funds;
 
   const state: ChainState = {
     ticketMeta: snapshot.ticketMeta,
@@ -132,7 +169,10 @@ export async function solveHypothetical(
   // Ask the question that was actually asked: is there a reshuffle that includes THIS
   // participant? Without this the bound is spent on reshuffles between other people, and the
   // answer becomes "no settlement found" for almost everyone in a pool of any size.
-  const result = solve(intents, state, { ...SEARCH_CONFIG, mustInclude: hypotheticalHash });
+  const result = solve(intents, state, { ...SEARCH_CONFIG,
+    timeoutMs: Math.min(SEARCH_CONFIG.timeoutMs, budget?.remainingMs() ?? SEARCH_CONFIG.timeoutMs),
+    mustInclude: hypotheticalHash });
+  budget?.checkpoint();
   const runtimeMs = performance.now() - started;
 
   const chosen = result.chosen;
@@ -140,6 +180,15 @@ export async function solveHypothetical(
   // A candidate that does not include the hypothetical answers a different question: it says
   // some other participants could settle among themselves, not that this variation helps.
   const found = !!chosen && !!leg;
+  const committed = new Map(pool.map(i => [i.hash.toLowerCase(), i]));
+  const counterpartyIntents: CounterpartyIntent[] = found ? chosen!.intents
+    .filter(i => hashIntent(i).toLowerCase() !== hypotheticalHash.toLowerCase())
+    .map(i => {
+      const hash = hashIntent(i);
+      const original = committed.get(hash.toLowerCase());
+      if (!original) throw new Error('CandidateIntentEvidenceMismatch: candidate intent is absent from the pinned snapshot.');
+      return { intentHash: original.hash, owner: original.owner.toLowerCase() as Address, committedTx: original.committedTx };
+    }) : [];
 
   return {
     submittable: false,
@@ -147,11 +196,8 @@ export async function solveHypothetical(
     snapshotBlock: snapshot.block.toString(),
     bounds: SEARCH_CONFIG,
     termination: result.evidence.search?.termination ?? 'complete',
-    counterparties: found
-      ? chosen!.intents
-          .filter((i) => hashIntent(i).toLowerCase() !== hypotheticalHash.toLowerCase())
-          .map((i) => i.owner.toLowerCase() as Address)
-      : [],
+    counterparties: counterpartyIntents.map(i => i.owner),
+    counterpartyIntents,
     participantCount: found ? chosen!.intents.length : null,
     targetNetPay: leg ? leg.netPayment.toString() : null,
     receives: leg ? leg.receives.map((id) => id.toString()) : [],

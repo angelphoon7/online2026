@@ -1,11 +1,10 @@
 import 'server-only';
-import { subgraphEndpoint } from '@/shared/graph/client';
+import { fetchGraph, subgraphEndpoint, SubgraphRateLimited } from '@/shared/graph/client';
 
 // Same-origin proxy to Subgraph Studio.
 //
-// The browser never talks to Studio directly: the query URL is version-pinned, so baking it
-// into the client bundle would freeze a subgraph version into a build, and any API key would
-// ship with it. shared/graph/client.ts posts here when it runs in a browser.
+// Browser Graph calls use this proxy. The selected deployment provides a public default
+// endpoint; server-side overrides and private API keys are resolved at request time.
 //
 // This forwards read queries only — a GraphQL endpoint for a subgraph has no mutations — and
 // it does not interpret the body beyond a size guard.
@@ -32,17 +31,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const upstream = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        ...(process.env.SUBGRAPH_API_KEY
-          ? { authorization: `Bearer ${process.env.SUBGRAPH_API_KEY}` }
-          : {}),
-      },
-      body,
-      cache: 'no-store',
-    });
+    const upstream = await fetchGraph(body, { url: endpoint, signal: AbortSignal.any([request.signal, AbortSignal.timeout(20_000)]) });
 
     // Pass the payload through untouched: graph-node's own errors carry the indexed block
     // number that the client turns into a SubgraphLagError, and rewriting them would lose it.
@@ -51,8 +40,10 @@ export async function POST(request: Request) {
       headers: { 'content-type': 'application/json', 'Cache-Control': 'no-store' },
     });
   } catch (error) {
+    if (error instanceof SubgraphRateLimited) return Response.json({ errors: [{ message: error.message, extensions: { code: error.name } }] },
+      { status: 429, headers: { 'content-type': 'application/json', 'Cache-Control': 'no-store', 'Retry-After': String(error.retryAfterSeconds) } });
     return Response.json(
-      { errors: [{ message: `Subgraph unreachable: ${(error as Error).message}` }] },
+      { errors: [{ message: 'Subgraph unreachable. Retry shortly.' }] },
       { status: 502, headers: { 'Cache-Control': 'no-store' } }
     );
   }

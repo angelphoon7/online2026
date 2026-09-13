@@ -52,7 +52,7 @@ const ceilings = snapshot.intents.map((i) => i.maxNetPay).filter((p) => p > 0n);
 const deepest = ceilings.length ? ceilings.reduce((a, b) => (a > b ? a : b)) : 0n;
 console.log(`  deepest signed willingness to pay in the pool: ${usdc(deepest)} USDC\n`);
 
-const funds = await readCapacity(snapshot.intents.map((i) => i.owner));
+const funds = await readCapacity(snapshot.intents.map((i) => i.owner), snapshot.block);
 
 type Beat = { hash: `0x${string}`; owner: string; settlesAt: number | null; breaksAt: number; participants: number | null };
 const settleable: { hash: `0x${string}`; owner: string; participants: number | null; pays: string }[] = [];

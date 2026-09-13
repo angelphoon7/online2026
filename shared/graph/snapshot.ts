@@ -21,8 +21,9 @@
 // proposal is submitted (server/solve.ts), which is what makes index lag cause a failed
 // simulation rather than an invalid settlement.
 
-import { gql, SubgraphIndexingError, type GqlOptions } from './client';
+import { gql, SubgraphIndexingError, SubgraphLagError, type GqlOptions } from './client';
 import { POOL_SNAPSHOT, INTENT_BY_ID } from './queries';
+import { readGraphPages, SubgraphPaginationError, type GraphPageMeta, type GraphPageOptions } from './pages';
 import { fromGraph, hashIntent, sameAddress, type GraphIntent } from '../intent';
 import type { Intent, TicketMeta, Hex, Address } from '../intent';
 
@@ -56,7 +57,7 @@ export type LiveIntent = Intent & {
 };
 
 export type Snapshot = {
-  /** The block this whole payload describes — data and _meta came from one request. */
+  /** Every page was read at this block, with matching deployment and timestamp. */
   block: bigint;
   timestamp: bigint;
   deployment: string;
@@ -68,19 +69,13 @@ export type Snapshot = {
   excluded: Exclusion[];
 };
 
-export type SnapshotOptions = GqlOptions & {
-  /** Freshness floor: fail rather than answer from a block earlier than this. */
-  minBlock?: bigint;
-  /** Per-list cap. graph-node's maximum is 1000. */
+export type SnapshotOptions = GraphPageOptions & {
+  /** Compatibility alias for pageSize; this is a page size, never a total-result cap. */
   first?: number;
 };
 
 type PoolResponse = {
-  _meta: {
-    block: { number: number; timestamp: string };
-    hasIndexingErrors: boolean;
-    deployment: string;
-  };
+  _meta: GraphPageMeta;
   intents: (GraphIntent & {
     committedAtBlock: string;
     committedTx: string;
@@ -100,18 +95,14 @@ type PoolResponse = {
 
 export async function getPoolSnapshot(options: SnapshotOptions = {}): Promise<Snapshot> {
   const minBlock = options.minBlock ?? 0n;
-  const first = options.first ?? 1000;
-
-  const data = await gql<PoolResponse>(
-    POOL_SNAPSHOT,
-    { minBlock: Number(minBlock), first },
-    options
-  );
+  const data = await readGraphPages<PoolResponse>(POOL_SNAPSHOT, { intents: '0x', tickets: '' },
+    { ...options, pageSize: options.pageSize ?? options.first });
 
   // A mapping failure means the entities are not trustworthy; do not quietly solve on them.
   if (data._meta.hasIndexingErrors) throw new SubgraphIndexingError();
 
   const block = BigInt(data._meta.block.number);
+  if (block < minBlock) throw new SubgraphLagError(`SubgraphLagError: indexed ${block}, required ${minBlock}`, block);
   const timestamp = BigInt(data._meta.block.timestamp);
 
   const ticketMeta = new Map<bigint, TicketMeta>();
@@ -132,6 +123,9 @@ export async function getPoolSnapshot(options: SnapshotOptions = {}): Promise<Sn
   const intents: LiveIntent[] = [];
   const excluded: Exclusion[] = [];
 
+  // Preserve the prior discovery order after cursor pagination, with a deterministic tie.
+  data.intents.sort((a, b) => BigInt(a.committedAtBlock) < BigInt(b.committedAtBlock) ? -1
+    : BigInt(a.committedAtBlock) > BigInt(b.committedAtBlock) ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   for (const g of data.intents) {
     const id = g.id as Hex;
     const owner = g.owner.toLowerCase() as Address;
@@ -157,6 +151,9 @@ export async function getPoolSnapshot(options: SnapshotOptions = {}): Promise<Sn
 
     // The nested list is the authority on custody; a short list means a ticket entity is
     // missing entirely, which would otherwise look like "not escrowed".
+    if (g.offeredTickets.length >= 1000 && g.offeredTickets.length < g.offered.length) {
+      throw new SubgraphPaginationError('offered ticket relations reached their nested query limit');
+    }
     if (g.offeredTickets.length !== g.offered.length) {
       const known = new Set(g.offeredTickets.map((t) => t.id));
       const missing = g.offered.filter((id) => !known.has(id));
@@ -241,16 +238,36 @@ export type IntentStatus = {
   settlement: { id: string; txHash: string; blockNumber: string; participantCount: string } | null;
 };
 
+export class IntentSnapshotMismatch extends Error {
+  constructor(detail: string) {
+    super(`IntentSnapshotMismatch: ${detail}`);
+    this.name = 'IntentSnapshotMismatch';
+  }
+}
+
 /**
  * Look up one intent regardless of state.
  *
  * Needed because the pool snapshot only carries LIVE intents: an intent the user asks about may
  * have been revoked or settled, and that — with its transaction hash — is the answer.
+ * The snapshot is mandatory: historical state is checked at its exact block and deployment.
  */
 export async function getIntentById(
   id: Hex,
+  snapshot: Pick<Snapshot, 'block' | 'deployment'>,
   options: GqlOptions = {}
 ): Promise<IntentStatus | null> {
-  const data = await gql<{ intent: IntentStatus | null }>(INTENT_BY_ID, { id }, options);
+  const data = await gql<{
+    _meta: { block: { number: number }; deployment: string; hasIndexingErrors: boolean };
+    intent: IntentStatus | null;
+  }>(INTENT_BY_ID, { id: id.toLowerCase(), block: Number(snapshot.block) }, options);
+  if (data._meta.hasIndexingErrors) throw new SubgraphIndexingError();
+  if (BigInt(data._meta.block.number) !== snapshot.block || data._meta.deployment !== snapshot.deployment) {
+    throw new IntentSnapshotMismatch(`lookup must use deployment ${snapshot.deployment} at block ${snapshot.block}`);
+  }
+  if (data.intent && (
+    data.intent.id.toLowerCase() !== id.toLowerCase() ||
+    (data.intent.closedAtBlock !== null && BigInt(data.intent.closedAtBlock) > snapshot.block)
+  )) throw new IntentSnapshotMismatch('returned intent does not belong to the requested snapshot');
   return data.intent;
 }

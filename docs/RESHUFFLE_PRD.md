@@ -153,6 +153,10 @@ Preloaded initial data is acceptable — ArcBook's demo used preloaded maker pos
 
 ## 8. Prizes
 
+**Historical planning assumptions below, superseded on 13 September 2026.** Use the
+[current official categories and pending eligibility declaration](SUBMISSION_STATUS.md)
+for submission; the older amounts, Launch category and timing below are not current targets.
+
 | Prize | Match |
 |---|---|
 | **Arc — Best DeFi/Onchain Finance** ($1,667) | Its scope covers payments and fintech infrastructure, and names conditional payments and multi-step settlement. Frame as *conditional delivery and multi-party net settlement for non-fungible entitlements*. Do not argue about whether NFTs count as swaps |

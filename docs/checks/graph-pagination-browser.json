@@ -1,0 +1,148 @@
+﻿{
+    "checkedAt":  "2026-09-12T22:00:18.3155839+00:00",
+    "mockedUpstreams":  true,
+    "transactionsSent":  0,
+    "modelRequests":  0,
+    "stats":  {
+                  "startTime":  "2026-09-12T21:56:17.799Z",
+                  "duration":  23934.973,
+                  "expected":  12,
+                  "skipped":  0,
+                  "unexpected":  0,
+                  "flaky":  0
+              },
+    "checks":  [
+                   {
+                       "name":  "receipt floor survives errors, stale responses, agent hash changes and reload",
+                       "expectedStatus":  "passed",
+                       "status":  "expected",
+                       "results":  [
+                                       {
+                                           "status":  "passed",
+                                           "durationMs":  2610
+                                       }
+                                   ]
+                   },
+                   {
+                       "name":  "partial budget failure retains revoke receipt and waits before showing the pool",
+                       "expectedStatus":  "passed",
+                       "status":  "expected",
+                       "results":  [
+                                       {
+                                           "status":  "passed",
+                                           "durationMs":  1234
+                                       }
+                                   ]
+                   },
+                   {
+                       "name":  "drawer shows the selected intent, bounded grouping and separate commitments for one wallet",
+                       "expectedStatus":  "passed",
+                       "status":  "expected",
+                       "results":  [
+                                       {
+                                           "status":  "passed",
+                                           "durationMs":  1378
+                                       }
+                                   ]
+                   },
+                   {
+                       "name":  "what-if-only answer displays every change, candidate and unsuccessful call without an old diagnosis",
+                       "expectedStatus":  "passed",
+                       "status":  "expected",
+                       "results":  [
+                                       {
+                                           "status":  "passed",
+                                           "durationMs":  1284
+                                       }
+                                   ]
+                   },
+                   {
+                       "name":  "pool-only answers show totals, distributions and exclusions including empty pool results",
+                       "expectedStatus":  "passed",
+                       "status":  "expected",
+                       "results":  [
+                                       {
+                                           "status":  "passed",
+                                           "durationMs":  1437
+                                       }
+                                   ]
+                   },
+                   {
+                       "name":  "drawer rejects diagnose_intent evidence at another block and clears the earlier answer",
+                       "expectedStatus":  "passed",
+                       "status":  "expected",
+                       "results":  [
+                                       {
+                                           "status":  "passed",
+                                           "durationMs":  1194
+                                       }
+                                   ]
+                   },
+                   {
+                       "name":  "drawer rejects what_if evidence at another block and clears the earlier answer",
+                       "expectedStatus":  "passed",
+                       "status":  "expected",
+                       "results":  [
+                                       {
+                                           "status":  "passed",
+                                           "durationMs":  1321
+                                       }
+                                   ]
+                   },
+                   {
+                       "name":  "drawer rejects pool_overview evidence at another block and clears the earlier answer",
+                       "expectedStatus":  "passed",
+                       "status":  "expected",
+                       "results":  [
+                                       {
+                                           "status":  "passed",
+                                           "durationMs":  1361
+                                       }
+                                   ]
+                   },
+                   {
+                       "name":  "judge sign-in unlocks controls and signing out hides editable intents",
+                       "expectedStatus":  "passed",
+                       "status":  "expected",
+                       "results":  [
+                                       {
+                                           "status":  "passed",
+                                           "durationMs":  1472
+                                       }
+                                   ]
+                   },
+                   {
+                       "name":  "judging guide sends the exact selected pair or triple and disables unavailable groups",
+                       "expectedStatus":  "passed",
+                       "status":  "expected",
+                       "results":  [
+                                       {
+                                           "status":  "passed",
+                                           "durationMs":  1548
+                                       }
+                                   ]
+                   },
+                   {
+                       "name":  "direct diagnosis for another intent shows an error and no evidence",
+                       "expectedStatus":  "passed",
+                       "status":  "expected",
+                       "results":  [
+                                       {
+                                           "status":  "passed",
+                                           "durationMs":  948
+                                       }
+                                   ]
+                   },
+                   {
+                       "name":  "a market above 1000 intents exposes its final request and opens that exact diagnosis",
+                       "expectedStatus":  "passed",
+                       "status":  "expected",
+                       "results":  [
+                                       {
+                                           "status":  "passed",
+                                           "durationMs":  4361
+                                       }
+                                   ]
+                   }
+               ]
+}

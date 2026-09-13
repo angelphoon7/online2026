@@ -71,6 +71,7 @@ function snapshot(intents: Intent[], seats: Seat[]): Snapshot {
 }
 
 const capacity = (owners: Address[]) => ({
+  block: 61_000_000n,
   usdcBalance: new Map(owners.map((o) => [o, 1000n * USDC])),
   usdcAllowance: new Map(owners.map((o) => [o, 1000n * USDC])),
 });
@@ -128,11 +129,11 @@ test('a budget raise the committed limit already permits is not recommended', ()
     intent: '0xdead' as Hex,
     status: 'NOT_FOUND_WITHIN_BOUND' as const,
     relaxations: [
-      { change: 'maxNetPay->cap', found: true, counterparties: [B], participantCount: 2,
+      { change: 'maxNetPay->cap', found: true, counterparties: [B], counterpartyIntents: [], participantCount: 2,
         targetNetPay: '0', receives: ['3'], binding: false },
     ],
     bounds: { maxParticipants: 4, maxCandidates: 100, timeoutMs: 2000, budgetCapUsdc: 100, groupSearchCap: 40 },
-    counterpartyTx: {},
+    counterpartyIntents: [],
     runtimeMs: 1,
   };
 
@@ -265,7 +266,7 @@ test('revoked: status is CLOSED and the revoking transaction is named', async ()
   process.env.SUBGRAPH_URL = 'http://stub.invalid/graphql';
   globalThis.fetch = (async () =>
     new Response(
-      JSON.stringify({ data: { intent: { id: hashIntent(a), state: 'REVOKED', closedTx: '0xdead', closedAtBlock: '61000001' } } }),
+      JSON.stringify({ data: { _meta: { block: { number: Number(snap.block) }, deployment: snap.deployment, hasIndexingErrors: false }, intent: { id: hashIntent(a), state: 'REVOKED', closedTx: '0xdead', closedAtBlock: '60999999' } } }),
       { headers: { 'content-type': 'application/json' } }
     )) as typeof fetch;
   try {
@@ -335,7 +336,7 @@ test('guard rejects banned language, unsupported identifiers, and the wrong bloc
   const log = [{ tool: 'diagnose_intent', input: { intentHash: hashIntent(a) }, output: evidence }];
   const block = '61000000';
 
-  const good = `At Arc Testnet block #${block}, no settlement was found within the search bound. Raising the limit is the smallest change among those tried.`;
+  const good = renderEvidence(evidence);
   assert.equal(checkAnswer(good, log, block), null);
   assert.equal(guard(good, log, block, evidence).guardFallback, false);
 
@@ -349,12 +350,12 @@ test('guard rejects banned language, unsupported identifiers, and the wrong bloc
     checkAnswer(`At Arc Testnet block #${block}, your counterparty is ${invented}.`, log, block),
     'UNSUPPORTED_IDENTIFIER'
   );
-  // B's address IS in the evidence, so stating it is allowed.
-  assert.equal(checkAnswer(`At Arc Testnet block #${block}, ${B} holds the seat you want.`, log, block), null);
+  // Knowing an address is not evidence for a claim about that address's ownership.
+  assert.equal(checkAnswer(`At Arc Testnet block #${block}, ${B} holds the seat you want.`, log, block), 'UNSUPPORTED_CLAIM');
 
   // 3. A claim about some other moment, or no moment at all.
   assert.equal(checkAnswer('At Arc Testnet block #999, nothing was found.', log, block), 'WRONG_BLOCK');
-  assert.equal(checkAnswer('No settlement was found within the search bound.', log, block), 'WRONG_BLOCK');
+  assert.equal(checkAnswer('No settlement was found within the search bound.', log, block), 'INVALID_PREFIX');
   assert.equal(checkAnswer('', log, block), 'EMPTY');
 
   // A rejected answer is replaced by the deterministic sentence, never shown with a warning.

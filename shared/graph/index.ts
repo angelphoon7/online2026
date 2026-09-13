@@ -8,8 +8,10 @@
 // before any proposal is submitted, so index lag can cause a failed simulation but never an
 // invalid settlement.
 
-export { gql, subgraphEndpoint, GraphError, SubgraphLagError, SubgraphIndexingError } from './client';
+export { gql, subgraphEndpoint, GraphError, SubgraphRateLimited, SubgraphLagError, SubgraphIndexingError, SubgraphHistoryUnavailable } from './client';
 export type { GqlOptions } from './client';
+export { readGraphPages, SubgraphPaginationError, SubgraphSnapshotChanged, SubgraphPageLimit, SubgraphReadTimeout } from './pages';
+export type { GraphPageOptions, GraphPageMeta } from './pages';
 
 export { POOL_SNAPSHOT, META, INTENT_BY_ID } from './queries';
 

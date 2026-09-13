@@ -1,0 +1,56 @@
+{
+  "checkedAt": "2026-09-12T18:27:38.095Z",
+  "status": "PASS",
+  "steps": [
+    "6-D",
+    "8 (Apply budget)",
+    "10-B"
+  ],
+  "change": {
+    "revokeTx": "0x0c477d9ea7156fb418c17464f3fb49fd83b06d14bf38bafccbc9e570284b3430",
+    "commitTx": "0x3d9fd3d353e564b9a48add42266480d059ad78ce820f9f07de81516b6e93000a",
+    "commitBlock": "61770778",
+    "newHash": "0xa8304a351bbbe67ffc6d767114e57eb6504f96339aec8166602de1f8ada30488",
+    "oldHash": "0xf7387010926792738ba5c0b1048ec46e5aa3197ba8ef81ca7976b8864d31baf0",
+    "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+    "previousMaxNetPay": "0",
+    "maxNetPay": "-12000000",
+    "nonce": "79"
+  },
+  "receipts": [
+    {
+      "hash": "0x0c477d9ea7156fb418c17464f3fb49fd83b06d14bf38bafccbc9e570284b3430",
+      "blockNumber": "61770769",
+      "status": "success",
+      "gasUsed": "30952",
+      "effectiveGasPrice": "20250000000",
+      "feeUsdc": "0.000626778"
+    },
+    {
+      "hash": "0x3d9fd3d353e564b9a48add42266480d059ad78ce820f9f07de81516b6e93000a",
+      "blockNumber": "61770778",
+      "status": "success",
+      "gasUsed": "104999",
+      "effectiveGasPrice": "20250000000",
+      "feeUsdc": "0.00212622975"
+    }
+  ],
+  "beforeBlock": "61770753",
+  "commitBlock": "61770778",
+  "firstDrawerBlockAfterIndexing": "61770784",
+  "afterAnswerBlock": "61771245",
+  "observedUiIndexingMs": 3018,
+  "oldPoolAndAnswerHiddenWhileIndexing": true,
+  "laterRequestsRetainReceiptFloor": true,
+  "drawerFollowsNewHash": true,
+  "beforeStatus": "SETTLEABLE",
+  "afterStatus": "NOT_FOUND_WITHIN_BOUND",
+  "recording": {
+    "speed": 1,
+    "clips": [
+      "docs/checks/graph-budget/apply-budget.webm",
+      "docs/checks/graph-budget/read-only-retry.webm"
+    ],
+    "note": "The first recording captured transactions and indexing, then an agent read returned HTTP 503. The second is a read-only retry on the same new hash. No transaction was repeated."
+  }
+}

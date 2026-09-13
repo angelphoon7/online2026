@@ -1,0 +1,2 @@
+pool source: subgraph @ block 61762525 — 74 searchable, 0 excluded
+pool source: subgraph @ block 61762563 — 2 of 2 requested hashes discovered

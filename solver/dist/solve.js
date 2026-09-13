@@ -19,6 +19,7 @@ export function solve(allIntents, state, config = DEFAULT_CONFIG) {
     const evidence = buildEvidence(liveIntents.length, candidates, excluded, chosen);
     evidence.search = { termination };
     return {
+        candidates: ranked,
         chosen: chosen
             ? { intents: chosen.intents, legs: chosen.legs }
             : null,

@@ -1,0 +1,36 @@
+{
+  "checkedAt": "2026-09-12T20:03:30.221Z",
+  "scope": "Faults applied only to ignored isolated copies; production wait.ts unchanged.",
+  "mutations": [
+    {
+      "mutation": "accept stale block",
+      "testPattern": "polls until the receipt block",
+      "exitCode": 1,
+      "rejectedByAssertion": true
+    },
+    {
+      "mutation": "remove backoff cap",
+      "testPattern": "default polling backs off",
+      "exitCode": 1,
+      "rejectedByAssertion": true
+    },
+    {
+      "mutation": "ignore indexing errors",
+      "testPattern": "indexing error at 100",
+      "exitCode": 1,
+      "rejectedByAssertion": true
+    },
+    {
+      "mutation": "accept response after deadline",
+      "testPattern": "successful response arriving after the deadline",
+      "exitCode": 1,
+      "rejectedByAssertion": true
+    },
+    {
+      "mutation": "replace caller abort reason with timeout",
+      "testPattern": "caller abort during fetch",
+      "exitCode": 1,
+      "rejectedByAssertion": true
+    }
+  ]
+}

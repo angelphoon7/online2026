@@ -1,5 +1,6 @@
 import type { Address, Hex } from 'viem';
 import type { IntentParams } from './contracts';
+import { SolveRequestError } from './solve-errors';
 
 export interface SolveEvidence {
   id: string;
@@ -37,8 +38,9 @@ export async function findPoolSettlement(minBlock?: bigint): Promise<{ proposal:
   return parseSolveResponse(await fetch('/api/solve/pool', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body({}, minBlock) }));
 }
 async function parseSolveResponse(response: Response): Promise<{ proposal: SettlementProposal | null; evidence: SolveEvidence }> {
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error ?? 'Backend solve failed');
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new SolveRequestError(data?.error ?? 'The solver service is temporarily unavailable. Retry shortly.', response.status, data?.code);
+  if (!data) throw new SolveRequestError('The solver returned an unreadable response. Retry shortly.', response.status);
   if (!data.proposal) return { proposal: null, evidence: data };
   const parsed: IntentParams[] = data.proposal.intents.map((i: Record<string, unknown>) => ({
     ...i, offered: (i.offered as string[]).map(BigInt),

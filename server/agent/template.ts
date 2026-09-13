@@ -104,6 +104,9 @@ export function renderEvidence(evidence: Evidence): string {
     );
   } else if (evidence.supply?.firstZero) {
     lines.push(`On the supply side, ${STAGE_SENTENCE[evidence.supply.firstZero]}.`);
+  } else if (evidence.supply?.truncated) {
+    const s = evidence.supply;
+    lines.push(`Grouping checked ${s.groupSearched} of ${s.groupCandidates} acceptable tickets. The largest group found in that subset is ${s.largestGroup}, for a request of exactly ${s.need}. The remaining tickets were not checked for grouping.`);
   } else if (evidence.supply?.blockedAt === 'cohesiveGroup') {
     lines.push(
       `The largest group of acceptable tickets that meets this intent's grouping conditions is ${evidence.supply.largestGroup}, and it asks for exactly ${evidence.supply.need}.`

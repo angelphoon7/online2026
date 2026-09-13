@@ -26,20 +26,90 @@ npm.cmd run start -- --port 3101
 | `POST /api/agent/ask` | `{ "intentHash": "0x…", "question": "Why can't this intent settle?", "minBlock": "N" }`. Model tool selection/narration when configured, deterministic baseline diagnosis otherwise. |
 | `GET /api/evidence/{id}` | Returns the saved evidence, including source block, considered hashes, excluded candidates, chosen proposal, search caps and simulation result. |
 | `POST /api/evidence/{id}/receipt` | Accepts `{ "transactionHash": "0x…" }`. Checks chain ID, successful receipt, exact destination/calldata, `Settled` event and SETTLED registry states before attaching confirmation. |
+| `GET /api/health` | Checks Agent IP/shared admission, storage, live Graph freshness, prepared groups, restricted judge access and testnet signer/issuer availability. Returns 503 if a required capability is unavailable. |
+| `GET /api/demo/scenarios?minBlock=N` | Current shared catalog with Graph-derived group availability, signed deadlines, exclusions and replacement hashes. Does not claim a successful match. |
+| `GET/POST/DELETE /api/demo/session` | Inspect, create and revoke a one-hour HttpOnly judge session. Login uses the private access code; writes require the same Origin. |
 
-Only hashes are accepted as explicit solver inputs; client-supplied budgets and ownership claims cannot change signed conditions. Explicit requests support 2–4 distinct committed intents. The pool service accepts up to 256 searchable live intents, forming candidates of at most four participants and four offered/received tickets per intent. Each search has 100-candidate and 2-second limits. Assignment recursion also checks the deadline. RPC fallback for explicit hashes scans bounded log pages; Graph discovery is the demo path. There is no claim about unbounded market search.
+Both Agent APIs apply sliding-window quotas: ask 12/minute and diagnose 30/minute per IP.
+Production uses atomic Redis admission across instances, retaining counters on worker
+restart. Excess requests return `429 AgentRateLimited` with `Retry-After`.
+
+Their overall deadlines are 60 and 30 seconds respectively, including body/Graph/RPC/model
+reads, Redis admission, solver work and fallback; timeout returns `504 AgentRequestTimeout`.
+Cancellation propagates downstream. Vercel automatically uses `x-vercel-forwarded-for`;
+other production hosts need `AGENT_IP_SOURCE=trusted-proxy` and an ingress that overwrites
+`X-Forwarded-For` with one verified IP and prevents direct access. Missing identity or Redis
+returns `503 AgentRateLimitUnavailable`. Development without Redis retains local counters.
+[Step 7-I configuration and deployment acceptance](../docs/GRAPH_7I.md).
+
+Agent candidate evidence uses `counterpartyIntents: { intentHash, owner, committedTx }[]`
+instead of the earlier owner-keyed `counterpartyTx` map. Each candidate retains its actual
+commitments even when one wallet has several intents. Supply grouping reports its inspected
+subset, and what-if tool inputs undergo strict runtime validation before capacity reads.
+[API shape, behavior and regression cases](../docs/GRAPH_AGENT_INTEGRITY.md).
+
+The drawer validates successful tool outputs by intent hash and answer block, independently
+renders what-if and pool-overview results, and exposes their scoped input/output evidence.
+Conflicting blocks reject the answer; tool errors are shown separately from matching results.
+[Step 8 drawer evidence](../docs/GRAPH_8_EVIDENCE.md).
+
+Only hashes are accepted as explicit solver inputs; client-supplied budgets and ownership claims cannot change signed conditions. Explicit requests support 2–4 distinct committed intents. The pool service accepts up to 256 searchable live intents, forming candidates of at most four participants and four offered/received tickets per intent. Each search has 100-candidate and 2-second limits. Assignment recursion also checks the deadline. RPC mode scans bounded log pages; Graph discovery is the demo path. There is no claim about unbounded market search.
+
+Market and pool Graph queries apply `number_gte` on their first page; an unmet floor returns
+HTTP 409. Every subsequent page is pinned to that block hash and checked for the same metadata.
+Independent ID cursors collect all roots; repeated/invalid pages or the 100-page/20-second read
+bound return named HTTP 503 errors with no partial pool. [Pagination tests and live traces](../docs/GRAPH_PAGINATION.md).
+Judge-list reads also accept `minBlock`. A budget replacement that
+fails after revocation returns the confirmed revoke block/hash in `confirmed`, so the browser
+can retain the receipt floor even on an error response. [Post-write UI and drawer checks](../docs/GRAPH_6B_8.md).
+
+Both solver routes return top-level `snapshotBlock`, `bounds`, ranked `candidates` and `excluded`,
+alongside the existing evidence fields. Only the chosen `proposal` has RPC simulation evidence
+and, on success, transaction calldata. `snapshotBlock` is null in RPC mode. An unmet Graph
+floor returns HTTP 409; requested hashes unavailable in the searchable snapshot return HTTP
+422 without a log fallback. [Live HTTP responses and source logs](../docs/GRAPH_4A_6C.md).
 
 The ranking rule is least gross cash moved among candidates found within the search budget, then fewer participants, then the lexicographically smallest ordered set of hashes. The backend sorts input hashes before searching. No solution found within the search bound does not establish infeasibility.
 
 All capacity, custody, ticket and intent reads use one block snapshot. A subsequent simulation uses a fresh block. The local runner simulates again immediately before signing and sending. Simulation does not lock state; Settlement validates again at execution. A failed proposal costs its proposer gas.
 
-Evidence persists under `.data/evidence` on the server filesystem. Mount persistent storage when deploying the service; an ephemeral serverless filesystem will not preserve it. Public artifacts for the ten recorded rounds are also exported to `deployments/settlements`. Responses never include private keys or authenticated RPC URLs.
+Evidence, claims, single-use challenges, judge sessions, signing journals and the current
+demo catalog use `server/durable-store.ts`. Configure Redis REST for hosted instances.
+The development fallback uses `.data/shared/<namespace>` and can still read legacy local
+evidence; Redis never falls back to a laptop's files. Production file storage requires an
+explicit persistent-volume opt-in and is rejected on Vercel. `npm run storage:migrate`
+copies existing local records without overwriting conflicting target data. Confirmed
+evidence receipts cannot be overwritten by another transaction hash. Public artifacts for
+the ten recorded rounds remain in `deployments/settlements`.
+[Hosting, migration and recovery](../docs/JUDGING_SETUP.md).
 
-`READ_SOURCE=graph` uses `server/market-graph.ts` and `server/solve-graph.ts` to discover the market from Studio. `READ_SOURCE=rpc` retains log-based discovery for local development. If unset, the presence of `SUBGRAPH_URL` selects Graph. Agent routes require Graph independently of this selector. Evidence identifies its source; explicit-hash solving can still use RPC log lookup for a requested hash absent from the indexed pool. Receipts and execution simulation always use RPC.
+`READ_SOURCE=graph` uses `server/market-graph.ts` and `server/solve-graph.ts` to discover the market from Studio. `READ_SOURCE=rpc` retains log-based discovery for local development. If unset, the presence of `SUBGRAPH_URL` selects Graph. Agent routes require Graph independently of this selector. Graph-mode explicit-hash solving stays within the indexed pool and never substitutes newer RPC log discovery. Receipts and execution simulation always use RPC.
 
-The agent's indexed pool is one snapshot, but payment capacity uses separate latest-RPC reads and closed-intent lookup is unpinned. See [Graph limitations](../README.md#graph-limitations) before describing the complete diagnosis as historical state. The model guard is a vocabulary/identifier/block-reference check, not complete numerical or semantic verification.
+The agent's pool, USDC balances/allowances and closed-intent lookup use the same snapshot block.
+Payment capacity is cached with its block and rejected if reused for another snapshot.
+Historical read failures return 503 without substituting `latest`; pruned Graph history is
+distinguished from indexing lag. [Step 7-A / D checks](../docs/GRAPH_7A_7D.md).
+The model guard requires the exact block prefix and accepts complete evidence-rendered
+passages only. Amounts remain bound to direction and hypothetical context; arbitrary prose
+cannot pass based on a value allowlist. Provider IDs and token usage appear in `modelCalls`;
+fallback evidence is labelled separately. [Step 7-G / H checks and live acceptance setup](../docs/GRAPH_7G_7H.md).
 
 ## Testnet signing routes
+
+Budget and revoke routes require an authenticated judge session and explicit hash scope,
+including in development. Knowing an intent hash or the server having its owner's key is
+not sufficient. `JUDGE_CONTROLS_ENABLED=false` disables the controls in development too.
+`npm run judge:setup` fills empty template placeholders or adds missing private local access
+settings, preserving existing codes and explicit false flags. Replacements inherit
+their configured root's permission; removing the root removes that permission.
+
+Issuer and judge actions coordinate by chain and signer using an expiring worker lease
+plus a durable active-operation reservation. Signed bytes are saved before broadcast.
+Timeouts keep the reservation: the same operation can resume on a different instance using
+the saved plan and transaction bytes, including a budget change after revocation. A distinct
+operation cannot take that nonce while the prior status is uncertain. Completed claims stay
+once-per-wallet across restarts; challenges are consumed atomically. External seeding scripts
+must run while hosted signing is paused, because they do not participate in this coordinator.
 
 `/api/demo/tickets` uses a registered issuer key to issue free test tickets when enabled.
 `/api/demo/budget` and `/api/demo/revoke` use controlled participant keys for real on-chain

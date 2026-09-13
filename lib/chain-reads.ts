@@ -6,27 +6,14 @@ import { CONTRACTS } from './config';
 import { escrowAbi, settlementAbi } from './abi';
 import type { ChainReceipt, ChainTicket, MarketSnapshot } from './market-types';
 import type { SettlementProposal } from './solve-api';
+import { findUnusedIntentNonce } from './intent-nonce';
 
-let pending: Promise<MarketSnapshot> | null = null;
+export { getMarketSnapshot } from './market-snapshot';
 async function readJson<T>(url: string): Promise<T> {
   const response = await fetch(url, { cache: 'no-store' });
   const body = await response.json();
   if (!response.ok) throw new Error(body.error ?? 'Public chain reads unavailable');
   return body;
-}
-export async function getMarketSnapshot(fresh = false, minBlock?: bigint): Promise<MarketSnapshot> {
-  if (fresh && pending) await pending.catch(() => {});
-  if (!pending) {
-    // minBlock is the freshness floor (trust rule 2): the server refuses to answer from a
-    // block older than the transaction the user just sent, rather than returning a stale
-    // market in which their own action has not happened yet.
-    const query = new URLSearchParams();
-    if (fresh) query.set('fresh', '1');
-    if (minBlock !== undefined && minBlock > 0n) query.set('minBlock', minBlock.toString());
-    const suffix = query.size > 0 ? `?${query}` : '';
-    pending = readJson<MarketSnapshot>(`/api/market${suffix}`).finally(() => { pending = null; });
-  }
-  return pending;
 }
 export const ticketHolder = (t: ChainTicket) => t.depositor !== '0x0000000000000000000000000000000000000000' ? t.depositor : t.owner;
 export function getIntentPool(snapshot: MarketSnapshot, eventId = 1) {
@@ -50,9 +37,8 @@ export const getChainBlockNumber = () => getPublicClient().getBlockNumber();
 export const getTicketDepositor = (tokenId: bigint) => getPublicClient().readContract({ address: CONTRACTS.escrow, abi: escrowAbi, functionName: 'depositor', args: [tokenId] });
 export const getUSDCAllowance = (address: Address) => getPublicClient().readContract({ address: CONTRACTS.usdc, abi: erc20Abi, functionName: 'allowance', args: [address, CONTRACTS.settlement] });
 export async function getUnusedNonce(address: Address, minimum: bigint) {
-  let nonce = minimum;
-  while (await getPublicClient().readContract({ address: CONTRACTS.intentRegistry, abi: [{ type: 'function', name: 'usedNonce', stateMutability: 'view', inputs: [{ type: 'address' }, { type: 'uint256' }], outputs: [{ type: 'bool' }] }], functionName: 'usedNonce', args: [address, nonce] })) nonce++;
-  return nonce;
+  const client = getPublicClient();
+  return findUnusedIntentNonce(minimum, nonce => client.readContract({ address: CONTRACTS.intentRegistry, abi: [{ type: 'function', name: 'usedNonce', stateMutability: 'view', inputs: [{ type: 'address' }, { type: 'uint256' }], outputs: [{ type: 'bool' }] }], functionName: 'usedNonce', args: [address, nonce] }));
 }
 export async function getNativeUSDCBalance(address: Address) {
   const client = getPublicClient();

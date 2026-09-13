@@ -1,0 +1,1345 @@
+{
+  "checkedAt": "2026-09-12T19:15:54.679Z",
+  "source": {
+    "endpoint": "https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1",
+    "deployment": "QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL",
+    "block": {
+      "number": 61777195,
+      "timestamp": 1789240548,
+      "hash": "0x577fa350eadd90595215c5a45c100bbbda4529b78ecc38ee1719a48d0da113c5"
+    },
+    "hasIndexingErrors": false
+  },
+  "receiptFloor": 61777093,
+  "scope": "Each selected group of three signed requests only. Other market inventory may allow direct swaps. Independent groups have disjoint tickets. No settlement broadcast.",
+  "groups": [
+    {
+      "name": "single-date",
+      "exactCount": 1,
+      "intents": [
+        {
+          "hash": "0xc7a6f1396af3f240050c98910ecf035119cf9a7d17885244afcb3242b69ecb07",
+          "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+          "offered": [
+            "260"
+          ]
+        },
+        {
+          "hash": "0x486f7c7c659f5a307dcc924e6a7d1058bc0b1923160894774f11b9eff3706759",
+          "owner": "0x8c3345e88cb68f16dc31f88ee21b2032a5250e90",
+          "offered": [
+            "261"
+          ]
+        },
+        {
+          "hash": "0xd45fbafc70ad594484c5946b776bca86a2a0f2c7218617c793aacb0ba56f86c1",
+          "owner": "0xc1d189f4fad5bbae8cf972cb59e669441d813fbb",
+          "offered": [
+            "262"
+          ]
+        }
+      ],
+      "pairCases": [
+        {
+          "participants": [
+            0,
+            1
+          ],
+          "shortages": [
+            {
+              "intentHash": "0x486f7c7c659f5a307dcc924e6a7d1058bc0b1923160894774f11b9eff3706759",
+              "required": 1,
+              "acceptedTicketsAvailable": 0
+            }
+          ],
+          "bounds": {
+            "maxParticipants": 3,
+            "maxCandidates": 100,
+            "timeoutMs": 5000
+          },
+          "runtimeMs": 2.0178000000000793,
+          "timestamp": "2026-09-12T19:15:55.752Z",
+          "intentsConsidered": 2,
+          "candidatesFound": 0,
+          "candidatesExcluded": [
+            {
+              "intentHashes": [
+                "0xc7a6f1396af3f240050c98910ecf035119cf9a7d17885244afcb3242b69ecb07",
+                "0x486f7c7c659f5a307dcc924e6a7d1058bc0b1923160894774f11b9eff3706759"
+              ],
+              "reason": "No valid ticket assignment satisfying all predicates"
+            }
+          ],
+          "chosen": null,
+          "search": {
+            "termination": "complete"
+          },
+          "simulationResult": {
+            "success": false,
+            "errorName": "SectionNotAccepted",
+            "args": [
+              "0x486f7c7c659f5a307dcc924e6a7d1058bc0b1923160894774f11b9eff3706759",
+              0
+            ]
+          }
+        },
+        {
+          "participants": [
+            0,
+            2
+          ],
+          "shortages": [
+            {
+              "intentHash": "0xc7a6f1396af3f240050c98910ecf035119cf9a7d17885244afcb3242b69ecb07",
+              "required": 1,
+              "acceptedTicketsAvailable": 0
+            }
+          ],
+          "bounds": {
+            "maxParticipants": 3,
+            "maxCandidates": 100,
+            "timeoutMs": 5000
+          },
+          "runtimeMs": 0.8996999999999389,
+          "timestamp": "2026-09-12T19:15:55.810Z",
+          "intentsConsidered": 2,
+          "candidatesFound": 0,
+          "candidatesExcluded": [
+            {
+              "intentHashes": [
+                "0xc7a6f1396af3f240050c98910ecf035119cf9a7d17885244afcb3242b69ecb07",
+                "0xd45fbafc70ad594484c5946b776bca86a2a0f2c7218617c793aacb0ba56f86c1"
+              ],
+              "reason": "No valid ticket assignment satisfying all predicates"
+            }
+          ],
+          "chosen": null,
+          "search": {
+            "termination": "complete"
+          },
+          "simulationResult": {
+            "success": false,
+            "errorName": "SessionNotAccepted",
+            "args": [
+              "0xc7a6f1396af3f240050c98910ecf035119cf9a7d17885244afcb3242b69ecb07",
+              0
+            ]
+          }
+        },
+        {
+          "participants": [
+            1,
+            2
+          ],
+          "shortages": [
+            {
+              "intentHash": "0xd45fbafc70ad594484c5946b776bca86a2a0f2c7218617c793aacb0ba56f86c1",
+              "required": 1,
+              "acceptedTicketsAvailable": 0
+            }
+          ],
+          "bounds": {
+            "maxParticipants": 3,
+            "maxCandidates": 100,
+            "timeoutMs": 5000
+          },
+          "runtimeMs": 0.7985000000003311,
+          "timestamp": "2026-09-12T19:15:55.866Z",
+          "intentsConsidered": 2,
+          "candidatesFound": 0,
+          "candidatesExcluded": [
+            {
+              "intentHashes": [
+                "0x486f7c7c659f5a307dcc924e6a7d1058bc0b1923160894774f11b9eff3706759",
+                "0xd45fbafc70ad594484c5946b776bca86a2a0f2c7218617c793aacb0ba56f86c1"
+              ],
+              "reason": "No valid ticket assignment satisfying all predicates"
+            }
+          ],
+          "chosen": null,
+          "search": {
+            "termination": "complete"
+          },
+          "simulationResult": {
+            "success": false,
+            "errorName": "SessionNotAccepted",
+            "args": [
+              "0xd45fbafc70ad594484c5946b776bca86a2a0f2c7218617c793aacb0ba56f86c1",
+              1
+            ]
+          }
+        }
+      ],
+      "triple": {
+        "bounds": {
+          "maxParticipants": 3,
+          "maxCandidates": 100,
+          "timeoutMs": 5000
+        },
+        "runtimeMs": 2.6853000000000975,
+        "timestamp": "2026-09-12T19:15:55.919Z",
+        "intentsConsidered": 3,
+        "candidatesFound": 1,
+        "candidatesExcluded": [
+          {
+            "intentHashes": [
+              "0xc7a6f1396af3f240050c98910ecf035119cf9a7d17885244afcb3242b69ecb07",
+              "0x486f7c7c659f5a307dcc924e6a7d1058bc0b1923160894774f11b9eff3706759"
+            ],
+            "reason": "No valid ticket assignment satisfying all predicates"
+          },
+          {
+            "intentHashes": [
+              "0xc7a6f1396af3f240050c98910ecf035119cf9a7d17885244afcb3242b69ecb07",
+              "0xd45fbafc70ad594484c5946b776bca86a2a0f2c7218617c793aacb0ba56f86c1"
+            ],
+            "reason": "No valid ticket assignment satisfying all predicates"
+          },
+          {
+            "intentHashes": [
+              "0x486f7c7c659f5a307dcc924e6a7d1058bc0b1923160894774f11b9eff3706759",
+              "0xd45fbafc70ad594484c5946b776bca86a2a0f2c7218617c793aacb0ba56f86c1"
+            ],
+            "reason": "No valid ticket assignment satisfying all predicates"
+          }
+        ],
+        "chosen": {
+          "intentHashes": [
+            "0xc7a6f1396af3f240050c98910ecf035119cf9a7d17885244afcb3242b69ecb07",
+            "0x486f7c7c659f5a307dcc924e6a7d1058bc0b1923160894774f11b9eff3706759",
+            "0xd45fbafc70ad594484c5946b776bca86a2a0f2c7218617c793aacb0ba56f86c1"
+          ],
+          "gross": "0",
+          "reason": "Least cash moved among 1 candidate found within the search budget: 0 gross, 3 participants"
+        },
+        "search": {
+          "termination": "complete"
+        },
+        "proposal": {
+          "intents": [
+            {
+              "id": "0xc7a6f1396af3f240050c98910ecf035119cf9a7d17885244afcb3242b69ecb07",
+              "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+              "eventId": 1,
+              "offered": [
+                "260"
+              ],
+              "sessionMask": "2",
+              "sectionMask": "1",
+              "exactCount": 1,
+              "mustShareSession": true,
+              "mustShareSection": true,
+              "mustBeAdjacent": false,
+              "maxNetPay": "0",
+              "deadline": "1789790400",
+              "nonce": "30260000",
+              "state": "LIVE"
+            },
+            {
+              "id": "0x486f7c7c659f5a307dcc924e6a7d1058bc0b1923160894774f11b9eff3706759",
+              "owner": "0x8c3345e88cb68f16dc31f88ee21b2032a5250e90",
+              "eventId": 1,
+              "offered": [
+                "261"
+              ],
+              "sessionMask": "1",
+              "sectionMask": "2",
+              "exactCount": 1,
+              "mustShareSession": true,
+              "mustShareSection": true,
+              "mustBeAdjacent": false,
+              "maxNetPay": "0",
+              "deadline": "1789790400",
+              "nonce": "30260000",
+              "state": "LIVE"
+            },
+            {
+              "id": "0xd45fbafc70ad594484c5946b776bca86a2a0f2c7218617c793aacb0ba56f86c1",
+              "owner": "0xc1d189f4fad5bbae8cf972cb59e669441d813fbb",
+              "eventId": 1,
+              "offered": [
+                "262"
+              ],
+              "sessionMask": "1",
+              "sectionMask": "1",
+              "exactCount": 1,
+              "mustShareSession": true,
+              "mustShareSection": true,
+              "mustBeAdjacent": false,
+              "maxNetPay": "0",
+              "deadline": "1789790400",
+              "nonce": "30260000",
+              "state": "LIVE"
+            }
+          ],
+          "legs": [
+            {
+              "intentHash": "0xc7a6f1396af3f240050c98910ecf035119cf9a7d17885244afcb3242b69ecb07",
+              "receives": [
+                "261"
+              ],
+              "netPayment": "0"
+            },
+            {
+              "intentHash": "0x486f7c7c659f5a307dcc924e6a7d1058bc0b1923160894774f11b9eff3706759",
+              "receives": [
+                "262"
+              ],
+              "netPayment": "0"
+            },
+            {
+              "intentHash": "0xd45fbafc70ad594484c5946b776bca86a2a0f2c7218617c793aacb0ba56f86c1",
+              "receives": [
+                "260"
+              ],
+              "netPayment": "0"
+            }
+          ]
+        },
+        "routes": [
+          {
+            "fromOwner": "0x8c3345e88cb68f16dc31f88ee21b2032a5250e90",
+            "toOwner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+            "tokenIds": [
+              "261"
+            ]
+          },
+          {
+            "fromOwner": "0xc1d189f4fad5bbae8cf972cb59e669441d813fbb",
+            "toOwner": "0x8c3345e88cb68f16dc31f88ee21b2032a5250e90",
+            "tokenIds": [
+              "262"
+            ]
+          },
+          {
+            "fromOwner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+            "toOwner": "0xc1d189f4fad5bbae8cf972cb59e669441d813fbb",
+            "tokenIds": [
+              "260"
+            ]
+          }
+        ],
+        "simulationResult": {
+          "success": true
+        },
+        "transactionHash": null
+      },
+      "apiRequest": {
+        "intentHashes": [
+          "0xc7a6f1396af3f240050c98910ecf035119cf9a7d17885244afcb3242b69ecb07",
+          "0x486f7c7c659f5a307dcc924e6a7d1058bc0b1923160894774f11b9eff3706759",
+          "0xd45fbafc70ad594484c5946b776bca86a2a0f2c7218617c793aacb0ba56f86c1"
+        ],
+        "minBlock": "61777093"
+      }
+    },
+    {
+      "name": "single-section",
+      "exactCount": 1,
+      "intents": [
+        {
+          "hash": "0xdeb9d14956f8ec6a5e3653a0015afeebdbd116e6a8a17893ae3723f230b04129",
+          "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+          "offered": [
+            "263"
+          ]
+        },
+        {
+          "hash": "0xba9fc0a4d3b0947ce1d3661bfeb07fc443bcc38358098f8d9123aab91b196fc1",
+          "owner": "0x8c3345e88cb68f16dc31f88ee21b2032a5250e90",
+          "offered": [
+            "264"
+          ]
+        },
+        {
+          "hash": "0x5b517df192f08354ac58913a147f2349c60d5fed60963bb7a8bb7598089c9597",
+          "owner": "0xc1d189f4fad5bbae8cf972cb59e669441d813fbb",
+          "offered": [
+            "265"
+          ]
+        }
+      ],
+      "pairCases": [
+        {
+          "participants": [
+            0,
+            1
+          ],
+          "shortages": [
+            {
+              "intentHash": "0xba9fc0a4d3b0947ce1d3661bfeb07fc443bcc38358098f8d9123aab91b196fc1",
+              "required": 1,
+              "acceptedTicketsAvailable": 0
+            }
+          ],
+          "bounds": {
+            "maxParticipants": 3,
+            "maxCandidates": 100,
+            "timeoutMs": 5000
+          },
+          "runtimeMs": 1.1665000000002692,
+          "timestamp": "2026-09-12T19:15:57.139Z",
+          "intentsConsidered": 2,
+          "candidatesFound": 0,
+          "candidatesExcluded": [
+            {
+              "intentHashes": [
+                "0xdeb9d14956f8ec6a5e3653a0015afeebdbd116e6a8a17893ae3723f230b04129",
+                "0xba9fc0a4d3b0947ce1d3661bfeb07fc443bcc38358098f8d9123aab91b196fc1"
+              ],
+              "reason": "No valid ticket assignment satisfying all predicates"
+            }
+          ],
+          "chosen": null,
+          "search": {
+            "termination": "complete"
+          },
+          "simulationResult": {
+            "success": false,
+            "errorName": "SectionNotAccepted",
+            "args": [
+              "0xba9fc0a4d3b0947ce1d3661bfeb07fc443bcc38358098f8d9123aab91b196fc1",
+              0
+            ]
+          }
+        },
+        {
+          "participants": [
+            0,
+            2
+          ],
+          "shortages": [
+            {
+              "intentHash": "0xdeb9d14956f8ec6a5e3653a0015afeebdbd116e6a8a17893ae3723f230b04129",
+              "required": 1,
+              "acceptedTicketsAvailable": 0
+            }
+          ],
+          "bounds": {
+            "maxParticipants": 3,
+            "maxCandidates": 100,
+            "timeoutMs": 5000
+          },
+          "runtimeMs": 0.9546000000000276,
+          "timestamp": "2026-09-12T19:15:57.187Z",
+          "intentsConsidered": 2,
+          "candidatesFound": 0,
+          "candidatesExcluded": [
+            {
+              "intentHashes": [
+                "0xdeb9d14956f8ec6a5e3653a0015afeebdbd116e6a8a17893ae3723f230b04129",
+                "0x5b517df192f08354ac58913a147f2349c60d5fed60963bb7a8bb7598089c9597"
+              ],
+              "reason": "No valid ticket assignment satisfying all predicates"
+            }
+          ],
+          "chosen": null,
+          "search": {
+            "termination": "complete"
+          },
+          "simulationResult": {
+            "success": false,
+            "errorName": "SectionNotAccepted",
+            "args": [
+              "0xdeb9d14956f8ec6a5e3653a0015afeebdbd116e6a8a17893ae3723f230b04129",
+              2
+            ]
+          }
+        },
+        {
+          "participants": [
+            1,
+            2
+          ],
+          "shortages": [
+            {
+              "intentHash": "0x5b517df192f08354ac58913a147f2349c60d5fed60963bb7a8bb7598089c9597",
+              "required": 1,
+              "acceptedTicketsAvailable": 0
+            }
+          ],
+          "bounds": {
+            "maxParticipants": 3,
+            "maxCandidates": 100,
+            "timeoutMs": 5000
+          },
+          "runtimeMs": 1.3153999999994994,
+          "timestamp": "2026-09-12T19:15:57.262Z",
+          "intentsConsidered": 2,
+          "candidatesFound": 0,
+          "candidatesExcluded": [
+            {
+              "intentHashes": [
+                "0xba9fc0a4d3b0947ce1d3661bfeb07fc443bcc38358098f8d9123aab91b196fc1",
+                "0x5b517df192f08354ac58913a147f2349c60d5fed60963bb7a8bb7598089c9597"
+              ],
+              "reason": "No valid ticket assignment satisfying all predicates"
+            }
+          ],
+          "chosen": null,
+          "search": {
+            "termination": "complete"
+          },
+          "simulationResult": {
+            "success": false,
+            "errorName": "SectionNotAccepted",
+            "args": [
+              "0x5b517df192f08354ac58913a147f2349c60d5fed60963bb7a8bb7598089c9597",
+              1
+            ]
+          }
+        }
+      ],
+      "triple": {
+        "bounds": {
+          "maxParticipants": 3,
+          "maxCandidates": 100,
+          "timeoutMs": 5000
+        },
+        "runtimeMs": 4.739400000000387,
+        "timestamp": "2026-09-12T19:15:57.317Z",
+        "intentsConsidered": 3,
+        "candidatesFound": 1,
+        "candidatesExcluded": [
+          {
+            "intentHashes": [
+              "0xdeb9d14956f8ec6a5e3653a0015afeebdbd116e6a8a17893ae3723f230b04129",
+              "0xba9fc0a4d3b0947ce1d3661bfeb07fc443bcc38358098f8d9123aab91b196fc1"
+            ],
+            "reason": "No valid ticket assignment satisfying all predicates"
+          },
+          {
+            "intentHashes": [
+              "0xdeb9d14956f8ec6a5e3653a0015afeebdbd116e6a8a17893ae3723f230b04129",
+              "0x5b517df192f08354ac58913a147f2349c60d5fed60963bb7a8bb7598089c9597"
+            ],
+            "reason": "No valid ticket assignment satisfying all predicates"
+          },
+          {
+            "intentHashes": [
+              "0xba9fc0a4d3b0947ce1d3661bfeb07fc443bcc38358098f8d9123aab91b196fc1",
+              "0x5b517df192f08354ac58913a147f2349c60d5fed60963bb7a8bb7598089c9597"
+            ],
+            "reason": "No valid ticket assignment satisfying all predicates"
+          }
+        ],
+        "chosen": {
+          "intentHashes": [
+            "0xdeb9d14956f8ec6a5e3653a0015afeebdbd116e6a8a17893ae3723f230b04129",
+            "0xba9fc0a4d3b0947ce1d3661bfeb07fc443bcc38358098f8d9123aab91b196fc1",
+            "0x5b517df192f08354ac58913a147f2349c60d5fed60963bb7a8bb7598089c9597"
+          ],
+          "gross": "0",
+          "reason": "Least cash moved among 1 candidate found within the search budget: 0 gross, 3 participants"
+        },
+        "search": {
+          "termination": "complete"
+        },
+        "proposal": {
+          "intents": [
+            {
+              "id": "0xdeb9d14956f8ec6a5e3653a0015afeebdbd116e6a8a17893ae3723f230b04129",
+              "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+              "eventId": 1,
+              "offered": [
+                "263"
+              ],
+              "sessionMask": "2",
+              "sectionMask": "2",
+              "exactCount": 1,
+              "mustShareSession": true,
+              "mustShareSection": true,
+              "mustBeAdjacent": false,
+              "maxNetPay": "0",
+              "deadline": "1789790400",
+              "nonce": "30260001",
+              "state": "LIVE"
+            },
+            {
+              "id": "0xba9fc0a4d3b0947ce1d3661bfeb07fc443bcc38358098f8d9123aab91b196fc1",
+              "owner": "0x8c3345e88cb68f16dc31f88ee21b2032a5250e90",
+              "eventId": 1,
+              "offered": [
+                "264"
+              ],
+              "sessionMask": "2",
+              "sectionMask": "4",
+              "exactCount": 1,
+              "mustShareSession": true,
+              "mustShareSection": true,
+              "mustBeAdjacent": false,
+              "maxNetPay": "0",
+              "deadline": "1789790400",
+              "nonce": "30260001",
+              "state": "LIVE"
+            },
+            {
+              "id": "0x5b517df192f08354ac58913a147f2349c60d5fed60963bb7a8bb7598089c9597",
+              "owner": "0xc1d189f4fad5bbae8cf972cb59e669441d813fbb",
+              "eventId": 1,
+              "offered": [
+                "265"
+              ],
+              "sessionMask": "2",
+              "sectionMask": "1",
+              "exactCount": 1,
+              "mustShareSession": true,
+              "mustShareSection": true,
+              "mustBeAdjacent": false,
+              "maxNetPay": "0",
+              "deadline": "1789790400",
+              "nonce": "30260001",
+              "state": "LIVE"
+            }
+          ],
+          "legs": [
+            {
+              "intentHash": "0xdeb9d14956f8ec6a5e3653a0015afeebdbd116e6a8a17893ae3723f230b04129",
+              "receives": [
+                "264"
+              ],
+              "netPayment": "0"
+            },
+            {
+              "intentHash": "0xba9fc0a4d3b0947ce1d3661bfeb07fc443bcc38358098f8d9123aab91b196fc1",
+              "receives": [
+                "265"
+              ],
+              "netPayment": "0"
+            },
+            {
+              "intentHash": "0x5b517df192f08354ac58913a147f2349c60d5fed60963bb7a8bb7598089c9597",
+              "receives": [
+                "263"
+              ],
+              "netPayment": "0"
+            }
+          ]
+        },
+        "routes": [
+          {
+            "fromOwner": "0x8c3345e88cb68f16dc31f88ee21b2032a5250e90",
+            "toOwner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+            "tokenIds": [
+              "264"
+            ]
+          },
+          {
+            "fromOwner": "0xc1d189f4fad5bbae8cf972cb59e669441d813fbb",
+            "toOwner": "0x8c3345e88cb68f16dc31f88ee21b2032a5250e90",
+            "tokenIds": [
+              "265"
+            ]
+          },
+          {
+            "fromOwner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+            "toOwner": "0xc1d189f4fad5bbae8cf972cb59e669441d813fbb",
+            "tokenIds": [
+              "263"
+            ]
+          }
+        ],
+        "simulationResult": {
+          "success": true
+        },
+        "transactionHash": null
+      },
+      "apiRequest": {
+        "intentHashes": [
+          "0xdeb9d14956f8ec6a5e3653a0015afeebdbd116e6a8a17893ae3723f230b04129",
+          "0xba9fc0a4d3b0947ce1d3661bfeb07fc443bcc38358098f8d9123aab91b196fc1",
+          "0x5b517df192f08354ac58913a147f2349c60d5fed60963bb7a8bb7598089c9597"
+        ],
+        "minBlock": "61777093"
+      }
+    },
+    {
+      "name": "triple-date",
+      "exactCount": 3,
+      "intents": [
+        {
+          "hash": "0xb9a1efd313f4a3de81b3c944f8be7f5d8d639cc3a63746ea78910292ad8683fd",
+          "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+          "offered": [
+            "266",
+            "267",
+            "268"
+          ]
+        },
+        {
+          "hash": "0x42c9674f8f95f3a0a53c170eb544d9b736b6978cbd32c8efe5b35166af3f785c",
+          "owner": "0x8c3345e88cb68f16dc31f88ee21b2032a5250e90",
+          "offered": [
+            "269",
+            "270",
+            "271"
+          ]
+        },
+        {
+          "hash": "0x5f21bc9152349377513de84538edbd86c7b9ea04c1b457e6fb38481dc86130dc",
+          "owner": "0xc1d189f4fad5bbae8cf972cb59e669441d813fbb",
+          "offered": [
+            "272",
+            "273",
+            "274"
+          ]
+        }
+      ],
+      "pairCases": [
+        {
+          "participants": [
+            0,
+            1
+          ],
+          "shortages": [
+            {
+              "intentHash": "0x42c9674f8f95f3a0a53c170eb544d9b736b6978cbd32c8efe5b35166af3f785c",
+              "required": 3,
+              "acceptedTicketsAvailable": 0
+            }
+          ],
+          "bounds": {
+            "maxParticipants": 3,
+            "maxCandidates": 100,
+            "timeoutMs": 5000
+          },
+          "runtimeMs": 1.9647000000004482,
+          "timestamp": "2026-09-12T19:15:59.806Z",
+          "intentsConsidered": 2,
+          "candidatesFound": 0,
+          "candidatesExcluded": [
+            {
+              "intentHashes": [
+                "0xb9a1efd313f4a3de81b3c944f8be7f5d8d639cc3a63746ea78910292ad8683fd",
+                "0x42c9674f8f95f3a0a53c170eb544d9b736b6978cbd32c8efe5b35166af3f785c"
+              ],
+              "reason": "No valid ticket assignment satisfying all predicates"
+            }
+          ],
+          "chosen": null,
+          "search": {
+            "termination": "complete"
+          },
+          "simulationResult": {
+            "success": false,
+            "errorName": "SectionNotAccepted",
+            "args": [
+              "0x42c9674f8f95f3a0a53c170eb544d9b736b6978cbd32c8efe5b35166af3f785c",
+              1
+            ]
+          }
+        },
+        {
+          "participants": [
+            0,
+            2
+          ],
+          "shortages": [
+            {
+              "intentHash": "0xb9a1efd313f4a3de81b3c944f8be7f5d8d639cc3a63746ea78910292ad8683fd",
+              "required": 3,
+              "acceptedTicketsAvailable": 0
+            }
+          ],
+          "bounds": {
+            "maxParticipants": 3,
+            "maxCandidates": 100,
+            "timeoutMs": 5000
+          },
+          "runtimeMs": 0.8060999999997875,
+          "timestamp": "2026-09-12T19:15:59.874Z",
+          "intentsConsidered": 2,
+          "candidatesFound": 0,
+          "candidatesExcluded": [
+            {
+              "intentHashes": [
+                "0xb9a1efd313f4a3de81b3c944f8be7f5d8d639cc3a63746ea78910292ad8683fd",
+                "0x5f21bc9152349377513de84538edbd86c7b9ea04c1b457e6fb38481dc86130dc"
+              ],
+              "reason": "No valid ticket assignment satisfying all predicates"
+            }
+          ],
+          "chosen": null,
+          "search": {
+            "termination": "complete"
+          },
+          "simulationResult": {
+            "success": false,
+            "errorName": "SessionNotAccepted",
+            "args": [
+              "0xb9a1efd313f4a3de81b3c944f8be7f5d8d639cc3a63746ea78910292ad8683fd",
+              1
+            ]
+          }
+        },
+        {
+          "participants": [
+            1,
+            2
+          ],
+          "shortages": [
+            {
+              "intentHash": "0x5f21bc9152349377513de84538edbd86c7b9ea04c1b457e6fb38481dc86130dc",
+              "required": 3,
+              "acceptedTicketsAvailable": 0
+            }
+          ],
+          "bounds": {
+            "maxParticipants": 3,
+            "maxCandidates": 100,
+            "timeoutMs": 5000
+          },
+          "runtimeMs": 0.9197999999996682,
+          "timestamp": "2026-09-12T19:15:59.933Z",
+          "intentsConsidered": 2,
+          "candidatesFound": 0,
+          "candidatesExcluded": [
+            {
+              "intentHashes": [
+                "0x42c9674f8f95f3a0a53c170eb544d9b736b6978cbd32c8efe5b35166af3f785c",
+                "0x5f21bc9152349377513de84538edbd86c7b9ea04c1b457e6fb38481dc86130dc"
+              ],
+              "reason": "No valid ticket assignment satisfying all predicates"
+            }
+          ],
+          "chosen": null,
+          "search": {
+            "termination": "complete"
+          },
+          "simulationResult": {
+            "success": false,
+            "errorName": "SessionNotAccepted",
+            "args": [
+              "0x5f21bc9152349377513de84538edbd86c7b9ea04c1b457e6fb38481dc86130dc",
+              0
+            ]
+          }
+        }
+      ],
+      "triple": {
+        "bounds": {
+          "maxParticipants": 3,
+          "maxCandidates": 100,
+          "timeoutMs": 5000
+        },
+        "runtimeMs": 2.6439999999993233,
+        "timestamp": "2026-09-12T19:15:59.997Z",
+        "intentsConsidered": 3,
+        "candidatesFound": 1,
+        "candidatesExcluded": [
+          {
+            "intentHashes": [
+              "0xb9a1efd313f4a3de81b3c944f8be7f5d8d639cc3a63746ea78910292ad8683fd",
+              "0x42c9674f8f95f3a0a53c170eb544d9b736b6978cbd32c8efe5b35166af3f785c"
+            ],
+            "reason": "No valid ticket assignment satisfying all predicates"
+          },
+          {
+            "intentHashes": [
+              "0xb9a1efd313f4a3de81b3c944f8be7f5d8d639cc3a63746ea78910292ad8683fd",
+              "0x5f21bc9152349377513de84538edbd86c7b9ea04c1b457e6fb38481dc86130dc"
+            ],
+            "reason": "No valid ticket assignment satisfying all predicates"
+          },
+          {
+            "intentHashes": [
+              "0x42c9674f8f95f3a0a53c170eb544d9b736b6978cbd32c8efe5b35166af3f785c",
+              "0x5f21bc9152349377513de84538edbd86c7b9ea04c1b457e6fb38481dc86130dc"
+            ],
+            "reason": "No valid ticket assignment satisfying all predicates"
+          }
+        ],
+        "chosen": {
+          "intentHashes": [
+            "0xb9a1efd313f4a3de81b3c944f8be7f5d8d639cc3a63746ea78910292ad8683fd",
+            "0x42c9674f8f95f3a0a53c170eb544d9b736b6978cbd32c8efe5b35166af3f785c",
+            "0x5f21bc9152349377513de84538edbd86c7b9ea04c1b457e6fb38481dc86130dc"
+          ],
+          "gross": "0",
+          "reason": "Least cash moved among 1 candidate found within the search budget: 0 gross, 3 participants"
+        },
+        "search": {
+          "termination": "complete"
+        },
+        "proposal": {
+          "intents": [
+            {
+              "id": "0xb9a1efd313f4a3de81b3c944f8be7f5d8d639cc3a63746ea78910292ad8683fd",
+              "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+              "eventId": 1,
+              "offered": [
+                "266",
+                "267",
+                "268"
+              ],
+              "sessionMask": "1",
+              "sectionMask": "2",
+              "exactCount": 3,
+              "mustShareSession": true,
+              "mustShareSection": true,
+              "mustBeAdjacent": true,
+              "maxNetPay": "0",
+              "deadline": "1789790400",
+              "nonce": "30260002",
+              "state": "LIVE"
+            },
+            {
+              "id": "0x42c9674f8f95f3a0a53c170eb544d9b736b6978cbd32c8efe5b35166af3f785c",
+              "owner": "0x8c3345e88cb68f16dc31f88ee21b2032a5250e90",
+              "eventId": 1,
+              "offered": [
+                "269",
+                "270",
+                "271"
+              ],
+              "sessionMask": "2",
+              "sectionMask": "4",
+              "exactCount": 3,
+              "mustShareSession": true,
+              "mustShareSection": true,
+              "mustBeAdjacent": true,
+              "maxNetPay": "0",
+              "deadline": "1789790400",
+              "nonce": "30260002",
+              "state": "LIVE"
+            },
+            {
+              "id": "0x5f21bc9152349377513de84538edbd86c7b9ea04c1b457e6fb38481dc86130dc",
+              "owner": "0xc1d189f4fad5bbae8cf972cb59e669441d813fbb",
+              "eventId": 1,
+              "offered": [
+                "272",
+                "273",
+                "274"
+              ],
+              "sessionMask": "2",
+              "sectionMask": "2",
+              "exactCount": 3,
+              "mustShareSession": true,
+              "mustShareSection": true,
+              "mustBeAdjacent": true,
+              "maxNetPay": "0",
+              "deadline": "1789790400",
+              "nonce": "30260002",
+              "state": "LIVE"
+            }
+          ],
+          "legs": [
+            {
+              "intentHash": "0xb9a1efd313f4a3de81b3c944f8be7f5d8d639cc3a63746ea78910292ad8683fd",
+              "receives": [
+                "269",
+                "270",
+                "271"
+              ],
+              "netPayment": "0"
+            },
+            {
+              "intentHash": "0x42c9674f8f95f3a0a53c170eb544d9b736b6978cbd32c8efe5b35166af3f785c",
+              "receives": [
+                "272",
+                "273",
+                "274"
+              ],
+              "netPayment": "0"
+            },
+            {
+              "intentHash": "0x5f21bc9152349377513de84538edbd86c7b9ea04c1b457e6fb38481dc86130dc",
+              "receives": [
+                "266",
+                "267",
+                "268"
+              ],
+              "netPayment": "0"
+            }
+          ]
+        },
+        "routes": [
+          {
+            "fromOwner": "0x8c3345e88cb68f16dc31f88ee21b2032a5250e90",
+            "toOwner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+            "tokenIds": [
+              "269",
+              "270",
+              "271"
+            ]
+          },
+          {
+            "fromOwner": "0xc1d189f4fad5bbae8cf972cb59e669441d813fbb",
+            "toOwner": "0x8c3345e88cb68f16dc31f88ee21b2032a5250e90",
+            "tokenIds": [
+              "272",
+              "273",
+              "274"
+            ]
+          },
+          {
+            "fromOwner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+            "toOwner": "0xc1d189f4fad5bbae8cf972cb59e669441d813fbb",
+            "tokenIds": [
+              "266",
+              "267",
+              "268"
+            ]
+          }
+        ],
+        "simulationResult": {
+          "success": true
+        },
+        "transactionHash": null
+      },
+      "apiRequest": {
+        "intentHashes": [
+          "0xb9a1efd313f4a3de81b3c944f8be7f5d8d639cc3a63746ea78910292ad8683fd",
+          "0x42c9674f8f95f3a0a53c170eb544d9b736b6978cbd32c8efe5b35166af3f785c",
+          "0x5f21bc9152349377513de84538edbd86c7b9ea04c1b457e6fb38481dc86130dc"
+        ],
+        "minBlock": "61777093"
+      }
+    },
+    {
+      "name": "triple-section",
+      "exactCount": 3,
+      "intents": [
+        {
+          "hash": "0xf50851ff97e08eabae4b37511f880c0bf8f847a9ad429fcdc54cd2a0dd25ed0e",
+          "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+          "offered": [
+            "275",
+            "276",
+            "277"
+          ]
+        },
+        {
+          "hash": "0x3a75f8985df9018d08331cf169e7e2206ba20e11936c5fc6cffb66a4e175578b",
+          "owner": "0x8c3345e88cb68f16dc31f88ee21b2032a5250e90",
+          "offered": [
+            "278",
+            "279",
+            "280"
+          ]
+        },
+        {
+          "hash": "0x3885e55e61ce2c6645b9aedeb29fb213b58f8508cdbefc514c594fb28fac577b",
+          "owner": "0xc1d189f4fad5bbae8cf972cb59e669441d813fbb",
+          "offered": [
+            "281",
+            "282",
+            "283"
+          ]
+        }
+      ],
+      "pairCases": [
+        {
+          "participants": [
+            0,
+            1
+          ],
+          "shortages": [
+            {
+              "intentHash": "0x3a75f8985df9018d08331cf169e7e2206ba20e11936c5fc6cffb66a4e175578b",
+              "required": 3,
+              "acceptedTicketsAvailable": 0
+            }
+          ],
+          "bounds": {
+            "maxParticipants": 3,
+            "maxCandidates": 100,
+            "timeoutMs": 5000
+          },
+          "runtimeMs": 1.707300000000032,
+          "timestamp": "2026-09-12T19:16:02.426Z",
+          "intentsConsidered": 2,
+          "candidatesFound": 0,
+          "candidatesExcluded": [
+            {
+              "intentHashes": [
+                "0xf50851ff97e08eabae4b37511f880c0bf8f847a9ad429fcdc54cd2a0dd25ed0e",
+                "0x3a75f8985df9018d08331cf169e7e2206ba20e11936c5fc6cffb66a4e175578b"
+              ],
+              "reason": "No valid ticket assignment satisfying all predicates"
+            }
+          ],
+          "chosen": null,
+          "search": {
+            "termination": "complete"
+          },
+          "simulationResult": {
+            "success": false,
+            "errorName": "SectionNotAccepted",
+            "args": [
+              "0x3a75f8985df9018d08331cf169e7e2206ba20e11936c5fc6cffb66a4e175578b",
+              0
+            ]
+          }
+        },
+        {
+          "participants": [
+            0,
+            2
+          ],
+          "shortages": [
+            {
+              "intentHash": "0xf50851ff97e08eabae4b37511f880c0bf8f847a9ad429fcdc54cd2a0dd25ed0e",
+              "required": 3,
+              "acceptedTicketsAvailable": 0
+            }
+          ],
+          "bounds": {
+            "maxParticipants": 3,
+            "maxCandidates": 100,
+            "timeoutMs": 5000
+          },
+          "runtimeMs": 1.5280000000002474,
+          "timestamp": "2026-09-12T19:16:02.495Z",
+          "intentsConsidered": 2,
+          "candidatesFound": 0,
+          "candidatesExcluded": [
+            {
+              "intentHashes": [
+                "0xf50851ff97e08eabae4b37511f880c0bf8f847a9ad429fcdc54cd2a0dd25ed0e",
+                "0x3885e55e61ce2c6645b9aedeb29fb213b58f8508cdbefc514c594fb28fac577b"
+              ],
+              "reason": "No valid ticket assignment satisfying all predicates"
+            }
+          ],
+          "chosen": null,
+          "search": {
+            "termination": "complete"
+          },
+          "simulationResult": {
+            "success": false,
+            "errorName": "SectionNotAccepted",
+            "args": [
+              "0xf50851ff97e08eabae4b37511f880c0bf8f847a9ad429fcdc54cd2a0dd25ed0e",
+              2
+            ]
+          }
+        },
+        {
+          "participants": [
+            1,
+            2
+          ],
+          "shortages": [
+            {
+              "intentHash": "0x3885e55e61ce2c6645b9aedeb29fb213b58f8508cdbefc514c594fb28fac577b",
+              "required": 3,
+              "acceptedTicketsAvailable": 0
+            }
+          ],
+          "bounds": {
+            "maxParticipants": 3,
+            "maxCandidates": 100,
+            "timeoutMs": 5000
+          },
+          "runtimeMs": 0.5907000000006519,
+          "timestamp": "2026-09-12T19:16:02.551Z",
+          "intentsConsidered": 2,
+          "candidatesFound": 0,
+          "candidatesExcluded": [
+            {
+              "intentHashes": [
+                "0x3a75f8985df9018d08331cf169e7e2206ba20e11936c5fc6cffb66a4e175578b",
+                "0x3885e55e61ce2c6645b9aedeb29fb213b58f8508cdbefc514c594fb28fac577b"
+              ],
+              "reason": "No valid ticket assignment satisfying all predicates"
+            }
+          ],
+          "chosen": null,
+          "search": {
+            "termination": "complete"
+          },
+          "simulationResult": {
+            "success": false,
+            "errorName": "SectionNotAccepted",
+            "args": [
+              "0x3885e55e61ce2c6645b9aedeb29fb213b58f8508cdbefc514c594fb28fac577b",
+              1
+            ]
+          }
+        }
+      ],
+      "triple": {
+        "bounds": {
+          "maxParticipants": 3,
+          "maxCandidates": 100,
+          "timeoutMs": 5000
+        },
+        "runtimeMs": 2.444999999999709,
+        "timestamp": "2026-09-12T19:16:02.611Z",
+        "intentsConsidered": 3,
+        "candidatesFound": 1,
+        "candidatesExcluded": [
+          {
+            "intentHashes": [
+              "0xf50851ff97e08eabae4b37511f880c0bf8f847a9ad429fcdc54cd2a0dd25ed0e",
+              "0x3a75f8985df9018d08331cf169e7e2206ba20e11936c5fc6cffb66a4e175578b"
+            ],
+            "reason": "No valid ticket assignment satisfying all predicates"
+          },
+          {
+            "intentHashes": [
+              "0xf50851ff97e08eabae4b37511f880c0bf8f847a9ad429fcdc54cd2a0dd25ed0e",
+              "0x3885e55e61ce2c6645b9aedeb29fb213b58f8508cdbefc514c594fb28fac577b"
+            ],
+            "reason": "No valid ticket assignment satisfying all predicates"
+          },
+          {
+            "intentHashes": [
+              "0x3a75f8985df9018d08331cf169e7e2206ba20e11936c5fc6cffb66a4e175578b",
+              "0x3885e55e61ce2c6645b9aedeb29fb213b58f8508cdbefc514c594fb28fac577b"
+            ],
+            "reason": "No valid ticket assignment satisfying all predicates"
+          }
+        ],
+        "chosen": {
+          "intentHashes": [
+            "0xf50851ff97e08eabae4b37511f880c0bf8f847a9ad429fcdc54cd2a0dd25ed0e",
+            "0x3a75f8985df9018d08331cf169e7e2206ba20e11936c5fc6cffb66a4e175578b",
+            "0x3885e55e61ce2c6645b9aedeb29fb213b58f8508cdbefc514c594fb28fac577b"
+          ],
+          "gross": "0",
+          "reason": "Least cash moved among 1 candidate found within the search budget: 0 gross, 3 participants"
+        },
+        "search": {
+          "termination": "complete"
+        },
+        "proposal": {
+          "intents": [
+            {
+              "id": "0xf50851ff97e08eabae4b37511f880c0bf8f847a9ad429fcdc54cd2a0dd25ed0e",
+              "owner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+              "eventId": 1,
+              "offered": [
+                "275",
+                "276",
+                "277"
+              ],
+              "sessionMask": "1",
+              "sectionMask": "2",
+              "exactCount": 3,
+              "mustShareSession": true,
+              "mustShareSection": true,
+              "mustBeAdjacent": true,
+              "maxNetPay": "0",
+              "deadline": "1789790400",
+              "nonce": "30260003",
+              "state": "LIVE"
+            },
+            {
+              "id": "0x3a75f8985df9018d08331cf169e7e2206ba20e11936c5fc6cffb66a4e175578b",
+              "owner": "0x8c3345e88cb68f16dc31f88ee21b2032a5250e90",
+              "eventId": 1,
+              "offered": [
+                "278",
+                "279",
+                "280"
+              ],
+              "sessionMask": "1",
+              "sectionMask": "4",
+              "exactCount": 3,
+              "mustShareSession": true,
+              "mustShareSection": true,
+              "mustBeAdjacent": true,
+              "maxNetPay": "0",
+              "deadline": "1789790400",
+              "nonce": "30260003",
+              "state": "LIVE"
+            },
+            {
+              "id": "0x3885e55e61ce2c6645b9aedeb29fb213b58f8508cdbefc514c594fb28fac577b",
+              "owner": "0xc1d189f4fad5bbae8cf972cb59e669441d813fbb",
+              "eventId": 1,
+              "offered": [
+                "281",
+                "282",
+                "283"
+              ],
+              "sessionMask": "1",
+              "sectionMask": "1",
+              "exactCount": 3,
+              "mustShareSession": true,
+              "mustShareSection": true,
+              "mustBeAdjacent": true,
+              "maxNetPay": "0",
+              "deadline": "1789790400",
+              "nonce": "30260003",
+              "state": "LIVE"
+            }
+          ],
+          "legs": [
+            {
+              "intentHash": "0xf50851ff97e08eabae4b37511f880c0bf8f847a9ad429fcdc54cd2a0dd25ed0e",
+              "receives": [
+                "278",
+                "279",
+                "280"
+              ],
+              "netPayment": "0"
+            },
+            {
+              "intentHash": "0x3a75f8985df9018d08331cf169e7e2206ba20e11936c5fc6cffb66a4e175578b",
+              "receives": [
+                "281",
+                "282",
+                "283"
+              ],
+              "netPayment": "0"
+            },
+            {
+              "intentHash": "0x3885e55e61ce2c6645b9aedeb29fb213b58f8508cdbefc514c594fb28fac577b",
+              "receives": [
+                "275",
+                "276",
+                "277"
+              ],
+              "netPayment": "0"
+            }
+          ]
+        },
+        "routes": [
+          {
+            "fromOwner": "0x8c3345e88cb68f16dc31f88ee21b2032a5250e90",
+            "toOwner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+            "tokenIds": [
+              "278",
+              "279",
+              "280"
+            ]
+          },
+          {
+            "fromOwner": "0xc1d189f4fad5bbae8cf972cb59e669441d813fbb",
+            "toOwner": "0x8c3345e88cb68f16dc31f88ee21b2032a5250e90",
+            "tokenIds": [
+              "281",
+              "282",
+              "283"
+            ]
+          },
+          {
+            "fromOwner": "0xa8dae73bde3a5c0e412884c9be2039a79dfb31fd",
+            "toOwner": "0xc1d189f4fad5bbae8cf972cb59e669441d813fbb",
+            "tokenIds": [
+              "275",
+              "276",
+              "277"
+            ]
+          }
+        ],
+        "simulationResult": {
+          "success": true
+        },
+        "transactionHash": null
+      },
+      "apiRequest": {
+        "intentHashes": [
+          "0xf50851ff97e08eabae4b37511f880c0bf8f847a9ad429fcdc54cd2a0dd25ed0e",
+          "0x3a75f8985df9018d08331cf169e7e2206ba20e11936c5fc6cffb66a4e175578b",
+          "0x3885e55e61ce2c6645b9aedeb29fb213b58f8508cdbefc514c594fb28fac577b"
+        ],
+        "minBlock": "61777093"
+      }
+    }
+  ]
+}

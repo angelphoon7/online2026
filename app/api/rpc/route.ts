@@ -1,5 +1,6 @@
 // Same-origin, read-only Arc transport. Wallet signing/broadcast stays in MetaMask.
 import { chainConfig } from '@/server/chain';
+import { readArcRpc } from '@/server/arc-read-rpc';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     if (!body || Array.isArray(body) || body.jsonrpc !== '2.0' || !Array.isArray(body.params ?? [])) throw new Error('Invalid request');
     if (typeof body.id === 'string' || typeof body.id === 'number') id = body.id;
     if (!methods.has(body.method)) return Response.json({ jsonrpc: '2.0', id, error: { code: -32601, message: 'Only supported read methods are allowed' } }, { status: 400, headers });
-    const { addresses, usdc } = chainConfig();
+    const { addresses, usdc, rpcUrl, chainId } = chainConfig();
     const allowed = new Set([...Object.values(addresses), usdc].map(a => a.toLowerCase()));
     if (body.method === 'eth_call' || body.method === 'eth_getLogs') {
       const target = body.params?.[0];
@@ -33,22 +34,9 @@ export async function POST(request: Request) {
         if (span < 0n || span >= 10000n) throw new Error('Log range exceeds 10000 blocks');
       }
     }
-    const upstream = await fetch(process.env.ARC_RPC!, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id, method: body.method, params: body.params ?? [] }),
-      signal: AbortSignal.timeout(15000), cache: 'no-store',
-    });
-    if (!upstream.ok) return Response.json({ jsonrpc: '2.0', id, error: { code: -32000, message: 'Arc RPC is temporarily unavailable. Retry shortly.' } }, { status: 502, headers });
-    const result = await upstream.json();
-    if (result.error) return Response.json({ jsonrpc: '2.0', id, error: {
-      code: typeof result.error.code === 'number' ? result.error.code : -32000,
-      message: 'Arc rejected the read request',
-      ...(typeof result.error.data === 'string' && /^0x[0-9a-f]*$/i.test(result.error.data) ? { data: result.error.data } : {}),
-    } }, { headers });
-    if (!('result' in result)) throw new Error('Invalid RPC response');
-    return Response.json({ jsonrpc: '2.0', id, result: result.result }, { headers });
+    return await readArcRpc({ jsonrpc: '2.0', id, method: body.method, params: body.params ?? [] }, rpcUrl, chainId);
   } catch (error) {
     const transport = error instanceof TypeError || (error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name));
-    return Response.json({ jsonrpc: '2.0', id, error: { code: transport ? -32000 : -32602, message: transport ? 'Arc RPC could not be reached. Retry shortly.' : 'Invalid read request or Arc configuration' } }, { status: transport ? 502 : 400, headers });
+    return Response.json({ jsonrpc: '2.0', id, error: { code: transport ? -32603 : -32602, message: transport ? 'Arc RPC could not be reached. Retry shortly.' : 'Invalid read request or Arc configuration' } }, { status: transport ? 502 : 400, headers });
   }
 }

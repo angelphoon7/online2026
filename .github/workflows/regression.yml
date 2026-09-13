@@ -1,0 +1,49 @@
+name: Regression checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  application:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TSX_DISABLE_CACHE: '1'
+      PW_BROWSER: chromium
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            solver/package-lock.json
+      - run: npm ci
+      - run: npm --prefix solver ci
+      - run: npm --prefix solver run build
+      - run: npm --prefix solver test
+      - run: npm test
+      - run: npm run test:hosting
+      - run: npm run test:hosted-check
+      - run: npm run docs:check
+      - run: npm run deployment:check
+      - run: npm run subgraph:check
+      - run: npm run build
+      - run: npx tsc --noEmit --incremental false
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+
+  # These checks use fixtures; live acceptance uses the separate hosted command.
+  # No wallet keys, provider keys, signing journals or Redis credentials enter CI.

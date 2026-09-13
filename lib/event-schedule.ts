@@ -20,8 +20,15 @@ export function sessionDeadline(mask: bigint): bigint | null {
   return starts === null ? null : starts - EIGHT_HOURS;
 }
 export function formatEventTime(timestamp: bigint) {
-  const malaysiaTime = new Date(Number(timestamp + EIGHT_HOURS) * 1000);
-  return `${malaysiaTime.toISOString().replace('T', ' ').slice(0, 16)} Malaysia (UTC+8)`;
+  const localTime = new Date(Number(timestamp + EIGHT_HOURS) * 1000);
+  const hour = localTime.getUTCHours();
+  const date = `${localTime.getUTCDate()}/${localTime.getUTCMonth() + 1}/${String(localTime.getUTCFullYear()).slice(-2)}`;
+  return `${date} ${hour % 12 || 12}:${String(localTime.getUTCMinutes()).padStart(2, '0')}${hour >= 12 ? 'pm' : 'am'}`;
+}
+export function sessionLabel(session: number) {
+  const start = sessionStart(session);
+  if (start === null) return `Session ${session}`;
+  return new Date(Number(start + EIGHT_HOURS) * 1000).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' });
 }
 export function validateNewIntentTiming(sessionMask: bigint, deadline: bigint, now: bigint) {
   const expected = sessionDeadline(sessionMask);

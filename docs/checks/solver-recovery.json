@@ -1,0 +1,65 @@
+{
+  "checkedAt": "2026-09-13T02:40:41.509Z",
+  "origin": "http://localhost:3000",
+  "status": "PASS_LOCAL_LIVE_SOLVER",
+  "market": {
+    "blockNumber": "61829284",
+    "totalIntents": 185,
+    "totalTickets": 284,
+    "liveIntents": 136
+  },
+  "pool": {
+    "httpStatus": 200,
+    "evidenceId": "afa94aa9-37ca-4976-b449-7680528670a4",
+    "snapshotBlock": "61829284",
+    "revalidatedBlock": "61829290",
+    "liveIntents": 136,
+    "searchableIntents": 136,
+    "excludedIntents": 0,
+    "source": "subgraph",
+    "candidatesFound": 100,
+    "termination": "candidate-limit",
+    "simulation": {
+      "success": true
+    }
+  },
+  "latestIntent": {
+    "hash": "0x4507b5384b4a31686086a91e0d4ae6da4dfa6b75f203aea146d9dc35d98655ca",
+    "commitTx": "0xe25641d1e31e7ecb0411f4ea4d3074b82685c3200322b6d6407e5cd018e97f64",
+    "state": 1,
+    "offered": [
+      "34",
+      "35"
+    ],
+    "includedInSearch": true,
+    "includedInChosenCandidate": false
+  },
+  "selected": {
+    "httpStatus": 200,
+    "evidenceId": "de865303-a9e4-4c5b-a351-bbaeafc0c571",
+    "snapshotBlock": "61829302",
+    "simulation": {
+      "success": true
+    }
+  },
+  "futureFloor": {
+    "requested": "61929284",
+    "httpStatus": 409,
+    "code": "SubgraphLagError"
+  },
+  "transactionsBroadcast": 0,
+  "validation": {
+    "serverAndGraphTests": 308,
+    "browserTests": 25,
+    "productionBuild": "PASS",
+    "typescript": "PASS",
+    "documentationChecks": 358
+  },
+  "publicDeployment": {
+    "checkedAt": "2026-09-13T02:43:08.141Z",
+    "origin": "https://online2026.vercel.app",
+    "httpStatus": 503,
+    "error": "Unable to search the live pool. Retry when public chain reads are available.",
+    "fixDeployed": false
+  }
+}

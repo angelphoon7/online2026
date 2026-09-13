@@ -67,6 +67,8 @@ Adding StableFX would introduce a currency-conversion and quote workflow without
 - Deployments: [four-contract manifest](../deployments/arc-testnet.json).
 - Execution: [ten confirmed settlement hashes](../README.md#confirmed-arc-testnet-settlements), [per-round evidence](../deployments/settlements/) and [saved audit results](../deployments/settlement-audit.json).
 - Implementation: [backend API and simulation](../server/README.md), [contract validation tests](../test/Settlement.t.sol).
-- Indexing feasibility: [Studio Arc Testnet support check](SUBGRAPH_STUDIO_ARC_CHECK.md); our own subgraph deployment remains pending.
+- RESHUFFLE's `reshuffle` v0.1.1 subgraph is deployed and serves indexed Arc Testnet data.
+  [Deployment and public acceptance](graph-acceptance.md); authenticated Studio status/log
+  review remains [open](GRAPH_STUDIO_REVIEW.md).
 
 Arc deployment does not by itself imply use of Circle Wallets, Circle Contracts APIs, App Kits or other SDKs. This document describes the repository's actual integration boundary. This documentation update cross-checks saved deployment records; it does not claim a new live RPC audit or mainnet deployment.

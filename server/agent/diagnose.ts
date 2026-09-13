@@ -3,10 +3,11 @@ import type { Address, Hex } from 'viem';
 import { checkReceivedBundle, combinations } from '../../solver/dist/index.js';
 import type { ChainState, Intent, TicketMeta } from '../../solver/src/types';
 import type { Snapshot, LiveIntent, ExclusionReason } from '@/shared/graph';
-import { gql } from '@/shared/graph/client';
-import { INTENT_BY_ID } from '@/shared/graph/queries';
+import { getIntentById } from '@/shared/graph';
 import { SEARCH_CONFIG } from '../solve';
-import { readCapacity, solveHypothetical, type Capacity, type HypotheticalResult } from '../solve-hypothetical';
+import { readCapacity, requireCapacityBlock, solveHypothetical, type Capacity, type HypotheticalResult } from '../solve-hypothetical';
+import type { RequestBudget } from './request-budget';
+import type { CounterpartyIntent } from '@/lib/agent-evidence';
 
 // Deterministic diagnosis - step 7-D of docs/RESHUFFLE_GRAPH_PLAN.md.
 //
@@ -39,6 +40,7 @@ export type Relaxation = {
   change: string;
   found: boolean;
   counterparties: Address[];
+  counterpartyIntents: CounterpartyIntent[];
   participantCount: number | null;
   /** Signed, in contract units. */
   targetNetPay: string | null;
@@ -64,14 +66,14 @@ export type Evidence = {
   /** Present for CLOSED: revoked or already settled, with the transaction that did it. */
   closed?: { state: 'REVOKED' | 'SETTLED'; tx: string | null; block: string | null };
   /**
-   * Set on UNKNOWN when the registry lookup itself failed. "Not found" and "could not check"
-   * are different answers, and reporting the second as the first would state as fact that an
-   * intent was never committed when the indexer was simply unreachable.
+   * Retained for older saved evidence. New requests propagate lookup failures to the API
+   * instead of producing an UNKNOWN diagnosis from an unavailable historical snapshot.
    */
   lookupFailed?: boolean;
   /** Present for SETTLEABLE: a candidate containing this intent exists right now. */
   settleable?: {
     counterparties: Address[];
+    counterpartyIntents: CounterpartyIntent[];
     participantCount: number;
     targetNetPay: string;
     receives: string[];
@@ -82,14 +84,18 @@ export type Evidence = {
     /** The first stage whose count reached zero, if any. */
     firstZero: FunnelStage['stage'] | null;
     /**
-     * The stage that actually blocks this intent - the first zero, or 'cohesiveGroup' when
+     * A proven supply shortfall - the first zero, or 'cohesiveGroup' when
      * acceptable tickets exist but cannot be grouped into the requested count. Distinct from
      * firstZero, because "only one adjacent seat is available and you asked for two" blocks
-     * the intent without any stage reaching zero.
+     * the intent without any stage reaching zero. An incomplete grouping search cannot
+     * establish a shortfall across all acceptable tickets.
      */
     blockedAt: FunnelStage['stage'] | null;
+    /** Largest group found among groupSearched tickets, up to the requested count. */
     largestGroup: number;
     need: number;
+    groupSearched: number;
+    groupCandidates: number;
     /** True when the candidate set was capped before the group search. */
     truncated: boolean;
   };
@@ -100,8 +106,8 @@ export type Evidence = {
   };
   relaxations: Relaxation[];
   bounds: typeof SEARCH_CONFIG & { budgetCapUsdc: number; groupSearchCap: number };
-  /** address -> the transaction that committed their intent, for explorer links. */
-  counterpartyTx: Record<string, string>;
+  /** Union of the actual baseline/relaxation candidates' commitments, keyed by intent identity. */
+  counterpartyIntents: CounterpartyIntent[];
   runtimeMs: number;
 };
 
@@ -133,10 +139,13 @@ function predicateState(snapshot: Snapshot): ChainState {
  * downwards, so it stops at the first size that works and reports what is achievable rather
  * than only whether the full count is.
  */
-function largestAcceptableGroup(intent: Intent, candidates: bigint[], state: ChainState): number {
+async function largestAcceptableGroup(intent: Intent, candidates: bigint[], state: ChainState, budget?: RequestBudget): Promise<number> {
   const want = Math.min(intent.exactCount, candidates.length);
+  let tried = 0;
   for (let size = want; size >= 1; size--) {
     for (const bundle of combinations(candidates, size)) {
+      budget?.checkpoint();
+      if (++tried % 256 === 0) await budget?.yield();
       // exactCount is part of V5, so ask about a variant wanting exactly this many.
       if (!checkReceivedBundle({ ...intent, exactCount: size }, bundle, state)) return size;
     }
@@ -158,7 +167,8 @@ function offeredByOthers(snapshot: Snapshot, owner: Address): bigint[] {
   return ids;
 }
 
-function supplyFunnel(intent: LiveIntent, snapshot: Snapshot, state: ChainState): Evidence['supply'] {
+async function supplyFunnel(intent: LiveIntent, snapshot: Snapshot, state: ChainState, budget?: RequestBudget): Promise<Evidence['supply']> {
+  budget?.checkpoint();
   const start = offeredByOthers(snapshot, intent.owner);
   const stages: FunnelStage[] = [{ stage: 'offeredByOthers', remaining: start.length }];
 
@@ -176,16 +186,18 @@ function supplyFunnel(intent: LiveIntent, snapshot: Snapshot, state: ChainState)
   // group search rather than another filter.
   const truncated = pool.length > GROUP_SEARCH_CAP;
   const searched = truncated ? pool.slice(0, GROUP_SEARCH_CAP) : pool;
-  const largestGroup = largestAcceptableGroup(intent, searched, state);
+  const largestGroup = await largestAcceptableGroup(intent, searched, state, budget);
   stages.push({ stage: 'cohesiveGroup', remaining: largestGroup });
 
-  const firstZero = stages.find((s) => s.remaining === 0)?.stage ?? null;
+  const firstZero = stages.find(s => s.remaining === 0 && (s.stage !== 'cohesiveGroup' || !truncated))?.stage ?? null;
   return {
     stages,
     firstZero,
-    blockedAt: firstZero ?? (largestGroup < intent.exactCount ? 'cohesiveGroup' : null),
+    blockedAt: firstZero ?? (!truncated && largestGroup < intent.exactCount ? 'cohesiveGroup' : null),
     largestGroup,
     need: intent.exactCount,
+    groupSearched: searched.length,
+    groupCandidates: pool.length,
     truncated,
   };
 }
@@ -232,6 +244,7 @@ const asRelaxation = (change: string, result: HypotheticalResult): Relaxation =>
   change,
   found: result.found,
   counterparties: result.counterparties,
+  counterpartyIntents: result.counterpartyIntents,
   participantCount: result.participantCount,
   targetNetPay: result.targetNetPay,
   receives: result.receives,
@@ -242,7 +255,9 @@ const asRelaxation = (change: string, result: HypotheticalResult): Relaxation =>
  *
  * `capacity` is optional so a caller running several diagnoses can read USDC balances once.
  */
-export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: Capacity): Promise<Evidence> {
+export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: Capacity, budget?: RequestBudget): Promise<Evidence> {
+  budget?.checkpoint();
+  if (capacity) requireCapacityBlock(capacity, snapshot.block);
   const started = performance.now();
   const target = lower(intentHash);
   const bounds = { ...SEARCH_CONFIG, budgetCapUsdc: budgetCapUsdc(), groupSearchCap: GROUP_SEARCH_CAP };
@@ -252,12 +267,12 @@ export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: C
     intent: intentHash,
     relaxations: [] as Relaxation[],
     bounds,
-    counterpartyTx: {} as Record<string, string>,
+    counterpartyIntents: [] as CounterpartyIntent[],
   };
-  const done = (evidence: Omit<Evidence, 'runtimeMs'>): Evidence => ({
-    ...evidence,
-    runtimeMs: performance.now() - started,
-  });
+  const done = (evidence: Omit<Evidence, 'runtimeMs'>): Evidence => {
+    budget?.checkpoint();
+    return { ...evidence, runtimeMs: performance.now() - started };
+  };
 
   // 1. Locate. An excluded or closed intent is already a complete answer, and a better one
   //    than any counterfactual: it names the check that removed it.
@@ -268,35 +283,29 @@ export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: C
       return done({ ...base, status: 'EXCLUDED', exclusion: { reason: excluded.reason, detail: excluded.detail } });
     }
     // Not live and not excluded: it was revoked, already settled, or never committed here.
-    let lookupFailed = false;
-    const found = await gql<{ intent: { state: string; closedTx: string | null; closedAtBlock: string | null } | null }>(
-      INTENT_BY_ID,
-      { id: intentHash.toLowerCase() }
-    ).catch(() => {
-      lookupFailed = true;
-      return { intent: null };
-    });
-    if (found.intent && (found.intent.state === 'REVOKED' || found.intent.state === 'SETTLED')) {
+    // Exact snapshot block, not a freshness floor: a later revoke is not true at this block.
+    // Failed historical reads propagate to the API; they must not become UNKNOWN or latest.
+    const found = await getIntentById(intentHash, snapshot, { signal: budget?.signal });
+    budget?.checkpoint();
+    if (found && (found.state === 'REVOKED' || found.state === 'SETTLED')) {
       return done({
         ...base,
         status: 'CLOSED',
-        closed: { state: found.intent.state, tx: found.intent.closedTx, block: found.intent.closedAtBlock },
+        closed: { state: found.state, tx: found.closedTx, block: found.closedAtBlock },
       });
     }
-    return done({ ...base, status: 'UNKNOWN', ...(lookupFailed ? { lookupFailed } : {}) });
+    return done({ ...base, status: 'UNKNOWN' });
   }
-
-  const counterpartyTx: Record<string, string> = {};
-  for (const other of snapshot.intents) counterpartyTx[lower(other.owner)] = other.committedTx;
 
   // Read payment capacity once and reuse it for the baseline and every relaxation. V8 is part
   // of validity, so a relaxation that ignored it could promise a settlement the contract
   // would reject.
   const owners = snapshot.intents.map((i) => i.owner as Address);
-  const funds = capacity ?? (await readCapacity(owners));
+  const funds = capacity ?? (await readCapacity(owners, snapshot.block, budget));
+  budget?.checkpoint();
   const unchanged: Intent = { ...intent };
   const hypothetical = (variation: Partial<Intent>) =>
-    solveHypothetical(snapshot, { replaceHash: intent.hash, intent: { ...unchanged, ...variation } }, funds);
+    solveHypothetical(snapshot, { replaceHash: intent.hash, intent: { ...unchanged, ...variation } }, funds, budget);
 
   // 2. Baseline: the pool exactly as committed. Running it through the same path as the
   //    relaxations means the comparison is apples to apples.
@@ -304,10 +313,11 @@ export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: C
   if (baseline.found) {
     return done({
       ...base,
-      counterpartyTx,
+      counterpartyIntents: baseline.counterpartyIntents,
       status: 'SETTLEABLE',
       settleable: {
         counterparties: baseline.counterparties,
+        counterpartyIntents: baseline.counterpartyIntents,
         participantCount: baseline.participantCount!,
         targetNetPay: baseline.targetNetPay!,
         receives: baseline.receives,
@@ -317,7 +327,7 @@ export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: C
 
   const state = predicateState(snapshot);
   // 3 and 4. Necessary conditions, in both directions: what you want, and what you offer.
-  const supply = intent.exactCount > 0 ? supplyFunnel(intent, snapshot, state) : undefined;
+  const supply = intent.exactCount > 0 ? await supplyFunnel(intent, snapshot, state, budget) : undefined;
   const demand = intent.offered.length > 0 ? demandCheck(intent, snapshot) : undefined;
 
   // 5. Single-condition relaxations. One change at a time, each re-run through the solver.
@@ -357,7 +367,9 @@ export async function diagnose(snapshot: Snapshot, intentHash: Hex, capacity?: C
     );
   }
 
-  return done({ ...base, counterpartyTx, status: 'NOT_FOUND_WITHIN_BOUND', supply, demand, relaxations });
+  const counterpartyIntents = [...new Map(relaxations.flatMap(r => r.counterpartyIntents)
+    .map(i => [i.intentHash.toLowerCase(), i])).values()];
+  return done({ ...base, counterpartyIntents, status: 'NOT_FOUND_WITHIN_BOUND', supply, demand, relaxations });
 }
 
 /** The relaxation a judge should be shown first: one that worked, cheapest for this owner. */
