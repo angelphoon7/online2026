@@ -15,6 +15,7 @@ import { FREE_TICKETS_LABEL, DEMO_PRICE_NOTE } from '@/lib/ui-copy';
 import { formatUSDC, truncateAddress } from '@/lib/format';
 import { DEMO_TICKET_NOTE } from '@/lib/ui-copy';
 import { ADJACENCY_ACCEPTED, ADJACENCY_ERROR, ADJACENCY_NOTE, ALLOWANCE_NOTE, CONNECT_POSITIONS_NOTE, EMPTY_POSITIONS_NOTE, ESCROW_NOTE, OWN_POSITIONS_NOTE, PICK_OFFERED_NOTE, STEPS, WITHDRAWAL_DETAIL, intentReview, maskClasses } from '@/lib/ui-copy';
+import { Minus, Plus, Clock, Check, ArrowRight } from 'lucide-react';
 
 const same = (a: string, b: string | null) => a.toLowerCase() === b?.toLowerCase();
 const hasClass = (mask: bigint, n: number) => (mask & (1n << BigInt(n))) !== 0n;
@@ -101,89 +102,502 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
   const position = (t: ChainTicket) => {
     const escrowed = t.depositor !== '0x0000000000000000000000000000000000000000';
     const committed = escrowed && live.some(i => same(i.owner, ticketHolder(t)) && i.offered.includes(t.tokenId));
-    return <article key={t.tokenId} className="position">
-      <div><label><input type="checkbox" aria-label={`Offer ticket ${t.tokenId}`} disabled={busy || t.status === 1} checked={intent.offered.includes(BigInt(t.tokenId))}
-        onChange={() => update({ offered: intent.offered.includes(BigInt(t.tokenId)) ? intent.offered.filter(id => id !== BigInt(t.tokenId)) : [...intent.offered, BigInt(t.tokenId)] })} />
-        <span className="mono">#{t.tokenId} · {sessionLabel(t.sessionId)}</span></label>
-        <p className="mono">ROW {t.row} / SEAT {t.seat} / CAT {t.sectionId}</p><p className="quiet mono">{truncateAddress(ticketHolder(t))}</p><p className="mono">{DEMO_SECTION_PRICES[t.sectionId] === undefined ? 'Demo reference price unavailable' : `Demo reference: ${formatUSDC(DEMO_SECTION_PRICES[t.sectionId])} USDC / ticket`}</p>
-      </div>
-      <div className="position-actions"><span className="badge">{t.status === 1 ? 'USED' : committed ? 'committed' : escrowed ? 'escrowed' : 'wallet'}</span>
-        {t.status !== 1 && <button disabled={busy} onClick={() => void onCustody(t, escrowed ? 'withdraw' : 'deposit')}>{escrowed ? 'Withdraw' : 'Deposit'}</button>}
-      </div>
-    </article>;
+    const isOffered = intent.offered.includes(BigInt(t.tokenId));
+    return (
+      <article key={t.tokenId} className={`position ${isOffered ? 'is-offered' : ''}`}>
+        <div className="position-main">
+          <label className="position-select">
+            <input
+              type="checkbox"
+              aria-label={`Offer ticket ${t.tokenId}`}
+              disabled={busy || t.status === 1}
+              checked={isOffered}
+              onChange={() =>
+                update({
+                  offered: isOffered
+                    ? intent.offered.filter(id => id !== BigInt(t.tokenId))
+                    : [...intent.offered, BigInt(t.tokenId)],
+                })
+              }
+            />
+            <span className="mono ticket-token-chip">#{t.tokenId}</span>
+            <span className="ticket-session-chip">{sessionLabel(t.sessionId)}</span>
+          </label>
+          <div className="position-details">
+            <p className="mono seat-coords">
+              ROW <strong>{t.row}</strong> / SEAT <strong>{t.seat}</strong> / CAT <strong>{t.sectionId}</strong>
+            </p>
+            <p className="quiet mono holder-addr">{truncateAddress(ticketHolder(t))}</p>
+            <p className="mono demo-price-ref">
+              {DEMO_SECTION_PRICES[t.sectionId] === undefined
+                ? 'Demo reference price unavailable'
+                : `Demo reference: ${formatUSDC(DEMO_SECTION_PRICES[t.sectionId])} USDC / ticket`}
+            </p>
+          </div>
+        </div>
+        <div className="position-actions">
+          <span className={`badge badge-${t.status === 1 ? 'used' : committed ? 'committed' : escrowed ? 'escrowed' : 'wallet'}`}>
+            {t.status === 1 ? 'USED' : committed ? 'committed' : escrowed ? 'escrowed' : 'wallet'}
+          </span>
+          {t.status !== 1 && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void onCustody(t, escrowed ? 'withdraw' : 'deposit')}
+            >
+              {escrowed ? 'Withdraw' : 'Deposit'}
+            </button>
+          )}
+        </div>
+      </article>
+    );
   };
-  return <div className="intent-flow">
-    {step > 1 && !completed && <button type="button" className="back-nav-btn" onClick={() => go(step - 1)}>← Back</button>}
-    {STEPS.map((title, index) => {
-      const number = index + 1;
-      const expanded = step === number && !completed;
-      const visited = reached >= number;
-      if (!expanded) return null;
-      return <section key={title} className={`workspace-panel intent-step ${expanded ? 'is-expanded' : visited ? 'is-complete' : 'is-future'}`} data-step={number} data-expanded={expanded}>
-        <div className="step-heading"><h2 ref={element => { stepTitles.current[index] = element; }} tabIndex={-1} id={`step-title-${number}`}>
-          {!expanded && (number < reached || completed) && <span className="step-check" aria-label="Completed">✓</span>}{title}
-        </h2>{expanded ? <span className="mono step-marker">step {number} of {STEPS.length}</span> : visited && <><span className="mono step-summary">{summary(number)}</span><button className="text-button" disabled={busy} onClick={() => go(number)} aria-label={`Change ${title}`}>Change</button></>}</div>
-        {expanded && <div className="step-content" aria-labelledby={`step-title-${number}`}>
-          {number === 2 && <>
-            <p className="quiet">{account ? OWN_POSITIONS_NOTE : CONNECT_POSITIONS_NOTE}</p>
-            {!account && <button className="secondary connect-positions" disabled={busy} onClick={() => void onConnect()}>Connect wallet to see my tickets</button>}
-            {connectionError && <p role="alert">{connectionError}</p>}
-            <button className="secondary" disabled={busy} onClick={() => void onDemo()} aria-label={FREE_TICKETS_LABEL}>{FREE_TICKETS_LABEL}</button>
-            <p className="quiet">{DEMO_TICKET_NOTE}</p>
-            {account && !approved && positions.some(t => t.status !== 1 && same(t.owner, account) && t.depositor === '0x0000000000000000000000000000000000000000') && <button className="secondary" disabled={busy} onClick={() => void onApprove()}>Approve tickets</button>}
-            <div className="position-list">{positions.slice(0, 8).map(position)}</div>
-            {positions.length > 8 && <details className="more-tickets"><summary className="mono">+{positions.length - 8} more</summary><div>{positions.slice(8).map(position)}</div></details>}
-            {account && !positions.length && <p role="status">{EMPTY_POSITIONS_NOTE}</p>}
-            {positions.length > 0 && <><div className="batch-deposit">
-              <button className="secondary" disabled={busy || !toDeposit.length} onClick={() => void onDepositSelected(selectedPositions.map(t => BigInt(t.tokenId)))}>
-                {selectedPositions.length && !toDeposit.length ? 'Selected tickets deposited' : toDeposit.length ? `Deposit ${toDeposit.length} selected ticket${toDeposit.length === 1 ? '' : 's'}` : 'Deposit selected tickets'}
+  return (
+    <div className="intent-flow">
+      {/* Step Progress Tracker */}
+      <div className="intent-step-tracker" role="navigation" aria-label="Step progress">
+        {STEPS.map((stepTitle, idx) => {
+          const sNum = idx + 1;
+          const isCur = step === sNum && !completed;
+          const isDone = sNum < step || (completed && sNum <= STEPS.length);
+          const canGo = sNum <= reached && !busy;
+          return (
+            <div key={stepTitle} className="step-tracker-node">
+              {idx > 0 && <span className="step-tracker-divider" aria-hidden="true" />}
+              <button
+                type="button"
+                className={`step-tracker-item ${isCur ? 'active' : ''} ${isDone ? 'completed' : ''}`}
+                disabled={!canGo}
+                onClick={() => go(sNum)}
+              >
+                <span className="step-tracker-num">{isDone ? '✓' : sNum}</span>
+                <span className="step-tracker-label">
+                  <span className="step-tracker-sub">STEP 0{sNum}</span>
+                  <span className="step-tracker-title">{stepTitle}</span>
+                </span>
               </button>
-              <p className="quiet">Select your tickets above, then deposit them together in one transaction. If approval is needed, confirm it first; the deposit follows automatically. Tickets already deposited are skipped.</p>
             </div>
-            <p className="quiet">{ESCROW_NOTE} {WITHDRAWAL_DETAIL} {PICK_OFFERED_NOTE}</p>
-            <div className="price-comparison"><h3>Your swap payment</h3><p className="quiet">{DEMO_PRICE_NOTE}</p>
-              {quote ? <dl className="quote-lines mono" aria-live="polite">
-                <div><dt>Your selected tickets</dt><dd>{formatUSDC(quote.offeredTotal)} USDC</dd></div>
-                <div><dt>Wanted tickets</dt><dd>{formatUSDC(quote.wantedTotal)} USDC</dd></div>
-                <div className="quote-total"><dt>{quote.paymentAmount > 0n ? 'Upgrade payment' : quote.paymentAmount < 0n ? 'Credit requested' : 'Payment difference'}</dt><dd>{formatUSDC(quote.paymentAmount < 0n ? -quote.paymentAmount : quote.paymentAmount)} USDC</dd></div>
-              </dl> : <p className="quiet" role="status">{intent.offered.length ? 'A payment amount is unavailable for these tickets. Choose tickets and a wanted section with demo reference prices to continue.' : 'Select your offered tickets to calculate the payment amount.'}</p>}
-              {quote && <p className="quiet">{quote.paymentAmount > 0n ? 'Approve this amount and sign your intent. USDC is charged only when the whole swap succeeds; the final charge may be lower. Gas is separate.' : quote.paymentAmount < 0n ? 'No USDC payment approval is needed. Your intent requires at least this credit when the whole swap succeeds. Gas is separate.' : 'No USDC payment approval is needed. Your intent allows no net charge for the swap. Gas is separate.'}</p>}
+          );
+        })}
+      </div>
+
+      {step > 1 && !completed && (
+        <button type="button" className="back-nav-btn" onClick={() => go(step - 1)}>
+          ← Back to Preferences
+        </button>
+      )}
+
+      {STEPS.map((title, index) => {
+        const number = index + 1;
+        const expanded = step === number && !completed;
+        const visited = reached >= number;
+        if (!expanded) return null;
+        return (
+          <section
+            key={title}
+            className={`workspace-panel intent-step ${expanded ? 'is-expanded' : visited ? 'is-complete' : 'is-future'}`}
+            data-step={number}
+            data-expanded={expanded}
+          >
+            <div className="step-heading">
+              <div className="step-heading-main">
+                <h2 ref={element => { stepTitles.current[index] = element; }} tabIndex={-1} id={`step-title-${number}`}>
+                  {!expanded && (number < reached || completed) && <span className="step-check" aria-label="Completed">✓</span>}
+                  {title}
+                </h2>
+                <p className="step-heading-sub">
+                  {number === 1
+                    ? 'Specify the exact outcome you will accept. All signed conditions are enforced on-chain before settlement.'
+                    : 'Select tickets you currently hold to offer into the reshuffle pool.'}
+                </p>
+              </div>
+              {expanded ? (
+                <span className="mono step-marker">step {number} of {STEPS.length}</span>
+              ) : (
+                visited && (
+                  <>
+                    <span className="mono step-summary">{summary(number)}</span>
+                    <button className="text-button" disabled={busy} onClick={() => go(number)} aria-label={`Change ${title}`}>
+                      Change
+                    </button>
+                  </>
+                )
+              )}
             </div>
-            </>}
-            <div className="inline-intent-review">
-              <h3>{quote && quote.paymentAmount > 0n ? 'Approve payment and create intent' : 'Review and create intent'}</h3>
-            {timingUnavailable && <p role="alert">{cutoff === null ? MISSING_SCHEDULE_NOTE : CLOSED_SESSION_NOTE}</p>}
-            {intent.offered.length > 0 && <><div className="signed-sentence"><p>{review.sentence}</p><p className="quiet mono">{review.metadata}</p></div>
-            <button className="text-button" onClick={() => setRaw(!raw)} aria-expanded={raw}>View signed struct {raw ? '−' : '+'}</button>
-            {raw && <pre className="raw-struct">{jsonNumbers(account ? preview : { ...preview, message: { ...preview.message, owner: 'Wallet selected at signing', nonce: 'Read after connection' } })}</pre>}
-            </>}
-            {!intent.offered.length && <p className="quiet">Select the tickets you want to offer above to review your request.</p>}
-            {toDeposit.length > 0 && <p className="quiet">Deposit your selected tickets above before signing.</p>}
-            <button className="primary full sign-intent" disabled={busy || !account || !quote || !intent.offered.length || toDeposit.length > 0 || choiceInvalid || timingUnavailable} onClick={() => void onSign(intent, setPrepared, confirmed => { complete(confirmed); onComplete(); })}>{quote && quote.paymentAmount > 0n ? `Approve ${formatUSDC(quote.paymentAmount)} USDC & create intent` : 'Create intent'} <span>↗</span></button>
-            {quote && quote.paymentAmount > 0n && <p className="quiet">{ALLOWANCE_NOTE}</p>}
-            </div>
-          </>}
-          {number === 1 && <div className="builder">
-            <div className="condition-row"><label id="count-label">How many tickets</label><div className="condition-control"><div className="stepper" aria-labelledby="count-label">
-              <button disabled={intent.exactCount <= 1} onClick={() => update({ exactCount: intent.exactCount - 1, ...(intent.exactCount === 2 ? { mustBeAdjacent: false } : {}) })} aria-label="Decrease ticket count">−</button>
-              <output className="mono" aria-live="polite">{intent.exactCount}</output><button disabled={intent.exactCount >= 4} onClick={() => update({ exactCount: intent.exactCount + 1, ...(intent.exactCount === 1 ? { mustBeAdjacent: true } : {}) })} aria-label="Increase ticket count">+</button>
-            </div></div></div>
-            <div className="condition-row"><span id="sessions-label">Which night</span><div className="chips" role="radiogroup" aria-labelledby="sessions-label">{sessions.map(n => <label key={n} className="single-choice" data-selected={hasClass(intent.sessionMask, n)}><input type="radio" name="wanted-session" value={n} checked={hasClass(intent.sessionMask, n)} onChange={() => update({ sessionMask: 1n << BigInt(n), deadline: sessionDeadline(1n << BigInt(n)) ?? 0n })} /><span>{sessionLabel(n)}{sessionStart(n) !== null && <span className="choice-detail mono">{formatEventTime(sessionStart(n)!)}</span>}</span></label>)}</div></div>
-            <div className="condition-row"><span id="sections-label">Which category</span><div className="chips" role="radiogroup" aria-labelledby="sections-label">{sections.map(n => {
-              const counts = supply.get(n) ?? { issued: 0, deposited: 0, offered: 0 };
-              return <label key={n} className="single-choice" data-selected={hasClass(intent.sectionMask, n)}><input type="radio" name="wanted-section" value={n} checked={hasClass(intent.sectionMask, n)} onChange={() => update({ sectionMask: 1n << BigInt(n) })} /><span>CAT <span className="mono">{n}</span>{DEMO_SECTION_PRICES[n] !== undefined && <span className="choice-detail mono">{formatUSDC(DEMO_SECTION_PRICES[n])} USDC / ticket</span>}<span className="choice-detail section-supply" data-offered={counts.offered}>{counts.offered ? `${counts.offered} ticket${counts.offered === 1 ? '' : 's'} offered for swap` : 'No tickets offered yet'}</span></span></label>;
-            })}</div></div>
-            <div className="condition-row"><label htmlFor="adjacent-seats">Seats must be next to each other</label><div><input id="adjacent-seats" type="checkbox" checked={intent.mustBeAdjacent} onChange={e => update({ mustBeAdjacent: e.target.checked, ...(e.target.checked && intent.exactCount < 2 ? { exactCount: 2 } : {}) })} />
-              {intent.mustBeAdjacent && <div className="adjacency-illustration" role="img" aria-label={`${ADJACENCY_ACCEPTED}: 3, 4. ${ADJACENCY_ERROR}: 3, 5.`}>
-                {[true, false].map(valid => <div className="adjacency-example" key={String(valid)}><div aria-hidden="true">{[1, 2, 3, 4, 5, 6].map(n => <span key={n} className={n === 3 || n === (valid ? 4 : 5) ? 'illustration-seat filled' : 'illustration-seat'} />)}</div><span className={valid ? '' : 'mono rejected'}>{valid ? ADJACENCY_ACCEPTED : ADJACENCY_ERROR}</span></div>)}
-              </div>}
-            </div></div>
-            <div className="condition-row"><span id="valid-until-label">Valid until</span><div><p id="valid-until" aria-labelledby="valid-until-label">8 hours before the event starts.</p>{cutoff !== null && eventStart !== null ? <><p className="quiet">Event starts: <time dateTime={new Date(Number(eventStart) * 1000).toISOString()}>{formatEventTime(eventStart)}</time></p>{timingUnavailable && <p role="alert">{CLOSED_SESSION_NOTE}</p>}</> : <p role="alert">{MISSING_SCHEDULE_NOTE}</p>}</div></div>
-            <button className="primary step-continue" disabled={choiceInvalid || timingUnavailable} onClick={() => go(2)}>Continue <span>→</span></button>
-          </div>}
-        </div>}
-      </section>;
-    })}
+
+            {expanded && (
+              <div className="step-content" aria-labelledby={`step-title-${number}`}>
+                {number === 2 && (
+                  <>
+                    <p className="quiet">{account ? OWN_POSITIONS_NOTE : CONNECT_POSITIONS_NOTE}</p>
+                    {!account && (
+                      <button className="secondary connect-positions" disabled={busy} onClick={() => void onConnect()}>
+                        Connect wallet to see my tickets
+                      </button>
+                    )}
+                    {connectionError && <p role="alert">{connectionError}</p>}
+                    <button className="secondary" disabled={busy} onClick={() => void onDemo()} aria-label={FREE_TICKETS_LABEL}>
+                      {FREE_TICKETS_LABEL}
+                    </button>
+                    <p className="quiet">{DEMO_TICKET_NOTE}</p>
+                    {account && !approved && positions.some(t => t.status !== 1 && same(t.owner, account) && t.depositor === '0x0000000000000000000000000000000000000000') && (
+                      <button className="secondary" disabled={busy} onClick={() => void onApprove()}>
+                        Approve tickets
+                      </button>
+                    )}
+                    <div className="position-list">{positions.slice(0, 8).map(position)}</div>
+                    {positions.length > 8 && (
+                      <details className="more-tickets">
+                        <summary className="mono">+{positions.length - 8} more</summary>
+                        <div>{positions.slice(8).map(position)}</div>
+                      </details>
+                    )}
+                    {account && !positions.length && <p role="status">{EMPTY_POSITIONS_NOTE}</p>}
+                    {positions.length > 0 && (
+                      <>
+                        <div className="batch-deposit">
+                          <button
+                            className="secondary"
+                            disabled={busy || !toDeposit.length}
+                            onClick={() => void onDepositSelected(selectedPositions.map(t => BigInt(t.tokenId)))}
+                          >
+                            {selectedPositions.length && !toDeposit.length
+                              ? 'Selected tickets deposited'
+                              : toDeposit.length
+                              ? `Deposit ${toDeposit.length} selected ticket${toDeposit.length === 1 ? '' : 's'}`
+                              : 'Deposit selected tickets'}
+                          </button>
+                          <p className="quiet">
+                            Select your tickets above, then deposit them together in one transaction. If approval is needed, confirm it first; the deposit follows automatically. Tickets already deposited are skipped.
+                          </p>
+                        </div>
+                        <p className="quiet">{ESCROW_NOTE} {WITHDRAWAL_DETAIL} {PICK_OFFERED_NOTE}</p>
+                        <div className="price-comparison">
+                          <h3>Your swap payment</h3>
+                          <p className="quiet">{DEMO_PRICE_NOTE}</p>
+                          {quote ? (
+                            <dl className="quote-lines mono" aria-live="polite">
+                              <div>
+                                <dt>Your selected tickets</dt>
+                                <dd>{formatUSDC(quote.offeredTotal)} USDC</dd>
+                              </div>
+                              <div>
+                                <dt>Wanted tickets</dt>
+                                <dd>{formatUSDC(quote.wantedTotal)} USDC</dd>
+                              </div>
+                              <div className="quote-total">
+                                <dt>{quote.paymentAmount > 0n ? 'Upgrade payment' : quote.paymentAmount < 0n ? 'Credit requested' : 'Payment difference'}</dt>
+                                <dd>{formatUSDC(quote.paymentAmount < 0n ? -quote.paymentAmount : quote.paymentAmount)} USDC</dd>
+                              </div>
+                            </dl>
+                          ) : (
+                            <p className="quiet" role="status">
+                              {intent.offered.length
+                                ? 'A payment amount is unavailable for these tickets. Choose tickets and a wanted section with demo reference prices to continue.'
+                                : 'Select your offered tickets to calculate the payment amount.'}
+                            </p>
+                          )}
+                          {quote && (
+                            <p className="quiet">
+                              {quote.paymentAmount > 0n
+                                ? 'Approve this amount and sign your intent. USDC is charged only when the whole swap succeeds; the final charge may be lower. Gas is separate.'
+                                : quote.paymentAmount < 0n
+                                ? 'No USDC payment approval is needed. Your intent requires at least this credit when the whole swap succeeds. Gas is separate.'
+                                : 'No USDC payment approval is needed. Your intent allows no net charge for the swap. Gas is separate.'}
+                            </p>
+                          )}
+                        </div>
+                      </>
+                    )}
+                    <div className="inline-intent-review">
+                      <h3>{quote && quote.paymentAmount > 0n ? 'Approve payment and create intent' : 'Review and create intent'}</h3>
+                      {timingUnavailable && <p role="alert">{cutoff === null ? MISSING_SCHEDULE_NOTE : CLOSED_SESSION_NOTE}</p>}
+                      {intent.offered.length > 0 && (
+                        <>
+                          <div className="signed-sentence">
+                            <p>{review.sentence}</p>
+                            <p className="quiet mono">{review.metadata}</p>
+                          </div>
+                          <button className="text-button" onClick={() => setRaw(!raw)} aria-expanded={raw}>
+                            View signed struct {raw ? '−' : '+'}
+                          </button>
+                          {raw && (
+                            <pre className="raw-struct">
+                              {jsonNumbers(account ? preview : { ...preview, message: { ...preview.message, owner: 'Wallet selected at signing', nonce: 'Read after connection' } })}
+                            </pre>
+                          )}
+                        </>
+                      )}
+                      {!intent.offered.length && <p className="quiet">Select the tickets you want to offer above to review your request.</p>}
+                      {toDeposit.length > 0 && <p className="quiet">Deposit your selected tickets above before signing.</p>}
+                      <button
+                        className="primary full sign-intent"
+                        disabled={busy || !account || !quote || !intent.offered.length || toDeposit.length > 0 || choiceInvalid || timingUnavailable}
+                        onClick={() => void onSign(intent, setPrepared, confirmed => { complete(confirmed); onComplete(); })}
+                      >
+                        {quote && quote.paymentAmount > 0n ? `Approve ${formatUSDC(quote.paymentAmount)} USDC & create intent` : 'Create intent'} <span>↗</span>
+                      </button>
+                      {quote && quote.paymentAmount > 0n && <p className="quiet">{ALLOWANCE_NOTE}</p>}
+                    </div>
+                  </>
+                )}
+
+                {number === 1 && (
+                  <div className="builder">
+                    {/* Condition 1: How many tickets */}
+                    <div className="condition-row">
+                      <div className="condition-meta">
+                        <label id="count-label" className="condition-title">How many tickets</label>
+                        <span className="condition-desc">Exact ticket count you will receive. Settlement requires an exact match.</span>
+                      </div>
+                      <div className="condition-control">
+                        <div className="stepper-pill" role="group" aria-labelledby="count-label">
+                          <button
+                            type="button"
+                            className="stepper-btn"
+                            disabled={intent.exactCount <= 1}
+                            onClick={() => update({ exactCount: intent.exactCount - 1, ...(intent.exactCount === 2 ? { mustBeAdjacent: false } : {}) })}
+                            aria-label="Decrease ticket count"
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          <div className="stepper-value">
+                            <output className="mono stepper-number" aria-live="polite">{intent.exactCount}</output>
+                          </div>
+                          <button
+                            type="button"
+                            className="stepper-btn"
+                            disabled={intent.exactCount >= 4}
+                            onClick={() => update({ exactCount: intent.exactCount + 1, ...(intent.exactCount === 1 ? { mustBeAdjacent: true } : {}) })}
+                            aria-label="Increase ticket count"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Condition 2: Session */}
+                    <div className="condition-row">
+                      <div className="condition-meta">
+                        <span id="sessions-label" className="condition-title">Session</span>
+                        <span className="condition-desc">Choose the event session you want to attend.</span>
+                      </div>
+                      <div className="condition-control">
+                        <div className="session-grid" role="radiogroup" aria-labelledby="sessions-label">
+                          {sessions.map(n => {
+                            const isSelected = hasClass(intent.sessionMask, n);
+                            const start = sessionStart(n);
+                            return (
+                              <label
+                                key={n}
+                                className={`session-card ${isSelected ? 'is-selected' : ''}`}
+                                data-selected={isSelected}
+                              >
+                                <input
+                                  type="radio"
+                                  name="wanted-session"
+                                  value={n}
+                                  checked={isSelected}
+                                  onChange={() => update({ sessionMask: 1n << BigInt(n), deadline: sessionDeadline(1n << BigInt(n)) ?? 0n })}
+                                  className="sr-only"
+                                />
+                                <div className="card-top">
+                                  <span className="session-day">{sessionLabel(n)}</span>
+                                  <div className={`radio-dot ${isSelected ? 'active' : ''}`} aria-hidden="true">
+                                    {isSelected && <span className="dot-inner" />}
+                                  </div>
+                                </div>
+                                {start !== null && (
+                                  <div className="session-time mono">{formatEventTime(start)}</div>
+                                )}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Condition 3: Category */}
+                    <div className="condition-row">
+                      <div className="condition-meta">
+                        <span id="sections-label" className="condition-title">Category</span>
+                        <span className="condition-desc">Target seating tier and current swap inventory in pool.</span>
+                      </div>
+                      <div className="condition-control">
+                        <div className="category-grid" role="radiogroup" aria-labelledby="sections-label">
+                          {sections.map(n => {
+                            const isSelected = hasClass(intent.sectionMask, n);
+                            const counts = supply.get(n) ?? { issued: 0, deposited: 0, offered: 0 };
+                            return (
+                              <label
+                                key={n}
+                                className={`category-card ${isSelected ? 'is-selected' : ''}`}
+                                data-selected={isSelected}
+                              >
+                                <input
+                                  type="radio"
+                                  name="wanted-section"
+                                  value={n}
+                                  checked={isSelected}
+                                  onChange={() => update({ sectionMask: 1n << BigInt(n) })}
+                                  className="sr-only"
+                                />
+                                <div className="card-top">
+                                  <span className="cat-title">CAT {n}</span>
+                                  <div className={`radio-dot ${isSelected ? 'active' : ''}`} aria-hidden="true">
+                                    {isSelected && <span className="dot-inner" />}
+                                  </div>
+                                </div>
+                                {DEMO_SECTION_PRICES[n] !== undefined && (
+                                  <div className="cat-price mono">
+                                    {formatUSDC(DEMO_SECTION_PRICES[n])} USDC
+                                  </div>
+                                )}
+                                <div className="cat-pool mono">
+                                  {counts.offered} in pool
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Condition 4: Consecutive Seating */}
+                    <div className="condition-row">
+                      <div className="condition-meta">
+                        <label htmlFor="adjacent-seats" className="condition-title">Consecutive Seating</label>
+                        <span className="condition-desc">Require tickets to be strictly contiguous within the same row, section, and session.</span>
+                      </div>
+                      <div className="condition-control">
+                        <div className="adjacency-wrapper">
+                          <div className="toggle-row">
+                            <label htmlFor="adjacent-seats" className="toggle-label-wrap">
+                              <div className="switch-control">
+                                <input
+                                  id="adjacent-seats"
+                                  type="checkbox"
+                                  checked={intent.mustBeAdjacent}
+                                  onChange={e => update({ mustBeAdjacent: e.target.checked, ...(e.target.checked && intent.exactCount < 2 ? { exactCount: 2 } : {}) })}
+                                  className="switch-input"
+                                />
+                                <span className="switch-slider" />
+                              </div>
+                              <span className="switch-text">Seats must be next to each other</span>
+                            </label>
+                            {intent.mustBeAdjacent && (
+                              <span className="adjacency-active-badge">
+                                <span aria-hidden="true">✓</span> Enforced by Settlement contract
+                              </span>
+                            )}
+                          </div>
+
+                          {intent.mustBeAdjacent && (
+                            <div className="adjacency-showcase" role="img" aria-label={`${ADJACENCY_ACCEPTED}: 3, 4. ${ADJACENCY_ERROR}: 3, 5.`}>
+                              <div className="showcase-header">
+                                <span className="showcase-title">ON-CHAIN ADJACENCY VERIFICATION</span>
+                                <span className="showcase-note">Same session, section, row, and consecutive seat numbers</span>
+                              </div>
+                              <div className="showcase-scenarios">
+                                <div className="scenario-card is-valid">
+                                  <div className="scenario-badge valid-badge">
+                                    <span className="badge-icon">✓</span> {ADJACENCY_ACCEPTED}
+                                  </div>
+                                  <div className="seat-row-visual" aria-hidden="true">
+                                    {[1, 2, 3, 4, 5, 6].map(seatNum => {
+                                      const isTarget = seatNum === 3 || seatNum === 4;
+                                      return (
+                                        <div key={seatNum} className={`mini-seat ${isTarget ? 'seat-accepted' : ''}`}>
+                                          <span className="mini-seat-back" />
+                                          <span className="mini-seat-cushion">{seatNum}</span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                  <div className="scenario-explanation">
+                                    Seats 3 &amp; 4 are consecutive in Row 1 · Valid swap proposal
+                                  </div>
+                                </div>
+
+                                <div className="scenario-card is-invalid">
+                                  <div className="scenario-badge invalid-badge">
+                                    <span className="badge-icon">×</span> {ADJACENCY_ERROR}
+                                  </div>
+                                  <div className="seat-row-visual" aria-hidden="true">
+                                    {[1, 2, 3, 4, 5, 6].map(seatNum => {
+                                      const isTarget = seatNum === 3 || seatNum === 5;
+                                      return (
+                                        <div key={seatNum} className={`mini-seat ${isTarget ? 'seat-rejected' : ''}`}>
+                                          <span className="mini-seat-back" />
+                                          <span className="mini-seat-cushion">{seatNum}</span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                  <div className="scenario-explanation">
+                                    Seats 3 &amp; 5 have a gap · Reverted unconditionally
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Condition 5: Valid until */}
+                    <div className="condition-row">
+                      <div className="condition-meta">
+                        <span id="valid-until-label" className="condition-title">Settlement Window</span>
+                        <span className="condition-desc">Automatic expiry protection for your signed commitment.</span>
+                      </div>
+                      <div className="condition-control">
+                        <div className="validity-banner">
+                          <div className="validity-icon-wrap">
+                            <Clock className="w-5 h-5 text-amber-400" />
+                          </div>
+                          <div className="validity-content">
+                            <p id="valid-until" className="validity-headline" aria-labelledby="valid-until-label">
+                              8 hours before the event starts.
+                            </p>
+                            {cutoff !== null && eventStart !== null ? (
+                              <>
+                                <p className="validity-sub">
+                                  Event starts: <time className="mono" dateTime={new Date(Number(eventStart) * 1000).toISOString()}>{formatEventTime(eventStart)}</time>
+                                </p>
+                                {timingUnavailable && <p className="validity-alert" role="alert">{CLOSED_SESSION_NOTE}</p>}
+                              </>
+                            ) : (
+                              <p className="validity-alert" role="alert">{MISSING_SCHEDULE_NOTE}</p>
+                            )}
+                            <p className="validity-footnote">
+                              If unmatched at cutoff, intent expires automatically on-chain.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Footer */}
+                    <div className="intent-step-actions">
+                      <button
+                        type="button"
+                        className="primary step-continue"
+                        disabled={choiceInvalid || timingUnavailable}
+                        onClick={() => go(2)}
+                      >
+                        <span>Continue to Tickets</span>
+                        <ArrowRight className="w-4 h-4 btn-icon" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        );
+      })}
     <dialog ref={seatMapRef} className="intent-pool-dialog seat-map-dialog" aria-labelledby="seat-map-title" onClose={onSeatMapClose} onClick={event => {
       if (event.target !== event.currentTarget) return;
       const bounds = event.currentTarget.getBoundingClientRect();
@@ -208,5 +622,6 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
       <p className="quiet">{ADJACENCY_NOTE}</p>
       </div>
     </dialog>
-  </div>;
+  </div>
+  );
 }
