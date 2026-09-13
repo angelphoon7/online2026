@@ -17,6 +17,7 @@ import { settlementShape } from '@/lib/settlement-shape';
 import { CONTRACTS, CHAIN } from '@/lib/config';
 import { getWalletClient, approveNFTsForEscrow, depositTickets, withdrawTickets, signAndCommitIntent, revokeIntent, submitSettlement, approveUSDC, redeemTicket, type IntentParams } from '@/lib/contracts';
 import { findSettlement, findPoolSettlement, type SettlementProposal, type SolveEvidence } from '@/lib/solve-api';
+import { solverErrorMessage } from '@/lib/solve-errors';
 import { formatUSDC, truncateAddress } from '@/lib/format';
 import { restoreIntent, type ChainReceipt, type ChainTicket } from '@/lib/market-types';
 import { HERO_TITLE_LINES, EMPTY_RESULT, POOL_NOTE, condition, EXPLORER, POOL_LABEL, RANKING_RULE, SOLVER_NOTE } from '@/lib/ui-copy';
@@ -27,7 +28,6 @@ import Validation from './Validation';
 import MatchingStatus from './MatchingStatus';
 import PoolDialog from './PoolDialog';
 import JudgeControls, { type BudgetChange, type Revocation } from './JudgeControls';
-import JudgingGuide from './JudgingGuide';
 import AgentDrawer from './AgentDrawer';
 import ActivityNotification from './ActivityNotification';
 import EventLoadingDialog from './EventLoadingDialog';
@@ -143,7 +143,7 @@ export default function Market() {
       const result = wholePool ? await findPoolSettlement(snapshot.floor) : await findSettlement(hashes.map(hash => ({ hash })), snapshot.floor);
       if (version !== searchVersion.current || !freshness.current(snapshot.revision)) return;
       setProposal(result.proposal); setEvidence(result.evidence);
-    } catch (e) { if (version === searchVersion.current) { setProposal(null); setEvidence(null); setSolverError(e instanceof Error && /^(Select|Live pool exceeds)/.test(e.message) ? e.message : 'Solver unreachable. Public chain reads remain available. Retry the solver.'); } }
+    } catch (e) { if (version === searchVersion.current) { setProposal(null); setEvidence(null); setSolverError(solverErrorMessage(e)); } }
     finally { if (version === searchVersion.current) { searchInFlight.current = false; setSolving(false); } }
   }, [freshness]);
   useEffect(() => {
@@ -558,7 +558,6 @@ export default function Market() {
                   >
                     ← Back to Events
                   </button>
-                  <span className="eyebrow">The workspace / Event 1</span>
                   <h2>Keep the ticket.<br />Change the outcome.</h2>
                 </div>
                 <div>
@@ -568,12 +567,10 @@ export default function Market() {
                     </a>
                     <span className="workspace-block-source">/ {market.source === 'graph' ? 'VIA THE GRAPH' : 'VIA DIRECT RPC READS'}</span>
                   </>}</p>
-                  <button className="text-button" onClick={() => void refresh(true)}>Refresh public state ↻</button>
                 </div>
               </div>
               <div className="network-note">USDC pays for both settlement and native gas on Arc. You don’t need a second token.</div>
-              <JudgingGuide freshness={freshness} busy={disabled || solving} onSearch={hashes => { setAutomatic(false); setSelected(hashes); setProposal(null); setEvidence(null); void runSolver(hashes); }} />
-              <div className="workspace-tools"><button className="secondary pool-toggle" aria-haspopup="dialog" aria-expanded={poolOpen} onClick={() => setPoolOpen(true)}>{indexingBlock !== null ? "Intent pool: indexing" : `Intent pool (${live.length})`}</button><p className="quiet">See what others offer and want. Opening the list is optional; matching runs automatically.</p></div>
+              <div className="workspace-tools"><button className="secondary pool-toggle" aria-haspopup="dialog" aria-expanded={poolOpen} onClick={() => setPoolOpen(true)}>{indexingBlock !== null ? "Intent pool: indexing" : `Intent pool (${live.length})`}</button></div>
               <PoolDialog open={poolOpen} onClose={() => setPoolOpen(false)}>
                 {indexingBlock !== null ? <p role="status">{indexingMessage(indexingBlock)} {INDEXING_PENDING}</p> : <>
                 <p className="mono">{live.length} {POOL_LABEL}</p><p className="quiet">{POOL_NOTE}</p><div className="pool-list">{live.map((i, index) => <article key={i.hash} className="pool-row"><label><input type="checkbox" checked={selected.includes(i.hash)} disabled={disabled} onChange={() => selectIntent(i.hash)} /><span>{walletLabel(i.owner)} <span className="mono">/ Request {index + 1}</span></span></label><p>{condition(restoreIntent(i))}</p><details className="wallet-details"><summary>Wallet and transaction details</summary><a className="hash" href={`${EXPLORER}/address/${i.owner}`} target="_blank" rel="noreferrer">{i.owner}</a><a className="mono" href={`${EXPLORER}/tx/${i.commitTx}`} target="_blank" rel="noreferrer">Commit {i.commitTx.slice(0, 10)}… ↗</a></details><button className="text-button" onClick={() => { setAgentHash(i.hash); setAgentOpen(true); setPoolOpen(false); }}>Why no match?</button>{equal(i.owner, account) && <button disabled={disabled} onClick={() => void action('Revoke intent', async address => { await track(await revokeIntent(address, i.hash)); await refreshWritten(); setProposal(null); setEvidence(null); })}>Revoke my intent</button>}</article>)}</div>{!live.length && <p>No live requests yet. Submit an intent to join the pool.</p>}{!!market.hashMismatched.length && <p className="quiet" role="status">{market.hashMismatched.length} indexed {market.hashMismatched.length === 1 ? 'request is' : 'requests are'} excluded from this pool: the indexed fields do not re-hash to the id they were committed under, so they are not shown. <span className="mono">{market.hashMismatched.map(h => `${h.slice(0, 10)}…`).join(' ')}</span></p>}
@@ -607,7 +604,7 @@ export default function Market() {
           ) : (
             <section className="workspace-section">
               <button type="button" className="back-nav-btn" onClick={() => navigateTo('events')}>← Back to Events</button>
-              <div className="section-heading"><div><span className="eyebrow">The workspace / Event 1</span><h2>Keep the ticket.<br />Change the outcome.</h2></div></div>
+              <div className="section-heading"><div><h2>Keep the ticket.<br />Change the outcome.</h2></div></div>
               <EventLoadingDialog error={readError} onRetry={() => refresh(true)} onBack={() => navigateTo('events')} />
             </section>
           )}

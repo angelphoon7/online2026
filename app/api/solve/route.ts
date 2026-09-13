@@ -1,7 +1,7 @@
 import { parseSolveRequest, parseMinBlock, solveOnChain } from '@/server/solve';
 import { graphIntents } from '@/server/solve-graph';
 import { readSource } from '@/server/market';
-import { graphReadError } from '@/server/graph-read-error';
+import { solveErrorResponse } from '@/server/solve-error';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,17 +31,6 @@ export async function POST(request: Request) {
     const { committed, source } = await graphIntents(hashes, minBlock);
     return Response.json(await solveOnChain(hashes, committed, source), { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
-    const pageError = graphReadError(error); if (pageError) return pageError;
-    const failure = error as { name?: string; shortMessage?: string; message?: string };
-    console.error('Solve failed', failure.name, failure.shortMessage ?? failure.message);
-    // An unmet freshness floor is a wait, not a failure: the caller asked for a block the
-    // indexer has not reached, and retrying is the correct response.
-    if (failure.name === 'SubgraphLagError') {
-      return Response.json({ error: 'The indexer has not reached the block of your last transaction. Retry shortly.' }, { status: 409 });
-    }
-    if (failure.name === 'GraphIntentUnavailable') {
-      return Response.json({ error: failure.message }, { status: 422 });
-    }
-    return Response.json({ error: 'Unable to solve from chain state. Check committed hashes and backend configuration.' }, { status: 502 });
+    return solveErrorResponse(error);
   }
 }

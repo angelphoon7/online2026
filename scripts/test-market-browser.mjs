@@ -95,7 +95,7 @@ try {
         if(window.testWallet.holdSolver)await new Promise(resolve=>{window.testWallet.releaseSolve=()=>{window.testWallet.holdSolver=false;delete window.testWallet.releaseSolve;resolve();};});
         if(url==='/api/solve/pool'){window.testWallet.poolCalls=(window.testWallet.poolCalls??0)+1;window.testWallet.solveCalls.push(market.intents.filter(i=>i.eventId===1&&i.state===1&&!i.expired).map(i=>i.hash).sort());}
         else window.testWallet.solveCalls.push(JSON.parse(init.body).intentHashes);
-        if(window.testWallet.failSolver)return reply({error:'Offline'},503);
+        if(window.testWallet.failSolver)return reply({code:'SolverUnavailable',error:'The solver service is temporarily unavailable. Retry shortly.'},503);
         if(window.testWallet.noMatch)return reply({...evidence,proposal:null,chosen:null,candidatesFound:0,simulationResult:undefined});
         if(window.testWallet.badSimulation)return reply({...evidence,simulationResult:{success:false,error:'InsufficientPaymentCapacity'}});
         if(window.testWallet.unrelated){const result=structuredClone(evidence);const keep=result.proposal.intents.map((i,n)=>i.owner.toLowerCase()!==window.testWallet.account.toLowerCase()?n:-1).filter(n=>n>=0);result.proposal.intents=keep.map(n=>evidence.proposal.intents[n]);result.proposal.legs=keep.map(n=>evidence.proposal.legs[n]);return reply(result);}
@@ -202,9 +202,9 @@ try {
   console.log('PASS manual/automatic searches preserve open details and popup, disable stale settlement during refresh and remove obsolete matches.');
   await assert("document.querySelectorAll('.step-content').length===1 && document.querySelector('.intent-step[data-step=\"1\"]').dataset.expanded==='true' && !document.querySelector('.position')", 'Wish must come first');
   await assert("document.querySelectorAll('[name=wanted-section]').length===4 && document.querySelectorAll('[name=wanted-section]:checked').length===1 && document.querySelectorAll('[name=wanted-session]:checked').length===1", 'Single selections or expanded sections missing');
-  await assert("document.getElementById('valid-until').textContent==='2026-09-19 12:00 Malaysia (UTC+8)' && !document.querySelector('input[type=datetime-local]')", 'Fixed eight-hour cutoff missing');
+  await assert("document.getElementById('valid-until').textContent==='8 hours before the event starts.' && document.querySelector('.builder time').textContent==='19/9/26 8:00pm' && !document.querySelector('input[type=datetime-local]')", 'Fixed eight-hour cutoff missing');
   await evaluate("document.querySelector('[name=wanted-session][value=\"1\"]').click(); document.querySelector('[name=wanted-session][value=\"1\"]').click()");
-  await assert("document.querySelectorAll('[name=wanted-session]:checked').length===1 && document.getElementById('valid-until').textContent.includes('2026-09-20 12:00')", 'Night change failed to update cutoff or deselected itself');
+  await assert("document.querySelectorAll('[name=wanted-session]:checked').length===1 && document.querySelector('.builder time').textContent==='20/9/26 8:00pm'", 'Night change failed to update event time or deselected itself');
   await evaluate("document.querySelector('[name=wanted-session][value=\"0\"]').click(); document.querySelector('[name=wanted-section][value=\"3\"]').click(); document.querySelector('[name=wanted-section][value=\"3\"]').click()");
   await assert("document.querySelectorAll('[name=wanted-section]:checked').length===1 && document.querySelector('[name=wanted-section][value=\"3\"]').closest('label').textContent.includes('No tickets issued yet')", 'New section invents inventory or allows deselection');
   const wishClip=await evaluate("(()=>{const r=document.querySelector('.intent-flow').getBoundingClientRect();return {x:r.x,y:r.y+scrollY,width:r.width,height:r.height,scale:1};})()");
@@ -231,7 +231,7 @@ try {
   await assert(`${sectionOffered(0)}==='2' && ${sectionOffered(1)}==='0'`, 'Section supply did not follow the selected night');
   await evaluate('window.testWallet.setAllIntentStates(2);window.testWallet.poll()');
   await waitFor(`${sectionOffered(0)}==='0'`);
-  await assert("document.querySelector('[name=wanted-section][value=\"0\"]').closest('label').textContent.includes('deposited /') && !document.querySelector('[name=wanted-section][value=\"2\"]').disabled", 'Revocation erased deposited inventory or disabled future wishlist sections');
+  await assert("!document.querySelector('[name=wanted-section][value=\"0\"]').closest('label').textContent.includes('deposited /') && !document.querySelector('[name=wanted-section][value=\"2\"]').disabled", 'Inventory totals should be hidden and empty categories should remain selectable');
   await evaluate('window.testWallet.setAllIntentStates(1);window.testWallet.poll()');
   await waitFor(`${sectionOffered(0)}==='2'`);
   await evaluate("document.querySelector('[name=wanted-session][value=\"0\"]').click()");
@@ -240,7 +240,7 @@ try {
   await evaluate("document.getElementById('adjacent-seats').click()");
   await assert("!document.querySelector('.adjacency-illustration')", 'Unchecked adjacency illustration visible');
   await evaluate("document.getElementById('adjacent-seats').click(); document.querySelector('[name=wanted-section][value=\"1\"]').click(); document.querySelector('.seat-map summary').click()");
-  await assert("Array.from(document.querySelectorAll('.seat-map-content h3')).every(e=>e.textContent.endsWith('SECTION 1'))", 'Map ignores wishlist');
+  await assert("Array.from(document.querySelectorAll('.seat-map-content h3')).every(e=>e.textContent.endsWith('CAT 1'))", 'Map ignores wishlist');
   await advance();
   await assert("document.querySelector('.sign-intent').disabled && !document.querySelector('.position') && !document.querySelector('.batch-deposit') && !!document.querySelector('.connect-positions')", 'Disconnected inventory exposes other wallets tickets');
   await assert("!window.testWallet.calls.includes('eth_requestAccounts')", 'Entering inventory prompts connection without a click');
@@ -278,7 +278,7 @@ try {
   await assert("!window.testWallet.calls.includes('eth_sendTransaction')", 'Cancelled signature broadcast a transaction');
   await evaluate('window.testWallet.cancel=false');await evaluate("document.querySelector('.sign-intent').click()");await waitFor(`window.testWallet.calls.includes('eth_signTypedData_v4')`);
   await navigate();await evaluate('window.testWallet.failSolver=true');await click('Check all intents');
-  await waitFor(`document.body.innerText.includes('Solver unreachable')`);
+  await waitFor(`document.body.innerText.includes('The solver service is temporarily unavailable')`);
   await assert("!document.querySelector('.candidate') && !!document.querySelector('.seat-grid .seat')", 'Solver failure hides public reads or leaves stale candidate');
   await evaluate("document.querySelector('.history>summary').click();document.querySelector('.history-list button').click()");await waitFor(`!!document.querySelector('.receipt-section')`);
   await assert("document.querySelector('.receipt-section').innerText.includes('Submitted by a participant wallet')", 'False independent solver claim');

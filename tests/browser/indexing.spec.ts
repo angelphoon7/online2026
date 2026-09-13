@@ -18,8 +18,8 @@ const overview = (over = {}) => ({ block: '100', liveIntents: 3, escrowedTickets
 const toolAnswer = (evidence: unknown[]) => ({ block: '100', model: 'fixture', guardFallback: false,
   answer: 'At Arc Testnet block #100: tool evidence for this question.', evidence });
 
-async function fixture(page: Page, partial = false) {
-  const control = { block: 100, graphBlock: 100, graphError: false, changed: false, staleMarket: false, holdMarket: false, holdAsk: false, extraIntents: [] as ReturnType<typeof intent>[], oldMarket: null as Route | null, oldAsk: null as Route | null, reads: [] as string[] };
+async function fixture(page: Page, partial = false, solverStatus = 200) {
+  const control = { solverStatus, block: 100, graphBlock: 100, graphError: false, changed: false, staleMarket: false, holdMarket: false, holdAsk: false, extraIntents: [] as ReturnType<typeof intent>[], oldMarket: null as Route | null, oldAsk: null as Route | null, reads: [] as string[] };
   const market = (block = control.block) => ({ blockNumber: String(block), timestamp: '1789232809', source: 'graph', tickets: [], intents: [intent(A, owner('1'), control.changed ? 2 : 1), intent(B, owner('2')), ...(control.changed && !partial ? [intent(NEW, owner('1'))] : []), ...control.extraIntents], settlements: [], defaultHashes: [], hashMismatched: [] });
   await page.route('**/api/**', async route => {
     const request = route.request(), url = new URL(request.url()), path = url.pathname;
@@ -48,7 +48,10 @@ async function fixture(page: Page, partial = false) {
       expect(BigInt(body.minBlock)).toBeGreaterThanOrEqual(control.changed ? 200n : 100n);
       return json({ answer: `At Arc Testnet block #${control.block}: current answer.`, block: String(control.block), guardFallback: true, model: null, evidence: [{ tool: 'diagnose_intent', input: {}, output: diagnosis(body.intentHash, control.block) }] });
     }
-    if (path === '/api/solve/pool' || path === '/api/solve') return json({ id: 'fixture', proposal: null, source: { kind: 'subgraph', blockNumber: String(control.block), snapshotBlock: String(control.block) }, candidatesFound: 0, candidatesExcluded: [], intentsConsidered: 2, chosen: null });
+    if (path === '/api/solve/pool' || path === '/api/solve') {
+      if (control.solverStatus === 429) return json({ code: 'ArcRateLimited', error: 'Arc RPC is temporarily rate-limited. Your committed intent remains on-chain. Retry the solver shortly.' }, 429);
+      return json({ id: 'fixture', proposal: null, source: { kind: 'subgraph', blockNumber: String(control.block), snapshotBlock: String(control.block) }, candidatesFound: 0, candidatesExcluded: [], intentsConsidered: 2, chosen: null });
+    }
     if (path === '/api/rpc') { const body = request.postDataJSON(); return json({ jsonrpc: '2.0', id: body.id, result: body.method === 'eth_chainId' ? '0x4cef52' : '0xc8' }); }
     return json({ error: `Unexpected API request in browser fixture: ${path}` }, 500);
   });
@@ -64,10 +67,24 @@ async function applyBudget(page: Page) {
   await page.getByRole('button', { name: 'Apply budget', exact: true }).click();
 }
 
+test('RPC rate limit remains distinct from an unmatched request and retry recovers without signing', async ({ page }) => {
+  const { control } = await fixture(page, false, 429);
+  await expect(page.getByRole('alert').filter({ hasText: 'Arc RPC is temporarily rate-limited' })).toBeVisible();
+  await expect(page.getByText('Solver unreachable', { exact: false })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Waiting for a match' })).toHaveCount(0);
+  await expect(page.locator('.workspace-stack')).toBeVisible();
+  control.solverStatus = 200;
+  await page.getByRole('button', { name: /Check all intents/ }).click();
+  await expect(page.getByRole('heading', { name: 'Waiting for a match' })).toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: 'rate-limited' })).toHaveCount(0);
+  expect(control.reads.filter(read => read === 'POST /api/solve/pool')).toHaveLength(2);
+});
+
 test('receipt floor survives errors, stale responses, agent hash changes and reload', async ({ page }) => {
+  await page.clock.install();
   const { control, market } = await fixture(page);
   control.holdMarket = true;
-  await page.getByRole('button', { name: /Refresh public state/ }).click();
+  await page.clock.fastForward(30_000);
   await expect.poll(() => !!control.oldMarket).toBe(true);
   await page.getByRole('button', { name: 'Ask the agent', exact: true }).click();
   const drawer = page.getByRole('dialog', { name: 'Settlement agent' });
@@ -277,24 +294,6 @@ test('judge sign-in unlocks controls and signing out hides editable intents', as
   await expect(page.getByLabel('Participant intent', { exact: true })).toHaveCount(0);
 });
 
-test('judging guide sends the exact selected pair or triple and disables unavailable groups', async ({ page }) => {
-  await fixture(page);
-  await page.route('**/api/demo/scenarios*', route => route.fulfill({ json: { batch: 'fixture', snapshotBlock: '100', lagSeconds: 0, groups: [
-    { name: 'single-date', hashes: [A, B, NEW], available: true, issues: [], counts: [1, 1, 1], expiresAt: '2000000000' },
-    { name: 'expired-group', hashes: [A, B, NEW], available: false, issues: [{ reason: 'EXPIRED' }], counts: [3, 3, 3], expiresAt: null },
-  ] } }));
-  await page.reload();
-  await page.getByText('Start here / judge the live demo', { exact: true }).click();
-  const guide = page.locator('.judging-guide'), group = guide.locator('.judge-result').filter({ hasText: 'single date' });
-  await expect(guide.getByRole('link', { name: 'Circle faucet' })).toHaveAttribute('href', 'https://faucet.circle.com/');
-  for (const [name, hashes] of [['Check A + B', [A, B]], ['Check A + C', [A, NEW]], ['Check B + C', [B, NEW]], ['Check A + B + C', [A, B, NEW]]] as const) {
-    const received = page.waitForRequest(r => new URL(r.url()).pathname === '/api/solve');
-    await group.getByRole('button', { name, exact: true }).click();
-    expect((await received).postDataJSON().intentHashes).toEqual(hashes);
-  }
-  await expect(guide.locator('.judge-result').filter({ hasText: 'expired group' }).getByRole('button', { name: 'Check A + B + C', exact: true })).toBeDisabled();
-});
-
 test('direct diagnosis for another intent shows an error and no evidence', async ({ page }) => {
   await fixture(page);
   await page.route('**/api/agent/diagnose/**', route => route.fulfill({ json: { ...diagnosis(B, 100), status: 'EXCLUDED', exclusion: { reason: 'EXPIRED' } } }));
@@ -306,10 +305,11 @@ test('direct diagnosis for another intent shows an error and no evidence', async
 });
 
 test('a market above 1000 intents exposes its final request and opens that exact diagnosis', async ({ page }) => {
+  await page.clock.install();
   const { control } = await fixture(page);
   control.extraIntents = Array.from({ length: 1001 }, (_, n) => intent(`0x${(n + 1).toString(16).padStart(64, '0')}`, owner('3')));
   const last = control.extraIntents.at(-1)!;
-  await page.getByRole('button', { name: /Refresh public state/ }).click();
+  await page.clock.fastForward(30_000);
   const openPool = page.getByRole('button', { name: 'Intent pool (1003)', exact: true });
   await expect(openPool).toBeVisible();
   await openPool.click();

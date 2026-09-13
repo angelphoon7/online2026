@@ -60,13 +60,17 @@ assert.equal(demoPriceQuote({ ...draft, sectionMask: 16n }, pricedTickets), null
 assert.equal(demoPriceQuote({ ...draft, offered: [99n] }, pricedTickets), null);
 console.log('PASS fixed demo payment: upgrade, even swap, downgrade, changed count, and unavailable amounts for mixed or unpriced sections.');
 
-const { selectedClass, sessionDeadline, validateNewIntentTiming, formatEventTime } = await import('../lib/event-schedule.ts');
+const { selectedClass, sessionDeadline, validateNewIntentTiming, formatEventTime, sessionLabel, sessionStart } = await import('../lib/event-schedule.ts');
 const cutoff = BigInt(Date.parse('2026-09-19T04:00:00Z') / 1000);
 assert.equal(sessionDeadline(1n), cutoff);
 assert.equal(sessionDeadline(2n), cutoff + 86400n);
 assert.equal(draft.deadline, cutoff);
 assert.equal(initialIntent({ timestamp: '1789165000', intents: [], tickets: [] }, owner).deadline, cutoff);
-assert.equal(formatEventTime(cutoff), '2026-09-19 12:00 Malaysia (UTC+8)');
+assert.equal(formatEventTime(cutoff), '19/9/26 12:00pm');
+assert.equal(formatEventTime(sessionStart(0)), '19/9/26 8:00pm');
+assert.equal(formatEventTime(sessionStart(1)), '20/9/26 8:00pm');
+assert.equal(sessionLabel(0), 'Saturday');
+assert.equal(sessionLabel(1), 'Sunday');
 for (const mask of [0n, 3n, 4n]) assert.equal(sessionDeadline(mask), null);
 assert.equal(selectedClass(1n << 255n), 255);
 assert.equal(selectedClass(1n << 256n), null);
