@@ -21,6 +21,7 @@ export interface MarketSnapshot {
 export interface ChainReceipt {
   hash: Hex; blockNumber: string; status: 'success' | 'reverted'; proposer: Address; independent: boolean;
   ticketTransfers: number; usdcTransfers: number; netSum: string;
+  payments: { totalTransferred: string; wallets: { owner: Address; paid: string; received: string }[] } | null;
   participants: { owner: Address; offered: string[]; receives: string[]; netPayment: string }[];
   rejection: { name: string; args: string[] } | null;
 }

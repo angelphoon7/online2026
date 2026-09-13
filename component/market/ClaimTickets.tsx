@@ -53,9 +53,8 @@ export default function ClaimTickets({ receipt, wallet, disabled }: {
     <div className={styles.main}>
       <div>
         <h3>{isSeller ? 'Your sale is complete' : 'Claim your tickets'}</h3>
-        <p>{isSeller ? 'You received no tickets in this swap.' : ids.length
-          ? 'Your tickets were delivered during the swap. Add them to your wallet’s NFTs tab.'
-          : 'Connect the wallet that received tickets in this swap to add them to its NFTs tab.'}</p>
+        {(isSeller || !ids.length) && <p>{isSeller ? 'You received no tickets in this swap.'
+          : 'Connect the wallet that received tickets in this swap to add them to its NFTs tab.'}</p>}
         {ids.length > 0 && <p className={styles.tokens}>{ids.map(id => `#${id}`).join(' · ')}</p>}
       </div>
       {!isSeller && <button type="button" className="primary" disabled={disabled || pending || wallet.isConnecting}

@@ -4,6 +4,7 @@ import { abi, chainConfig } from './chain';
 import { serialize } from './evidence-store';
 import type { IntentParams } from '@/lib/contracts';
 import type { ChainReceipt } from '@/lib/market-types';
+import { confirmedReceiptPayments } from './receipt-payments';
 
 export async function settlementReceipt(hash: Hex): Promise<ChainReceipt> {
   const { client, addresses, usdc } = chainConfig();
@@ -13,6 +14,7 @@ export async function settlementReceipt(hash: Hex): Promise<ChainReceipt> {
   if (decoded.functionName !== 'settle') throw new Error('Not settle');
   const [intents, legs] = decoded.args as [IntentParams[], { intentHash: Hex; receives: bigint[]; netPayment: bigint }[]];
   let rejection = null;
+  let payments: ChainReceipt['payments'] = null;
   const ticketLogs = receipt.logs.filter(l => l.address.toLowerCase() === addresses.TicketNFT.toLowerCase()).flatMap(l => {
     try { const d = decodeEventLog({ abi: erc721Abi, ...l }); return d.eventName === 'Transfer' ? [d.args] : []; } catch { return []; }
   });
@@ -26,6 +28,7 @@ export async function settlementReceipt(hash: Hex): Promise<ChainReceipt> {
     for (let i = 0; i < legs.length; i++) for (const id of legs[i].receives) {
       if (!ticketLogs.some(l => l.tokenId === id && l.from.toLowerCase() === addresses.Escrow.toLowerCase() && l.to.toLowerCase() === intents[i].owner.toLowerCase())) throw new Error('Ticket recipient mismatch');
     }
+    payments = confirmedReceiptPayments(intents.map((intent, i) => ({ owner: intent.owner, netPayment: legs[i].netPayment })), paymentLogs, addresses.Settlement);
   } else {
     // Receipts contain status, not revert data. This is explicitly historical replay.
     try { await client.call({ account: tx.from, to: tx.to, data: tx.input, gas: tx.gas, blockNumber: receipt.blockNumber - 1n }); }
@@ -37,7 +40,7 @@ export async function settlementReceipt(hash: Hex): Promise<ChainReceipt> {
   }
   return JSON.parse(serialize({ hash, blockNumber: receipt.blockNumber, status: receipt.status, proposer: tx.from,
     independent: !intents.some(i => i.owner.toLowerCase() === tx.from.toLowerCase()),
-    ticketTransfers: ticketLogs.length, usdcTransfers: paymentLogs.length,
+    ticketTransfers: ticketLogs.length, usdcTransfers: paymentLogs.length, payments,
     netSum: legs.reduce((n, l) => n + l.netPayment, 0n),
     participants: intents.map((i, n) => ({ owner: i.owner, offered: i.offered, receives: legs[n]?.receives ?? [], netPayment: legs[n]?.netPayment ?? 0n })), rejection,
   }));

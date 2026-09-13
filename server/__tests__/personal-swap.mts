@@ -8,7 +8,7 @@ import { proposalForWallet, receiptOutcomes, receiptTitle, walletChangesTickets 
 const A = `0x${'a'.repeat(40)}` as Address, B = `0x${'b'.repeat(40)}` as Address;
 const hash = `0x${'1'.repeat(64)}` as Hex, otherHash = `0x${'2'.repeat(64)}` as Hex;
 const receipt: ChainReceipt = { hash, status: 'success', blockNumber: '100', proposer: A, independent: true,
-  ticketTransfers: 4, usdcTransfers: 0, netSum: '0', rejection: null,
+  ticketTransfers: 4, usdcTransfers: 0, payments: null, netSum: '0', rejection: null,
   participants: [{ owner: B, offered: ['78', '79'], receives: ['78', '79'], netPayment: '0' },
     { owner: B.toUpperCase().replace('0X', '0x') as Address, offered: ['60', '61'], receives: ['60', '61'], netPayment: '0' }],
 };

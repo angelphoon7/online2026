@@ -3,22 +3,31 @@ import { test, expect, type Page } from '@playwright/test';
 import { toFunctionSelector } from 'viem';
 import record from '../../deployments/act-one.json';
 import deployment from '../../deployments/public/arc-testnet.json';
+import type { ChainReceipt } from '../../lib/market-types';
 
 const owner = record.evidence.proposal.intents[0].owner;
 const outsider = '0x1111111111111111111111111111111111111111';
 type WalletRequest = { method: string; params?: unknown[] | Record<string, unknown> };
 
-async function fixture(page: Page, options: { disconnected?: boolean; outsider?: boolean; reverted?: boolean; seller?: boolean; settle?: boolean; duplicateOwner?: boolean; searchOnly?: boolean; unchanged?: boolean } = {}) {
+async function fixture(page: Page, options: { disconnected?: boolean; outsider?: boolean; reverted?: boolean; seller?: boolean; settle?: boolean; duplicateOwner?: boolean; searchOnly?: boolean; unchanged?: boolean; paymentAmounts?: string[]; missingPaymentProof?: boolean } = {}) {
   const proposal = record.evidence.proposal;
   const receipt = {
     hash: record.proof.transactionHash, blockNumber: '101', status: options.reverted ? 'reverted' : 'success',
     proposer: outsider, independent: true, ticketTransfers: record.proof.ticketTransferCount,
     usdcTransfers: 2, netSum: '0', rejection: null,
+    payments: null as ChainReceipt['payments'],
     participants: proposal.intents.map((intent, i) => ({ owner: intent.owner, offered: intent.offered,
-      receives: options.seller && i === 0 ? [] : proposal.legs[i].receives, netPayment: proposal.legs[i].netPayment })),
+      receives: options.seller && i === 0 ? [] : proposal.legs[i].receives, netPayment: options.paymentAmounts?.[i] ?? proposal.legs[i].netPayment })),
   };
   if (options.unchanged) receipt.participants = receipt.participants.slice(1).map(row => ({ ...row, owner: outsider, receives: row.offered }));
   if (options.duplicateOwner) receipt.participants.push({ ...receipt.participants[0], owner: owner.toUpperCase().replace('0X', '0x') });
+  if (!options.missingPaymentProof && !options.reverted) {
+    const net = new Map<string, bigint>();
+    for (const row of receipt.participants) net.set(row.owner.toLowerCase(), (net.get(row.owner.toLowerCase()) ?? 0n) + BigInt(row.netPayment));
+    const wallets = [...net].map(([owner, amount]) => ({ owner: owner as `0x${string}`, paid: String(amount > 0n ? amount : 0n), received: String(amount < 0n ? -amount : 0n) }));
+    receipt.payments = { totalTransferred: String(wallets.reduce((sum, wallet) => sum + BigInt(wallet.paid), 0n)), wallets };
+    receipt.usdcTransfers = wallets.filter(wallet => wallet.paid !== '0' || wallet.received !== '0').length;
+  }
   const market = {
     source: 'rpc', blockNumber: '101', timestamp: '1789160000',
     tickets: record.proof.tickets.map(ticket => ({ ...ticket.meta, tokenId: ticket.tokenId,
@@ -276,4 +285,29 @@ test('a search completed after an account switch cannot restore the old account 
   await expect(page.getByRole('button', { name: 'Propose and settle', exact: false })).toBeDisabled();
   await expect(page.locator('.candidate')).toHaveCount(0);
   expect(control.calls.some(call => call.method === 'eth_sendTransaction')).toBe(false);
+});
+
+test('the receipt shows USDC amount transferred and each payer and recipient, not event count or net sum', async ({ page }) => {
+  const { claim } = await fixture(page, { paymentAmounts: ['60000', '-60000', '0'] });
+  await expect(claim).not.toContainText('Your tickets were delivered');
+  await expect(page.locator('.receipt-count')).toContainText('0.06 USDC transferred');
+  await expect(page.locator('.receipt-count')).not.toContainText('2 USDC');
+  const rows = page.locator('.receipt-table tbody tr');
+  await expect(rows.nth(0)).toContainText('Paid 0.06 USDC');
+  await expect(rows.nth(1)).toContainText('Received 0.06 USDC');
+  await expect(page.locator('.receipt-table tfoot')).toHaveText('Total transferred0.06 USDC');
+  await page.locator('.receipt-section').screenshot({ path: '.data/browser-tests/receipt-usdc-amount.png' });
+});
+
+test('a zero-payment receipt never substitutes an approved upgrade limit for an actual payment', async ({ page }) => {
+  await fixture(page, { paymentAmounts: ['0', '0', '0'] });
+  await expect(page.locator('.receipt-count')).toContainText('0 USDC transferred');
+  await expect(page.locator('.receipt-table tfoot')).toHaveText('Total transferred0 USDC');
+  await expect(page.locator('.receipt-table')).not.toContainText('Paid');
+});
+
+test('a receipt without payment proof shows unavailable instead of inventing a zero amount', async ({ page }) => {
+  await fixture(page, { missingPaymentProof: true });
+  await expect(page.locator('.receipt-count')).toContainText('USDC amount unavailable');
+  await expect(page.locator('.receipt-table tfoot')).toHaveText('Total transferredUnavailable');
 });
