@@ -1,7 +1,7 @@
 import type { IntentParams } from './contracts';
 import { formatUSDC } from './format';
 
-export const HERO_TITLE_LINES = ['Swap tickets', 'without selling first.'] as const;
+export const HERO_TITLE_LINES = ['Swap Tickets', 'without selling first.'] as const;
 export const HERO_SUBTITLE = 'Every condition you sign is checked on-chain.';
 export const EMPTY_RESULT = 'No solution found within the search bound';
 export const RANKING_RULE = 'Least gross USDC moved among candidates found within the search budget';
