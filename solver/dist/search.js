@@ -27,6 +27,10 @@ export function search(intents, state, config = DEFAULT_CONFIG) {
                 return { candidates, excluded, termination: 'timeout' };
             if (candidates.length >= config.maxCandidates)
                 return { candidates, excluded, termination: 'candidate-limit' };
+            if (config.requireOwnershipChange && new Set(subset.map(intent => intent.owner.toLowerCase())).size < 2) {
+                excluded.push({ intentHashes: subset.map(hashIntent), reason: 'Search policy: tickets would remain with the same owner' });
+                continue;
+            }
             const poolSize = subset.reduce((s, i) => s + i.offered.length, 0);
             const neededSize = subset.reduce((s, i) => s + i.exactCount, 0);
             if (poolSize !== neededSize) {
@@ -40,13 +44,19 @@ export function search(intents, state, config = DEFAULT_CONFIG) {
                 excluded.push({ intentHashes: hashes, reason: 'No feasible payment distribution' });
                 continue;
             }
-            const assignments = findAssignments(subset, pool, state, 100, startTime + config.timeoutMs);
+            const offeredBy = new Map(subset.flatMap(intent => intent.offered.map(id => [id, intent.owner.toLowerCase()])));
+            const requiredOwner = required?.owner.toLowerCase();
+            const changesOwnership = (assignment) => assignment.some((ids, index) => ids.some(id => {
+                const from = offeredBy.get(id), to = subset[index].owner.toLowerCase();
+                return from !== to && (!requiredOwner || from === requiredOwner || to === requiredOwner);
+            }));
+            const assignments = findAssignments(subset, pool, state, 100, startTime + config.timeoutMs, config.requireOwnershipChange ? changesOwnership : undefined);
             if (assignments.length === 0) {
                 if (Date.now() > startTime + config.timeoutMs)
                     return { candidates, excluded, termination: 'timeout' };
                 excluded.push({
                     intentHashes: hashes,
-                    reason: 'No valid ticket assignment satisfying all predicates',
+                    reason: config.requireOwnershipChange ? 'No valid ticket assignment satisfying all predicates and changing ticket ownership for the requested swap' : 'No valid ticket assignment satisfying all predicates',
                 });
                 continue;
             }
@@ -107,7 +117,7 @@ export function computeMinGrossPayment(intents) {
     const gross = payments.reduce((a, p) => a + (p > 0n ? p : 0n), 0n);
     return { payments, gross };
 }
-export function findAssignments(subset, pool, state, limit, deadline = Number.POSITIVE_INFINITY) {
+export function findAssignments(subset, pool, state, limit, deadline = Number.POSITIVE_INFINITY, accept) {
     const results = [];
     const used = new Set();
     const current = Array.from({ length: subset.length }, () => []);
@@ -115,7 +125,7 @@ export function findAssignments(subset, pool, state, limit, deadline = Number.PO
         if (results.length >= limit || Date.now() > deadline)
             return;
         if (idx === subset.length) {
-            if (used.size === pool.length) {
+            if (used.size === pool.length && (!accept || accept(current))) {
                 results.push(current.map((a) => [...a]));
             }
             return;

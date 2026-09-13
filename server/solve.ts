@@ -6,7 +6,13 @@ import { chainConfig, abi } from './chain';
 import { saveEvidence } from './evidence-store';
 import { readSolverState, solverReadClient } from './solve-rpc';
 
-export const SEARCH_CONFIG = { maxParticipants: 4, maxCandidates: 100, timeoutMs: 2000 };
+export const SEARCH_CONFIG = { maxParticipants: 4, maxCandidates: 100, timeoutMs: 2000, requireOwnershipChange: true };
+export function parseRequiredIntent(body: unknown): Hex | undefined {
+  const value = (body as { mustInclude?: unknown })?.mustInclude;
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(value)) throw new Error('mustInclude must be a committed intent hash');
+  return value.toLowerCase() as Hex;
+}
 export function parseSolveRequest(body: unknown): Hex[] {
   const hashes = (body as { intentHashes?: unknown })?.intentHashes;
   if (!Array.isArray(hashes) || hashes.length < 2 || hashes.length > 4 || hashes.some(h => typeof h !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(h))) {
@@ -42,7 +48,7 @@ export type PoolSource = {
   endpoint?: string | null;
 };
 
-export async function solveOnChain(hashes: Hex[], committed?: ReadonlyMap<Hex, Intent>, pool?: PoolSource) {
+export async function solveOnChain(hashes: Hex[], committed?: ReadonlyMap<Hex, Intent>, pool?: PoolSource, mustInclude?: Hex) {
   const discovered = new Map<Hex, Intent>();
   // Graph discovery stays inside its named snapshot. Missing/excluded hashes must never be
   // reconstructed from newer RPC logs while the response still claims Graph provenance.
@@ -105,7 +111,8 @@ export async function solveOnChain(hashes: Hex[], committed?: ReadonlyMap<Hex, I
   }
   await readSolverState(jobs);
   const started = performance.now();
-  const result = solve(intents, state, SEARCH_CONFIG);
+  const searchConfig = { ...SEARCH_CONFIG, ...(mustInclude ? { mustInclude } : {}) };
+  const result = solve(intents, state, searchConfig);
   const runtimeMs = performance.now() - started;
   const inputExclusions = hashes.flatMap(hash => {
     const intent = discovered.get(hash)!;
@@ -150,8 +157,8 @@ export async function solveOnChain(hashes: Hex[], committed?: ReadonlyMap<Hex, I
     candidates: result.candidates,
     excluded,
     ...(pool ? { pool: { liveIntents: pool.liveIntents, searchableIntents: intents.length, excludedIntents: pool.excluded.length, source: pool.kind ?? 'rpc', snapshotBlock: pool.snapshotBlock ?? null } } : {}),
-    bounds: SEARCH_CONFIG,
-    searchConfig: SEARCH_CONFIG, runtimeMs, simulationBlock: simulationBlock.toString(), simulationResult,
+    bounds: searchConfig,
+    searchConfig, runtimeMs, simulationBlock: simulationBlock.toString(), simulationResult,
     proposal: result.chosen, transaction,
     message: result.chosen ? 'Candidate found within the search budget' : 'No solution found within the search bound',
   });

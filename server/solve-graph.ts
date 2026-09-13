@@ -131,14 +131,14 @@ export async function graphIntents(hashes: Hex[], minBlock = 0n): Promise<GraphP
 
 /** Solve over the whole live pool discovered from the subgraph. */
 const pendingSearches = new Map<string, Promise<Awaited<ReturnType<typeof solveOnChain>>>>();
-export function solveLivePoolFromGraph(minBlock = 0n) {
+export function solveLivePoolFromGraph(minBlock = 0n, mustInclude?: Hex) {
   const { rpcUrl, addresses } = chainConfig();
-  const key = JSON.stringify([subgraphEndpoint(), rpcUrl, addresses.IntentRegistry, minBlock.toString()]);
+  const key = JSON.stringify([subgraphEndpoint(), rpcUrl, addresses.IntentRegistry, minBlock.toString(), mustInclude ?? null]);
   const pending = pendingSearches.get(key);
   if (pending) return pending;
   const result = (async () => {
     const { committed, source } = await graphPool(minBlock);
-    return solveOnChain([...committed.keys()].sort(), committed, source);
+    return solveOnChain([...committed.keys()].sort(), committed, source, mustInclude);
   })().finally(() => { if (pendingSearches.get(key) === result) pendingSearches.delete(key); });
   // Share concurrent searches only. A new receipt floor always starts a separate search;
   // completed results are never reused for a later request.

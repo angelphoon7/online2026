@@ -10,7 +10,7 @@ import { solveOnChain } from './solve';
 
 // Explicit resource guard: never silently select a prefix of an oversized pool.
 export const MAX_POOL_INTENTS = 256;
-export async function solvePoolSnapshot(snapshot: MarketSnapshot) {
+export async function solvePoolSnapshot(snapshot: MarketSnapshot, mustInclude?: Hex) {
   const live = snapshot.intents.filter(i => i.eventId === 1 && i.state === 1 && !i.expired);
   if (live.length > MAX_POOL_INTENTS) throw new Error('Live pool exceeds the 256-intent service limit. No partial pool was searched.');
   const committed = new Map<Hex, Intent>();
@@ -22,27 +22,27 @@ export async function solvePoolSnapshot(snapshot: MarketSnapshot) {
       excluded.push({ intentHashes: [record.hash], reason: 'Search bound: at most four offered/received tickets per intent' });
     } else committed.set(record.hash, intent);
   }
-  // Full live pool, sorted independently of the viewing wallet or UI checkboxes.
+  // Discover every live intent; personal searches keep the requested intent fixed.
   // Current registry state, custody and payment capacity are re-read before search.
-  return solveOnChain([...committed.keys()].sort(), committed, { liveIntents: live.length, excluded });
+  return solveOnChain([...committed.keys()].sort(), committed, { liveIntents: live.length, excluded }, mustInclude);
 }
 
 let cached: { key: string; until: number; result: Awaited<ReturnType<typeof solvePoolSnapshot>> } | undefined;
 let pending: { key: string; result: Promise<Awaited<ReturnType<typeof solvePoolSnapshot>>> } | undefined;
-export async function solveLivePool(minBlock = 0n) {
+export async function solveLivePool(minBlock = 0n, mustInclude?: Hex) {
   // Prefer subgraph discovery: it carries a snapshot block and named exclusions, both of
   // which land in the evidence. The MarketSnapshot path stays for local Anvil.
   //
   // minBlock is the freshness floor (trust rule 2). It is deliberately not part of the cache
   // key below: the RPC path keys on the snapshot's own block, which already satisfies a floor
   // or does not, and a floored request must never be answered from a pre-floor cache entry.
-  if (readSource() === 'graph') return solveLivePoolFromGraph(minBlock);
+  if (readSource() === 'graph') return solveLivePoolFromGraph(minBlock, mustInclude);
   const snapshot = await marketSnapshot(false, minBlock);
   const { addresses } = chainConfig();
-  const key = `${addresses.IntentRegistry}:${snapshot.blockNumber}:${snapshot.intents.map(i => `${i.hash}:${i.state}:${i.expired}`).sort().join(',')}`;
+  const key = `${addresses.IntentRegistry}:${mustInclude ?? 'pool'}:${snapshot.blockNumber}:${snapshot.intents.map(i => `${i.hash}:${i.state}:${i.expired}`).sort().join(',')}`;
   if (cached?.key === key && cached.until > Date.now()) return cached.result;
   if (pending?.key === key) return pending.result;
-  const result = solvePoolSnapshot(snapshot).then(value => {
+  const result = solvePoolSnapshot(snapshot, mustInclude).then(value => {
     cached = { key, until: Date.now() + 30000, result: value };
     return value;
   }).finally(() => { if (pending?.key === key) pending = undefined; });

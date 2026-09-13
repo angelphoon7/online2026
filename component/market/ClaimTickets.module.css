@@ -1,0 +1,29 @@
+.claim {
+  margin: 0 0 32px;
+  padding: 28px;
+  border: 1px solid rgba(52, 211, 153, .3);
+  background: rgba(52, 211, 153, .04);
+}
+
+.main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.main h3 { margin: 0; font-size: 24px; font-weight: 500; letter-spacing: -.03em; }
+.claim p { margin: 10px 0 0; font-size: 13px; line-height: 1.6; color: var(--muted); }
+.claim .tokens { color: #6ee7b7; font-family: var(--font-mono); }
+.main button { flex-shrink: 0; gap: 32px; }
+.claim [role='status'] { color: var(--ink); }
+.details { margin-top: 20px; font-size: 12px; }
+.details summary { color: var(--muted); cursor: pointer; }
+.details ul { margin: 12px 0 0; display: grid; gap: 8px; }
+.contract { display: inline-block; margin-top: 12px; overflow-wrap: anywhere; font-family: var(--font-mono); }
+
+@media (max-width: 600px) {
+  .claim { padding: 20px; }
+  .main { align-items: stretch; flex-direction: column; gap: 20px; }
+  .main button { width: 100%; justify-content: space-between; }
+}

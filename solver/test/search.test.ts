@@ -249,6 +249,67 @@ describe('search', () => {
   });
 });
 
+describe('personal swaps and ownership changes', () => {
+  const swapConfig = { ...config, maxParticipants: 4, requireOwnershipChange: true };
+
+  it('excludes two requests that only return tickets to their one owner', () => {
+    const intents = [makeIntent(alice, [1n], 1, 0n, 1n), makeIntent(alice, [2n], 1, 0n, 2n)];
+    const state = buildState(intents); addTicket(state, 1n); addTicket(state, 2n);
+    expect(search(intents, state, config).candidates.length).toBeGreaterThan(0);
+    const result = search(intents, state, swapConfig);
+    expect(result.candidates).toEqual([]);
+    expect(result.excluded[0].reason).toContain('same owner');
+  });
+
+  it('does not spend the candidate cap on unchanged bundles from different wallets', () => {
+    const intents = [makeIntent(alice, [1n], 1, 0n, 1n), makeIntent(bob, [2n], 1, 0n, 2n)];
+    const state = buildState(intents); addTicket(state, 1n); addTicket(state, 2n);
+    const result = search(intents, state, { ...swapConfig, maxCandidates: 1 });
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0].legs.map(leg => leg.receives)).toEqual([[2n], [1n]]);
+  });
+
+  it('keeps the requested intent in every candidate even when other pairs fill a global search', () => {
+    const intents = Array.from({ length: 20 }, (_, n) => makeIntent(n % 2 ? alice : bob, [BigInt(n + 1)], 1, 0n, BigInt(n)));
+    const requested = { ...makeIntent(charlie, [34n, 35n], 2, 0n, 21n), sessionMask: 2n };
+    const partner = makeIntent(bob, [60n, 61n], 2, 0n, 22n);
+    const pool = [...intents, partner, requested], state = buildState(pool);
+    for (const id of pool.flatMap(intent => intent.offered)) addTicket(state, id);
+    addTicket(state, 60n, { sessionId: 1 }); addTicket(state, 61n, { sessionId: 1 });
+    const result = search(pool, state, { ...swapConfig, maxParticipants: 2, maxCandidates: 1, mustInclude: hashIntent(requested) });
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0].intentHashSet).toContain(hashIntent(requested));
+    expect(result.candidates[0].legs[0].receives).toEqual([60n, 61n]);
+  });
+
+  it('cannot attach an unchanged requester to a swap between other wallets', () => {
+    const requested = { ...makeIntent(alice, [1n], 1, 0n, 1n), sessionMask: 2n };
+    const pool = [requested, ...[bob, charlie].map((owner, n) => ({ ...makeIntent(owner, [BigInt(n + 2)], 1, 0n, BigInt(n + 2)), sessionMask: 1n }))];
+    const state = buildState(pool); addTicket(state, 1n, { sessionId: 1 }); addTicket(state, 2n); addTicket(state, 3n);
+    expect(search(pool, state, swapConfig).candidates.length).toBeGreaterThan(0);
+    expect(search(pool, state, { ...swapConfig, mustInclude: hashIntent(requested) }).candidates).toEqual([]);
+  });
+
+  it('returns no unrelated candidate if the required hash is absent', () => {
+    const pool = [makeIntent(alice, [1n], 1, 0n, 1n), makeIntent(bob, [2n], 1, 0n, 2n)];
+    const state = buildState(pool); addTicket(state, 1n); addTicket(state, 2n);
+    expect(search(pool, state, { ...swapConfig, mustInclude: hashIntent({ ...pool[0], nonce: 99n }) }).candidates).toEqual([]);
+  });
+
+  it('still allows several requests from one wallet when ownership changes with another wallet', () => {
+    const pool = [makeIntent(alice, [1n], 1, 0n, 1n), makeIntent(alice, [2n], 1, 0n, 2n), makeIntent(bob, [3n], 1, 0n, 3n)];
+    const state = buildState(pool); for (const id of [1n, 2n, 3n]) addTicket(state, id);
+    const result = search(pool, state, { ...swapConfig, mustInclude: hashIntent(pool[0]) });
+    expect(result.candidates.some(candidate => candidate.intents.length === 3)).toBe(true);
+  });
+
+  it('keeps pure buyer and seller requests eligible', () => {
+    const pool = [makePureSeller(alice, [1n], -20n, 1n), makePureBuyer(bob, 1, 20n, 2n)];
+    const state = buildState(pool); addTicket(state, 1n);
+    for (const requested of pool) expect(search(pool, state, { ...swapConfig, mustInclude: hashIntent(requested) }).candidates).toHaveLength(1);
+  });
+});
+
 describe('rankCandidates', () => {
   it('ranks by gross cash moved first', () => {
     const candidates = [

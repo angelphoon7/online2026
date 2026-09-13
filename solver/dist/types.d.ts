@@ -50,6 +50,9 @@ export interface SearchConfig {
      * applied to the candidates that include this hash.
      */
     mustInclude?: Hex;
+    /** Discovery policy: require a change of ticket ownership (for the required owner,
+     * when mustInclude is set). Contract-valid returns to the same owner are omitted. */
+    requireOwnershipChange?: boolean;
 }
 export interface Candidate {
     intents: Intent[];

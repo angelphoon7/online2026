@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { decodeFunctionData, encodeFunctionResult, erc20Abi } from 'viem';
 import { solverReadClient, readSolverState } from '../solve-rpc';
-import { solveOnChain } from '../solve';
+import { solveOnChain, parseRequiredIntent } from '../solve';
 import { solveLivePoolFromGraph } from '../solve-graph';
 import { solveErrorResponse } from '../solve-error';
 import { chainConfig, abi } from '../chain';
@@ -82,7 +82,11 @@ test('full solve revalidates each unique ticket and owner once at one block, the
     return ok(encodeFunctionResult({ abi: contractAbi, functionName: decoded.functionName, result }));
   });
   const entries = intents.map(i => [hashIntent(i), i] as const);
-  const result = await solveOnChain(entries.map(([hash]) => hash), new Map(entries), { kind: 'subgraph', snapshotBlock: '250', liveIntents: 3, excluded: [] });
+  const target = entries[1][0];
+  const result = await solveOnChain(entries.map(([hash]) => hash), new Map(entries), { kind: 'subgraph', snapshotBlock: '250', liveIntents: 3, excluded: [] }, target);
+  assert.equal(result.searchConfig.mustInclude, target);
+  assert.equal(result.searchConfig.requireOwnershipChange, true);
+  assert.ok(result.chosen?.intentHashes.includes(target));
   assert.equal(result.intentsConsidered, 3);
   for (const [name, count] of [['state', 3], ['meta', 4], ['depositor', 4], ['balanceOf', 2], ['allowance', 2]] as const) assert.equal(calls.filter(c => c.name === name).length, count, name);
   assert.ok(calls.filter(c => c.name !== 'settle').every(c => c.block === '0x100'));
@@ -122,4 +126,27 @@ test('rate limits, indexing waits and evidence storage errors retain their disti
   }
   t.mock.method(globalThis, 'fetch', async () => new Response('<html>Unavailable</html>', { status: 504 }));
   await assert.rejects(findPoolSettlement(), error => solverErrorMessage(error).includes('temporarily unavailable'));
+});
+
+test('personal pool requests send the required hash and reject malformed targets', async t => {
+  const hash = `0x${'AB'.repeat(32)}` as const;
+  assert.equal(parseRequiredIntent({ mustInclude: hash }), hash.toLowerCase());
+  assert.equal(parseRequiredIntent({}), undefined);
+  for (const value of [null, '', 123, [], '0x123']) assert.throws(() => parseRequiredIntent({ mustInclude: value }), /committed intent hash/);
+  t.mock.method(globalThis, 'fetch', async (_url: string, init: RequestInit) => {
+    assert.deepEqual(JSON.parse(String(init.body)), { mustInclude: hash, minBlock: '123' });
+    return Response.json({ proposal: null });
+  });
+  await findPoolSettlement(123n, hash);
+});
+
+test('concurrent personal Graph searches never share the result for a different requested intent', async t => {
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  t.mock.method(globalThis, 'fetch', async () => { await gate; return Response.json({ error: 'fixture' }, { status: 503 }); });
+  const a = `0x${'1'.repeat(64)}` as const, b = `0x${'2'.repeat(64)}` as const;
+  const first = solveLivePoolFromGraph(300n, a), same = solveLivePoolFromGraph(300n, a), other = solveLivePoolFromGraph(300n, b);
+  assert.equal(first, same); assert.notEqual(first, other);
+  const settled = Promise.allSettled([first, same, other]); release();
+  assert.ok((await settled).every(result => result.status === 'rejected'));
 });

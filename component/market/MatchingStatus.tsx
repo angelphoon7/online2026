@@ -15,9 +15,10 @@ export default function MatchingStatus({ request, selected, solving, error, prop
     : matchingStatus(request, wholePool ? [...selected, request.hash] : selected, solving, error, proposal, evidence);
   return <section className="workspace-panel matching-status" aria-label="Your swap request">
     <span className="eyebrow">Your latest swap request</span>
+    <p className="mono">Your offered tickets: {request.offered.map(id => `#${id}`).join(', ') || 'None'}</p>
     <div role="status" aria-live="polite"><h2>{status.title}</h2><p>{status.detail}</p></div>
     <a className="mono hash" href={`${EXPLORER}/tx/${request.commitTx}`} target="_blank" rel="noreferrer">View your intent commitment ↗</a>
-    {live && <><p className="quiet">Your intent is checked once after creation. Use the matching button to check again.</p>
+    {live && <><p className="quiet">Matching searches the pool for a swap that includes this request.</p>
       <p className="quiet">You can close the page: the intent stays on-chain and another proposer can settle it while it remains valid. This demo does not run a background settlement worker for you.</p></>}
   </section>;
 }

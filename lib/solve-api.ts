@@ -30,12 +30,12 @@ export interface SettlementProposal {
 // indexed block is a truthful answer.
 const body = (fields: Record<string, unknown>, minBlock?: bigint) =>
   JSON.stringify(minBlock && minBlock > 0n ? { ...fields, minBlock: minBlock.toString() } : fields);
-export async function findSettlement(intents: { hash: Hex }[], minBlock?: bigint): Promise<{ proposal: SettlementProposal | null; evidence: SolveEvidence }> {
-  const response = await fetch('/api/solve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body({ intentHashes: intents.map(i => i.hash) }, minBlock) });
+export async function findSettlement(intents: { hash: Hex }[], minBlock?: bigint, mustInclude?: Hex): Promise<{ proposal: SettlementProposal | null; evidence: SolveEvidence }> {
+  const response = await fetch('/api/solve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body({ intentHashes: intents.map(i => i.hash), mustInclude }, minBlock) });
   return parseSolveResponse(response);
 }
-export async function findPoolSettlement(minBlock?: bigint): Promise<{ proposal: SettlementProposal | null; evidence: SolveEvidence }> {
-  return parseSolveResponse(await fetch('/api/solve/pool', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body({}, minBlock) }));
+export async function findPoolSettlement(minBlock?: bigint, mustInclude?: Hex): Promise<{ proposal: SettlementProposal | null; evidence: SolveEvidence }> {
+  return parseSolveResponse(await fetch('/api/solve/pool', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body({ mustInclude }, minBlock) }));
 }
 async function parseSolveResponse(response: Response): Promise<{ proposal: SettlementProposal | null; evidence: SolveEvidence }> {
   const data = await response.json().catch(() => null);

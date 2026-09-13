@@ -17,7 +17,7 @@ import { settlementShape } from '@/lib/settlement-shape';
 import { CONTRACTS, CHAIN } from '@/lib/config';
 import { getWalletClient, approveNFTsForEscrow, depositTickets, withdrawTickets, signAndCommitIntent, revokeIntent, submitSettlement, approveUSDC, redeemTicket, type IntentParams } from '@/lib/contracts';
 import { findSettlement, findPoolSettlement, type SettlementProposal, type SolveEvidence } from '@/lib/solve-api';
-import { solverErrorMessage } from '@/lib/solve-errors';
+import { SolveRequestError, solverErrorMessage } from '@/lib/solve-errors';
 import { formatUSDC, truncateAddress } from '@/lib/format';
 import { restoreIntent, type ChainReceipt, type ChainTicket } from '@/lib/market-types';
 import { HERO_TITLE_LINES, EMPTY_RESULT, POOL_NOTE, condition, EXPLORER, POOL_LABEL, RANKING_RULE, SOLVER_NOTE, maskClasses } from '@/lib/ui-copy';
@@ -31,6 +31,8 @@ import JudgeControls, { type BudgetChange, type Revocation } from './JudgeContro
 import AgentDrawer from './AgentDrawer';
 import ActivityNotification from './ActivityNotification';
 import EventLoadingDialog from './EventLoadingDialog';
+import ClaimTickets from './ClaimTickets';
+import { proposalForWallet, receiptOutcomes, receiptTitle, walletChangesTickets } from '@/lib/personal-swap';
 import { automaticSelection, latestRequest } from '@/lib/matching-status';
 import { matchUnavailable } from '@/lib/match-review';
 import { waitForIndexed } from '@/shared/graph';
@@ -46,9 +48,6 @@ import SpecularButton from './SpecularButton';
 
 const scrollTo = (element: HTMLElement | null) => element?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
 const equal = (a?: string | null, b?: string | null) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
-const receivedTickets = (receipt: ChainReceipt, address: Address) => receipt.status === 'success'
-  ? [...new Set(receipt.participants.filter(p => equal(p.owner, address)).flatMap(p => p.receives))]
-  : [];
 async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
   const r = await fetch(url, { cache: 'no-store', ...init });
   const body = await r.json();
@@ -84,7 +83,6 @@ export default function Market() {
   const [status, setStatus] = useState('idle');
   const [rejection, setRejection] = useState<NamedRejection | null>(null);
   const [receipt, setReceipt] = useState<ChainReceipt | null>(null);
-  const [swapImport, setSwapImport] = useState<{ hash: Hex; owner: Address; message: string } | null>(null);
   const [nftClaim, setNftClaim] = useState<{ owner: Address; tokenIds: string[]; hashes: Hex[]; message: string } | null>(null);
   const [approved, setApproved] = useState(false);
   const [attack, setAttack] = useState<Attack>('siphon');
@@ -134,8 +132,11 @@ export default function Market() {
   const [agentOpen, setAgentOpen] = useState(false);
   const [agentHash, setAgentHash] = useState<Hex | null>(null);
   const [chainBlock, setChainBlock] = useState<string | null>(null);
+  const request = market ? latestRequest(market, account) : undefined;
+  const requiredHash = request?.state === 1 && !request.expired ? request.hash : undefined;
   const unavailableMatch = matchUnavailable(proposal, evidence, market);
-  const readyMatch = !!proposal && !!evidence?.simulationResult?.success && !unavailableMatch;
+  const readyMatch = !!proposal && !!evidence?.simulationResult?.success && !unavailableMatch
+    && (!account || (!!requiredHash && proposalForWallet(proposal, account, requiredHash)));
 
   const runSolver = useCallback(async (hashes: Hex[], wholePool = false) => {
     const snapshot = freshness.getSnapshot();
@@ -151,12 +152,25 @@ export default function Market() {
       // the user's own commit or revocation has not happened.
       const block = BigInt(snapshot.market?.blockNumber ?? 0);
       const floor = block > snapshot.floor ? block : snapshot.floor;
-      const result = wholePool ? await findPoolSettlement(floor) : await findSettlement(hashes.map(hash => ({ hash })), floor);
+      const personal = account && snapshot.market ? latestRequest(snapshot.market, account) : undefined;
+      if (account && (!personal || personal.state !== 1 || personal.expired)) throw new SolveRequestError('Create a live swap request before searching for your replacement tickets.', 409, 'PersonalMatchRequired');
+      const target = personal?.hash;
+      if (target && !wholePool && !hashes.includes(target)) throw new SolveRequestError('Include your own request in the selected intents.', 409, 'PersonalMatchRequired');
+      const result = wholePool ? await findPoolSettlement(floor, target) : await findSettlement(hashes.map(hash => ({ hash })), floor, target);
       if (version !== searchVersion.current || !freshness.current(snapshot.revision)) return;
+      if (result.proposal && account && !proposalForWallet(result.proposal, account, target)) {
+        throw new SolveRequestError('This result does not swap your requested tickets. Search again for your own request.', 409, 'PersonalMatchRequired');
+      }
       setProposal(result.proposal); setEvidence(result.evidence);
     } catch (e) { if (version === searchVersion.current) { setProposal(null); setEvidence(null); setSolverError(solverErrorMessage(e)); } }
     finally { if (version === searchVersion.current) { searchInFlight.current = false; setSolving(false); } }
-  }, [freshness]);
+  }, [freshness, account]);
+  useEffect(() => {
+    // A late search for the previous account must never become the new account's match.
+    searchVersion.current++; searchInFlight.current = false;
+    const timer = setTimeout(() => { setSolving(false); setProposal(null); setEvidence(null); setSolverError(''); }, 0);
+    return () => clearTimeout(timer);
+  }, [account]);
   useEffect(() => {
     // Persist only the public block floor, scoped to this chain and registry. Reloading or
     // reconnecting a wallet must not forget a confirmed write during indexer lag.
@@ -396,15 +410,8 @@ export default function Market() {
     if (result.status === 'success') { setReceipt(result); setTimeout(() => scrollTo(receiptPanel.current), 50); }
     return result;
   };
-  const importReplacementTickets = async (confirmed: ChainReceipt, address: Address) => {
-    const ids = receivedTickets(confirmed, address);
-    if (!ids.length) return;
-    setSwapImport({ hash: confirmed.hash, owner: address, message: 'Swap confirmed. Requesting NFT display in MetaMask...' });
-    const message = await requestTicketImports(address, ids);
-    setSwapImport({ hash: confirmed.hash, owner: address, message });
-  };
   const settle = (malicious?: Attack) => action(malicious ? 'Submit dishonest proposal' : 'Propose and settle', async address => {
-    setStatus('preparing'); setRejection(null); setReceipt(null); setSwapImport(null);
+    setStatus('preparing'); setRejection(null); setReceipt(null);
     let broadcast = false;
     try {
       let payload = proposal;
@@ -420,6 +427,11 @@ export default function Market() {
         if (actual?.name !== expected) throw new Error(`This state does not isolate ${expected}. ${actual?.name ?? 'Refresh the pool and try again.'}`);
       } else {
         if (!payload || !readyMatch || matchUnavailable(payload, evidence, freshness.getSnapshot().market)) throw new Error('This match is no longer available. Check all intents to search again.');
+        const currentMarket = freshness.getSnapshot().market;
+        const personal = currentMarket ? latestRequest(currentMarket, address) : undefined;
+        if (!personal || personal.state !== 1 || personal.expired || !proposalForWallet(payload, address, personal.hash)) {
+          throw new Error('This match does not swap your current request. Search again with your receiving wallet.');
+        }
         // Validate exactly what was reviewed, without re-running a search that could
         // change its tickets or payments. Simulation does not reserve chain state.
         await simulate(payload, address);
@@ -433,7 +445,6 @@ export default function Market() {
       const verified = await openReceipt(hash);
       setStatus(r.status === 'success' ? 'confirmed' : 'reverted'); setRejection(verified.rejection);
       setProposal(null); setEvidence(null);
-      if (r.status === 'success' && verified.status === 'success') await importReplacementTickets(verified, address);
       await refreshRequest;
     } catch (e) {
       if (!broadcast) {
@@ -466,13 +477,12 @@ export default function Market() {
   });
 
   const live = market ? getIntentPool(market) : [];
-  const request = market ? latestRequest(market, account) : undefined;
   const tickets = market ? getTicketsFor(null, market) : [];
   const sessions = [...new Set(tickets.map(t => t.sessionId))].sort((a, b) => a - b);
   const participants = [...new Set(market?.intents.map(i => i.owner.toLowerCase()) ?? [])].sort();
   const walletLabel = (address: string) => equal(address, account) ? 'You' : participants.includes(address.toLowerCase()) ? `Wallet ${participants.indexOf(address.toLowerCase()) + 1}` : truncateAddress(address);
   const disabled = !!busy || wallet.isConnecting || indexingBlock !== null;
-  const replacementIds = receipt && account ? receivedTickets(receipt, account) : [];
+  const receiptRows = receipt ? receiptOutcomes(receipt) : [];
   const selectIntent = (hash: Hex) => { setWholePool(false); searchVersion.current++; searchInFlight.current = false; setSolving(false); setSelected(s => s.includes(hash) ? s.filter(h => h !== hash) : [...s, hash]); setProposal(null); setEvidence(null); setSolverError(''); };
 
   return <div className={`reshuffle-ui ${currentView !== 'home' ? 'page-market' : 'page-home'}`}>
@@ -779,7 +789,7 @@ export default function Market() {
                   <div className="solver-actions"><button className="secondary" disabled={solving || disabled || matchAfterCommit || (!wholePool && (selected.length < 2 || selected.length > 4))} onClick={() => void runSolver(selected, wholePool)}>{solving ? 'Reading and searching…' : wholePool ? 'Check all intents' : 'Run solver'}{!wholePool && <span className="mono"> ({selected.length}/4)</span>}</button><button className="text-button" onClick={() => { setAgentHash(current => current ?? request?.hash ?? live[0]?.hash ?? null); setAgentOpen(true); }}>Ask the agent</button>{resetEnabled && equal(account, operator) && <button className="text-button" disabled={disabled} onClick={() => void reset()}>Reset demo</button>}</div>
                   <p className="quiet">{readyMatch && !solving ? 'Your match stays here while you review. Availability is checked again before settlement.' : wholePool ? 'Matching runs once after you create an intent. Click Check all intents whenever you want to search again.' : 'Choose 2–4 requests, then Run solver.'}</p>{!wholePool && <button className="text-button" disabled={disabled || solving || matchAfterCommit} onClick={() => { setWholePool(true); void runSolver([], true); }}>Check all intents</button>}
                   {solving && <p className="quiet" role="status">Checking current intents and ticket availability...</p>}{evidence?.pool && <details className="search-details" open={searchDetailsOpen} onToggle={event => setSearchDetailsOpen(event.currentTarget.open)}><summary>Search details and evidence</summary><p className="quiet mono">{evidence.pool.liveIntents} live requests / {evidence.pool.searchableIntents} within ticket-count limits / {evidence.pool.excludedIntents} excluded with reasons. Maximum 4 participants per candidate, 100 candidates, 2-second search budget. <a href={`/api/evidence/${evidence.id}`} target="_blank" rel="noreferrer">View search evidence and exclusion reasons</a></p></details>}{evidence?.search && !solving && <p className="quiet">{evidence.search.termination === 'complete' ? 'Search completed within the configured bounds.' : 'Search budget reached. Further combinations may remain unchecked.'}</p>}{solverError && <p role="alert">{solverError}</p>}{evidence && !proposal && !solving && <div className="matching-empty" role="status"><h3>Waiting for a match</h3><p>{EMPTY_RESULT}. New requests may make a swap possible; click Check all intents to search again.</p>{evidence.candidatesExcluded.some(i => /capacity|allowance/i.test(i.reason)) && <p>Insufficient USDC balance or allowance for a candidate. Update spending capacity before settling.</p>}</div>}
-                  {proposal && <div className="candidate"><p className="eyebrow">{solving ? 'Rechecking previous match' : readyMatch ? 'Candidate found - awaiting settlement' : 'Candidate needs rechecking'}</p><p className="quiet">{solving ? 'The previous result stays visible while current conditions are checked. Settlement is unavailable until this search finishes.' : evidence?.simulationResult?.success ? 'A candidate is not a completed swap. Propose and settle submits it for on-chain validation.' : 'This candidate has not passed simulation and cannot be submitted yet.'}</p><div className="panel-heading"><strong>{settlementShape(proposal)}</strong><span className="mono">{proposal.candidatesFound} candidates</span></div><details className="search-details" open={matchDetailsOpen} onToggle={event => setMatchDetailsOpen(event.currentTarget.open)}><summary>Why this match?</summary><p className="quiet">{RANKING_RULE}. Ties: fewer participants, then ordered intent hashes. Source block <span className="mono">{evidence?.source.blockNumber}</span>.</p></details><table className="net-table"><thead><tr><th>Participant</th><th>USDC net</th></tr></thead><tbody>{proposal.legs.map(l => <tr key={l.intentHash}><td><a href={`${EXPLORER}/address/${l.owner}`} title={l.owner} target="_blank" rel="noreferrer">{walletLabel(l.owner)}</a></td><td className="mono">{l.netPayment > 0n ? '−' : l.netPayment < 0n ? '+' : ''}{formatUSDC(l.netPayment < 0n ? -l.netPayment : l.netPayment)}</td></tr>)}</tbody><tfoot><tr><td>Σ</td><td className="mono">{formatUSDC(proposal.legs.reduce((n, l) => n - l.netPayment, 0n))}</td></tr></tfoot></table></div>}
+                  {proposal && <div className="candidate"><p className="eyebrow">{solving ? 'Rechecking previous match' : readyMatch ? 'Candidate found - awaiting settlement' : 'Candidate needs rechecking'}</p><p className="quiet">{solving ? 'The previous result stays visible while current conditions are checked. Settlement is unavailable until this search finishes.' : evidence?.simulationResult?.success ? 'A candidate is not a completed swap. Propose and settle submits it for on-chain validation.' : 'This candidate has not passed simulation and cannot be submitted yet.'}</p><div className="panel-heading"><strong>{settlementShape(proposal)}</strong><span className="mono">{proposal.candidatesFound} candidates</span></div><details className="search-details" open={matchDetailsOpen} onToggle={event => setMatchDetailsOpen(event.currentTarget.open)}><summary>Why this match?</summary><p className="quiet">{RANKING_RULE}. Ties: fewer participants, then ordered intent hashes. Source block <span className="mono">{evidence?.source.blockNumber}</span>.</p></details><table className="net-table"><thead><tr><th>Participant</th><th>Offered tickets</th><th>Receives</th><th>USDC net</th></tr></thead><tbody>{proposal.legs.map((l, index) => <tr key={l.intentHash}><td><a href={`${EXPLORER}/address/${l.owner}`} title={l.owner} target="_blank" rel="noreferrer">{walletLabel(l.owner)} · {truncateAddress(l.owner)}</a></td><td className="mono">{proposal.intents[index].offered.map(id => `#${id}`).join(', ') || '—'}</td><td className="mono">{l.receives.map(id => `#${id}`).join(', ') || '—'}</td><td className="mono">{l.netPayment > 0n ? '−' : l.netPayment < 0n ? '+' : ''}{formatUSDC(l.netPayment < 0n ? -l.netPayment : l.netPayment)}</td></tr>)}</tbody><tfoot><tr><td colSpan={3}>Σ</td><td className="mono">{formatUSDC(proposal.legs.reduce((n, l) => n - l.netPayment, 0n))}</td></tr></tfoot></table></div>}
                   <button className="primary full" disabled={disabled || solving || !readyMatch} onClick={() => void settle()}>Propose and settle <span>↗</span></button><p className="quiet">When a match is ready, click Propose and settle and confirm the transaction in your wallet. The proposer pays gas in USDC. Participants do not sign their intents again. Your swap is complete only after the receipt confirms success.</p>
                   <JudgeControls freshness={freshness} busy={disabled} label={walletLabel} onBudget={applyJudgeBudget} onRevoke={revokeJudgeIntent} />
                   <details className="dishonest"><summary>Submit dishonest proposal ▾</summary><p>Intentionally submit a failing transaction. The proposer pays its gas in USDC. The adjacency case uses the separate live rejection-demo intents.</p><select value={attack} onChange={e => setAttack(e.target.value as Attack)}><option value="siphon">Siphon 20 USDC</option><option value="adjacency">Non-adjacent seats</option><option value="count">Wrong count</option></select><button className="secondary" disabled={disabled || solving || !proposal} onClick={() => void settle(attack)}>Submit dishonest proposal</button></details>
@@ -805,15 +815,11 @@ export default function Market() {
               <EventLoadingDialog error={readError} onRetry={() => refresh(true)} onBack={() => navigateTo('events')} />
             </section>
           )}
-          {receipt && <section ref={receiptPanel} className="receipt-section"><div className="section-heading"><div><span className="eyebrow passed">Settlement confirmed</span><h2>Different tickets.<br />Every condition met.</h2></div><span className="receipt-stamp passed">✓</span></div><a className="hash" href={`${EXPLORER}/tx/${receipt.hash}`} target="_blank" rel="noreferrer">{receipt.hash} ↗</a><p className="receipt-count mono">{receipt.ticketTransfers} ticket transfers · {receipt.usdcTransfers} USDC transfers · 1 transaction</p><table className="receipt-table"><thead><tr><th>Participant</th><th>Before / offered</th><th>After / received</th><th>USDC net</th></tr></thead><tbody>{receipt.participants.map((p, n) => <tr key={`${p.owner}:${n}`}><td><a href={`${EXPLORER}/address/${p.owner}`} title={p.owner} target="_blank" rel="noreferrer">{walletLabel(p.owner)}</a></td><td className="mono">{p.offered.map(id => `#${id}`).join(', ') || '—'}</td><td className="mono">{p.receives.map(id => `#${id}`).join(', ') || '—'}</td><td className="mono">{BigInt(p.netPayment) > 0n ? '−' : BigInt(p.netPayment) < 0n ? '+' : ''}{formatUSDC(BigInt(p.netPayment) < 0n ? -BigInt(p.netPayment) : BigInt(p.netPayment))}</td></tr>)}</tbody><tfoot><tr><td colSpan={3}>Σ =</td><td className="mono passed">{formatUSDC(BigInt(receipt.netSum))}</td></tr></tfoot></table><p>{receipt.independent ? SOLVER_NOTE : 'Submitted by a participant wallet.'} <a href={`${EXPLORER}/address/${receipt.proposer}`} title={receipt.proposer} target="_blank" rel="noreferrer">{walletLabel(receipt.proposer)}</a></p><p className="quiet">Ticket recipients are checked against receipt logs. USDC transfer count excludes native gas. A different proposer address alone does not establish that participant browsers were offline.</p><div className="receipt-actions"><a className="secondary" href={`${EXPLORER}/tx/${receipt.hash}`} target="_blank" rel="noreferrer">View on Arc explorer ↗</a><button className="secondary" onClick={() => void navigator.clipboard.writeText(receipt.hash).then(() => setNotice('Hash copied.')).catch(() => setNotice('Clipboard unavailable. Select and copy the displayed hash.'))}>Copy hash</button></div>{replacementIds.length > 0 && <section className="wallet-nft-import swap-nft-import">
-            <h3>Your replacement tickets</h3>
-            <p>Settlement transferred these tickets directly to your wallet. No withdrawal is needed.</p>
-            <p role="status">{swapImport?.hash === receipt.hash && equal(swapImport.owner, account) ? swapImport.message : 'Add your received tickets to the wallet NFT display.'}</p>
-            <p className="quiet">{WALLET_IMPORT_NOTE}</p>
-            <span className="mono hash">NFT contract: {CONTRACTS.ticketNFT}</span>
-            <ul>{replacementIds.map(id => <li key={id} className="mono">Token ID: {id}</li>)}</ul>
-            <button className="secondary" disabled={disabled} onClick={() => void action('Add replacement tickets to wallet', address => importReplacementTickets(receipt, address))}>Add to wallet</button>
-          </section>}<div className="redeem-list">{receipt.participants.filter(p => equal(p.owner, account)).flatMap(p => p.receives).map(id => { const t = tickets.find(t => t.tokenId === id); return <div key={id}><span className="mono">Ticket #{id}</span>{t?.status === 1 ? <span className="badge">USED</span> : <button disabled={disabled || !t || !equal(t.owner, account)} onClick={() => void action('Redeem', async address => { await track(await redeemTicket(address, BigInt(id))); await refreshWritten(); })}>Redeem</button>}</div>; })}</div><p className="quiet">Redeem marks your ticket used permanently. Only its current holder can redeem it.</p></section>}
+          {receipt && <section ref={receiptPanel} className="receipt-section"><div className="section-heading"><div><span className="eyebrow passed">Settlement confirmed</span><h2>{receiptTitle(receipt, account)}</h2></div><span className="receipt-stamp passed">✓</span></div>
+            <ClaimTickets key={receipt.hash} receipt={receipt} wallet={wallet} disabled={!!busy} />
+            {receiptRows.every(row => !walletChangesTickets(receipt.participants, row.owner)) && <p className="quiet">This transaction returned tickets to their existing owner. Ticket ownership did not change.</p>}
+            {account && !receiptRows.some(row => equal(row.owner, account)) && <div className="activity"><p>This settlement did not include your wallet or settle your request.</p><p>Your deposited tickets: {tickets.filter(ticket => equal(ticket.depositor, account) && equal(ticket.owner, CONTRACTS.escrow)).map(ticket => `#${ticket.tokenId}`).join(', ') || 'None in the loaded state'}</p><button className="secondary" disabled={disabled || solving || !requiredHash} onClick={() => { setWorkflowView('matching'); setWholePool(true); void runSolver([], true); scrollTo(workspace.current); }}>Find my match</button></div>}
+            <a className="hash" href={`${EXPLORER}/tx/${receipt.hash}`} target="_blank" rel="noreferrer">{receipt.hash} ↗</a><p className="receipt-count mono">{receipt.ticketTransfers} ticket transfers · {receipt.usdcTransfers} USDC transfers · 1 transaction</p><table className="receipt-table"><thead><tr><th>Participant</th><th>Before / offered</th><th>After / received</th><th>USDC net</th></tr></thead><tbody>{receiptRows.map((p, n) => <tr key={`${p.owner}:${n}`}><td><a href={`${EXPLORER}/address/${p.owner}`} title={p.owner} target="_blank" rel="noreferrer">{walletLabel(p.owner)} · {truncateAddress(p.owner)}</a></td><td className="mono">{p.offered.map(id => `#${id}`).join(', ') || '—'}</td><td className="mono">{p.receives.map(id => `#${id}`).join(', ') || '—'}</td><td className="mono">{BigInt(p.netPayment) > 0n ? '−' : BigInt(p.netPayment) < 0n ? '+' : ''}{formatUSDC(BigInt(p.netPayment) < 0n ? -BigInt(p.netPayment) : BigInt(p.netPayment))}</td></tr>)}</tbody><tfoot><tr><td colSpan={3}>Σ =</td><td className="mono passed">{formatUSDC(BigInt(receipt.netSum))}</td></tr></tfoot></table><p>{receipt.independent ? SOLVER_NOTE : 'Submitted by a participant wallet.'} <a href={`${EXPLORER}/address/${receipt.proposer}`} title={receipt.proposer} target="_blank" rel="noreferrer">{walletLabel(receipt.proposer)}</a></p><p className="quiet">Ticket recipients are checked against receipt logs. USDC transfer count excludes native gas. A different proposer address alone does not establish that participant browsers were offline.</p><div className="receipt-actions"><a className="secondary" href={`${EXPLORER}/tx/${receipt.hash}`} target="_blank" rel="noreferrer">View on Arc explorer ↗</a><button className="secondary" onClick={() => void navigator.clipboard.writeText(receipt.hash).then(() => setNotice('Hash copied.')).catch(() => setNotice('Clipboard unavailable. Select and copy the displayed hash.'))}>Copy hash</button></div><div className="redeem-list">{receipt.participants.filter(p => equal(p.owner, account)).flatMap(p => p.receives).map(id => { const t = tickets.find(t => t.tokenId === id); return <div key={id}><span className="mono">Ticket #{id}</span>{t?.status === 1 ? <span className="badge">USED</span> : <button disabled={disabled || !t || !equal(t.owner, account)} onClick={() => void action('Redeem', async address => { await track(await redeemTicket(address, BigInt(id))); await refreshWritten(); })}>Redeem</button>}</div>; })}</div><p className="quiet">Redeem marks your ticket used permanently. Only its current holder can redeem it.</p></section>}
           <AgentDrawer open={agentOpen} onClose={() => setAgentOpen(false)} intentHash={agentHash} chainBlock={chainBlock} freshness={freshness} label={walletLabel} />
         </>
       )}

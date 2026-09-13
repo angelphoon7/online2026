@@ -21,7 +21,7 @@ npm.cmd run start -- --port 3101
 | `GET /api/market?minBlock=N` | Public market state from the selected Graph/RPC adapter. |
 | `POST /api/graph` | Same-origin GraphQL proxy; query credentials stay on the server. |
 | `POST /api/solve` | Accepts `{ "intentHashes": ["0x…", "0x…"], "minBlock": "N" }`, discovers signed conditions, reads chain state, searches and simulates. The block floor is optional. |
-| `POST /api/solve/pool` | Searches the full supported live pool; optional `{ "minBlock": "N" }`. Returns source, snapshot block, bounds, candidates and simulation evidence. |
+| `POST /api/solve/pool` | Searches the full supported live pool; optional `{ "minBlock": "N", "mustInclude": "0x…" }`. A personal search requires that exact intent in every candidate. Returns source, snapshot block, bounds, candidates and simulation evidence. |
 | `GET /api/agent/diagnose/{hash}?minBlock=N` | Deterministic diagnosis and evidence; no wallet or model key required. |
 | `POST /api/agent/ask` | `{ "intentHash": "0x…", "question": "Why can't this intent settle?", "minBlock": "N" }`. Model tool selection/narration when configured, deterministic baseline diagnosis otherwise. |
 | `GET /api/evidence/{id}` | Returns the saved evidence, including source block, considered hashes, excluded candidates, chosen proposal, search caps and simulation result. |
@@ -70,6 +70,8 @@ floor returns HTTP 409; requested hashes unavailable in the searchable snapshot 
 422 without a log fallback. [Live HTTP responses and source logs](../docs/GRAPH_4A_6C.md).
 
 The ranking rule is least gross cash moved among candidates found within the search budget, then fewer participants, then the lexicographically smallest ordered set of hashes. The backend sorts input hashes before searching. No solution found within the search bound does not establish infeasibility.
+
+Personal matching fixes the connected wallet's latest live request with `mustInclude` before enumerating combinations. Caches separate results by this hash. The service omits candidates that only return tickets to their existing owners; a personal result must change ticket ownership for the requested owner. This is a solver discovery policy, not an additional contract condition. Several intents from one owner remain supported when the settlement changes ownership with another wallet. Receipt rows group that owner's intents, and claiming is shown only to recipients whose ticket bundle changed.
 
 All capacity, custody, ticket and intent reads use one block snapshot. A subsequent simulation uses a fresh block. The local runner simulates again immediately before signing and sending. Simulation does not lock state; Settlement validates again at execution. A failed proposal costs its proposer gas.
 
