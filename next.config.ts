@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
   // Hosted credentials come from the provider's environment, never local file traces.
   outputFileTracingExcludes: {
     "/*": ["./.env", "./.env.*", "./.data/**/*", "./broadcast/**/*"],

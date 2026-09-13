@@ -64,6 +64,9 @@ export default function Market() {
   const refresh = freshness.refresh;
   const [opened, setOpened] = useState(false);
   const [poolOpen, setPoolOpen] = useState(false);
+  const [seatMapOpen, setSeatMapOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [workflowView, setWorkflowView] = useState<'intent' | 'matching'>('intent');
   const [searchDetailsOpen, setSearchDetailsOpen] = useState(false);
   const [matchDetailsOpen, setMatchDetailsOpen] = useState(false);
   const [selected, setSelected] = useState<Hex[]>([]);
@@ -122,6 +125,7 @@ export default function Market() {
 
   const workspace = useRef<HTMLElement>(null);
   const receiptPanel = useRef<HTMLElement>(null);
+  const historyDialog = useRef<HTMLDialogElement>(null);
   const activeAction = useRef(false);
   const searchVersion = useRef(0);
   const searchInFlight = useRef(false);
@@ -195,6 +199,17 @@ export default function Market() {
     const timer = setInterval(read, 15000);
     return () => { cancelled = true; clearInterval(timer); };
   }, [agentOpen]);
+  useEffect(() => {
+    const dialog = historyDialog.current;
+    if (!historyOpen || !dialog) return;
+    const previousOverflow = document.body.style.overflow;
+    dialog.showModal();
+    document.body.style.overflow = 'hidden';
+    return () => {
+      if (dialog.open) dialog.close();
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [historyOpen]);
   useEffect(() => {
     let cancelled = false;
     if (account) void getTicketsApproved(account).then(value => { if (!cancelled) setApproved(value); }).catch(() => { if (!cancelled) setApproved(false); });
@@ -540,7 +555,6 @@ export default function Market() {
               >
                 ← Back to Home
               </button>
-              <h2>Choose a night.<br />Keep your options.</h2>
             </div>
             <p><br /></p>
           </div>
@@ -569,28 +583,28 @@ export default function Market() {
         <>
           {market ? (
             <section id="workspace" ref={workspace} className="workspace-section">
-              <div className="section-heading">
-                <div>
-                  <button
-                    type="button"
-                    className="back-nav-btn"
-                    onClick={() => navigateTo('events')}
-                  >
-                    ← Back to Events
-                  </button>
-                  <h2>Keep the ticket.<br />Change the outcome.</h2>
-                </div>
-                <div>
-                  <p className="mono workspace-chain-status" role="status" aria-live="polite">{indexingBlock !== null ? indexingMessage(indexingBlock) : <>
-                    <a className="workspace-block-link" href={`${EXPLORER}/block/${market.blockNumber}`} target="_blank" rel="noopener noreferrer" aria-label={`View Arc Testnet block ${market.blockNumber} (opens in a new tab)`}>
-                      ARC BLOCK {market.blockNumber} <span aria-hidden="true">↗</span>
-                    </a>
-                    <span className="workspace-block-source">/ {market.source === 'graph' ? 'VIA THE GRAPH' : 'VIA DIRECT RPC READS'}</span>
-                  </>}</p>
-                </div>
-              </div>
+              <header className="workspace-header">
+                <button
+                  type="button"
+                  className="back-nav-btn"
+                  onClick={() => navigateTo('events')}
+                >
+                  ← Back to Events
+                </button>
+                <h2>Keep the ticket.<br />Change the outcome.</h2>
+                <p className="mono workspace-chain-status" role="status" aria-live="polite">{indexingBlock !== null ? indexingMessage(indexingBlock) : <>
+                  <a className="workspace-block-link" href={`${EXPLORER}/block/${market.blockNumber}`} target="_blank" rel="noopener noreferrer" aria-label={`View Arc Testnet block ${market.blockNumber} (opens in a new tab)`}>
+                    ARC BLOCK {market.blockNumber} <span aria-hidden="true">↗</span>
+                  </a>
+                  <span className="workspace-block-source">/ {market.source === 'graph' ? 'VIA THE GRAPH' : 'VIA DIRECT RPC READS'}</span>
+                </>}</p>
+                <nav className="workspace-nav" aria-label="Workspace navigation">
+                  <button type="button" aria-haspopup="dialog" aria-expanded={poolOpen} onClick={() => setPoolOpen(true)}>{indexingBlock !== null ? 'Intent pool: indexing' : `Intent Pool (${live.length})`}</button>
+                  <button type="button" aria-haspopup="dialog" aria-expanded={seatMapOpen} onClick={() => setSeatMapOpen(true)}>Seat Map</button>
+                  <button type="button" aria-haspopup="dialog" aria-expanded={historyOpen} onClick={() => setHistoryOpen(true)}>Past Settlements <span className="mono">({getSettlements(market).length})</span></button>
+                </nav>
+              </header>
               <div className="network-note">USDC pays for both settlement and native gas on Arc. You don’t need a second token.</div>
-              <div className="workspace-tools"><button className="secondary pool-toggle" aria-haspopup="dialog" aria-expanded={poolOpen} onClick={() => setPoolOpen(true)}>{indexingBlock !== null ? "Intent pool: indexing" : `Intent pool (${live.length})`}</button></div>
               <PoolDialog open={poolOpen} onClose={() => setPoolOpen(false)}>
                 {indexingBlock !== null ? <p role="status">{indexingMessage(indexingBlock)} {INDEXING_PENDING}</p> : <>
                 <p className="mono">{live.length} {POOL_LABEL}</p><p className="quiet">{POOL_NOTE}</p><div className="pool-list">{live.map((i, index) => <article key={i.hash} className="pool-row"><label><input type="checkbox" checked={selected.includes(i.hash)} disabled={disabled} onChange={() => selectIntent(i.hash)} /><span>{walletLabel(i.owner)} <span className="mono">/ Request {index + 1}</span></span></label><p>{condition(restoreIntent(i))}</p><details className="wallet-details"><summary>Wallet and transaction details</summary><a className="hash" href={`${EXPLORER}/address/${i.owner}`} target="_blank" rel="noreferrer">{i.owner}</a><a className="mono" href={`${EXPLORER}/tx/${i.commitTx}`} target="_blank" rel="noreferrer">Commit {i.commitTx.slice(0, 10)}… ↗</a></details><button className="text-button" onClick={() => { setAgentHash(i.hash); setAgentOpen(true); setPoolOpen(false); }}>Why no match?</button>{equal(i.owner, account) && <button disabled={disabled} onClick={() => void action('Revoke intent', async address => { await track(await revokeIntent(address, i.hash)); await refreshWritten(); setProposal(null); setEvidence(null); })}>Revoke my intent</button>}</article>)}</div>{!live.length && <p>No live requests yet. Submit an intent to join the pool.</p>}{!!market.hashMismatched.length && <p className="quiet" role="status">{market.hashMismatched.length} indexed {market.hashMismatched.length === 1 ? 'request is' : 'requests are'} excluded from this pool: the indexed fields do not re-hash to the id they were committed under, so they are not shown. <span className="mono">{market.hashMismatched.map(h => `${h.slice(0, 10)}…`).join(' ')}</span></p>}
@@ -605,8 +619,9 @@ export default function Market() {
               {nftClaim && equal(nftClaim.owner, account) && <section className="wallet-nft-import"><h3>Your free tickets</h3><p role="status">{nftClaim.message}</p><p className="quiet">{WALLET_IMPORT_NOTE}</p><span className="mono hash">NFT contract: {CONTRACTS.ticketNFT}</span><ul>{nftClaim.tokenIds.map((id, n) => <li key={id} className="mono">Token ID: {id} / <a href={`${EXPLORER}/tx/${nftClaim.hashes[n]}`} target="_blank" rel="noreferrer">Mint receipt</a></li>)}</ul><button className="secondary" disabled={disabled} onClick={() => void retryNFTImport()}>Add to wallet</button></section>}
               <div hidden={indexingBlock !== null}>
               <div className="workspace-stack">
+                {workflowView === 'intent' ? <IntentBuilder onConnect={async () => { await wallet.connect(); await refresh(true); }} connectionError={wallet.error} market={market} account={account} approved={approved} busy={disabled} seatMapOpen={seatMapOpen} onSeatMapClose={() => setSeatMapOpen(false)} onComplete={() => setWorkflowView('matching')} onCustody={custody} onDepositSelected={depositSelected} onSign={sign} onDemo={claimDemo} onApprove={() => action('Approve tickets', async address => { await track(await approveNFTsForEscrow(address)); setApproved(true); })} /> : <>
+                <button type="button" className="back-nav-btn" onClick={() => setWorkflowView('intent')}>← Back to request</button>
                 {request && <MatchingStatus request={request} selected={selected} solving={solving} error={readError || solverError} proposal={unavailableMatch ? null : proposal} evidence={evidence} automatic={automatic} resume={() => setAutomatic(true)} busy={disabled} />}
-                <IntentBuilder onConnect={async () => { await wallet.connect(); await refresh(true); }} connectionError={wallet.error} market={market} account={account} approved={approved} busy={disabled} onCustody={custody} onDepositSelected={depositSelected} onSign={sign} onDemo={claimDemo} onApprove={() => action('Approve tickets', async address => { await track(await approveNFTsForEscrow(address)); setApproved(true); })} />
                 <section className="workspace-panel matching-panel"><div className="panel-heading"><h2>Matching</h2><span className="eyebrow">{readyMatch && !solving ? 'Ready to settle' : automatic ? 'Automatic search' : 'Manual search'}</span></div>
                   <div className="solver-actions"><button className="secondary" disabled={solving || disabled || (automatic ? live.length < 2 : selected.length < 2 || selected.length > 4)} onClick={() => void runSolver(selected, automatic)}>{solving ? 'Reading and searching…' : automatic ? 'Check all intents' : 'Run solver'} <span className="mono">({automatic ? `${live.length} in pool` : `${selected.length}/4`})</span></button><button className="text-button" onClick={() => { setAgentHash(current => current ?? request?.hash ?? live[0]?.hash ?? null); setAgentOpen(true); }}>Ask the agent</button>{resetEnabled && equal(account, operator) && <button className="text-button" disabled={disabled} onClick={() => void reset()}>Reset demo</button>}</div>
                   <p className="quiet">{readyMatch && !solving ? 'Your match stays here while you review. Availability updates in the background.' : automatic ? 'Searching live requests automatically. Each candidate includes two to four participants.' : 'Manual search is on. Choose 2–4 requests, then Run solver.'}</p>{!automatic && !request && <button className="text-button" disabled={disabled} onClick={() => setAutomatic(true)}>Resume automatic matching</button>}
@@ -616,10 +631,20 @@ export default function Market() {
                   <JudgeControls freshness={freshness} busy={disabled} label={walletLabel} onBudget={applyJudgeBudget} onRevoke={revokeJudgeIntent} />
                   <details className="dishonest"><summary>Submit dishonest proposal ▾</summary><p>Intentionally submit a failing transaction. The proposer pays its gas in USDC. The adjacency case uses the separate live rejection-demo intents.</p><select value={attack} onChange={e => setAttack(e.target.value as Attack)}><option value="siphon">Siphon 20 USDC</option><option value="adjacency">Non-adjacent seats</option><option value="count">Wrong count</option></select><button className="secondary" disabled={disabled || solving || !proposal} onClick={() => void settle(attack)}>Submit dishonest proposal</button></details>
                 </section>
+                </>}
               </div>
               </div>
               {(status !== 'idle' || rejection) && <Validation key={`${status}:${txHash}`} status={status} hash={txHash} rejection={rejection} />}
-              <details className="history" hidden={indexingBlock !== null}><summary className="panel-heading"><span>Past settlements</span><span className="mono">{getSettlements(market).length} recorded swaps</span></summary><div className="history-list">{getSettlements(market).map((r, index) => <button key={r.hash} title={r.hash} onClick={() => void openReceipt(r.hash).catch(e => setNotice(e.message))}><span>Swap {getSettlements(market).length - index}</span><span>{r.participants} participants</span><span>Open receipt ↗</span></button>)}</div>{!getSettlements(market).length && <p className="quiet">No settlements recorded yet.</p>}</details>
+              <dialog ref={historyDialog} className="intent-pool-dialog history-dialog" aria-labelledby="history-title" onClose={() => setHistoryOpen(false)} onClick={event => {
+                if (event.target !== event.currentTarget) return;
+                const bounds = event.currentTarget.getBoundingClientRect();
+                if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) event.currentTarget.close();
+              }}>
+                <div className="panel-heading"><h2 id="history-title">Past Settlements</h2><button className="secondary" onClick={() => historyDialog.current?.close()} aria-label="Close past settlements">Close ×</button></div>
+                <p className="quiet">{getSettlements(market).length} recorded swaps</p>
+                <div className="history-list">{getSettlements(market).map((r, index) => <button key={r.hash} title={r.hash} onClick={() => { setHistoryOpen(false); void openReceipt(r.hash).catch(e => setNotice(e.message)); }}><span>Swap {getSettlements(market).length - index}</span><span>{r.participants} participants</span><span>Open receipt ↗</span></button>)}</div>
+                {!getSettlements(market).length && <p className="quiet">No settlements recorded yet.</p>}
+              </dialog>
             </section>
           ) : (
             <section className="workspace-section">

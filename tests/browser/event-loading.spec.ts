@@ -46,7 +46,7 @@ test('event keeps its quarter-ring loading state through failures and opens auto
   await expect(page.locator('#workspace')).toBeVisible();
   await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden');
   await page.clock.runFor(15000);
-  expect(control.reads).toBe(3, 'Successful loading cancels the dialog retry loop');
+  expect(control.reads, 'Successful loading cancels the dialog retry loop').toBe(3);
 });
 
 test('loading waits through Retry-After and recovers without exposing provider errors', async ({ page }) => {
@@ -67,7 +67,7 @@ test('leaving the loading dialog cancels its retries and allows reopening', asyn
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('#events')).toBeVisible();
   await page.clock.runFor(15000);
-  expect(control.reads).toBe(1, 'No dialog retry after leaving; page prefetch resumes at 30 seconds');
+  expect(control.reads, 'No dialog retry after leaving; page prefetch resumes at 30 seconds').toBe(1);
   await page.locator('.poster-live').click();
   await expect(dialog).toBeVisible();
   await expect.poll(async () => { await page.clock.runFor(500); return control.responses; }).toBe(2);

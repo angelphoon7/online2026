@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Address } from 'viem';
 import type { IntentParams } from '@/lib/contracts';
 import type { ChainTicket, MarketSnapshot } from '@/lib/market-types';
@@ -18,8 +18,11 @@ import { ADJACENCY_ACCEPTED, ADJACENCY_ERROR, ADJACENCY_NOTE, ALLOWANCE_NOTE, CO
 
 const same = (a: string, b: string | null) => a.toLowerCase() === b?.toLowerCase();
 const hasClass = (mask: bigint, n: number) => (mask & (1n << BigInt(n))) !== 0n;
-export default function IntentBuilder({ market, account, approved, busy, onApprove, onCustody, onDepositSelected, onSign, onDemo, onConnect, connectionError }: {
+export default function IntentBuilder({ market, account, approved, busy, seatMapOpen, onSeatMapClose, onComplete, onApprove, onCustody, onDepositSelected, onSign, onDemo, onConnect, connectionError }: {
   market: MarketSnapshot; account: Address | null; approved: boolean; busy: boolean;
+  seatMapOpen: boolean;
+  onSeatMapClose: () => void;
+  onComplete: () => void;
   onConnect: () => Promise<void>;
   connectionError: string | null;
   onApprove: () => Promise<void>;
@@ -35,6 +38,18 @@ export default function IntentBuilder({ market, account, approved, busy, onAppro
   const [reached, setReached] = useState(1);
   const [raw, setRaw] = useState(false);
   const stepTitles = useRef<(HTMLHeadingElement | null)[]>([]);
+  const seatMapRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = seatMapRef.current;
+    if (!seatMapOpen || !dialog) return;
+    const previousOverflow = document.body.style.overflow;
+    dialog.showModal();
+    document.body.style.overflow = 'hidden';
+    return () => {
+      if (dialog.open) dialog.close();
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [seatMapOpen]);
   const [selectionAccount, setSelectionAccount] = useState(account?.toLowerCase() ?? null);
   if (selectionAccount !== (account?.toLowerCase() ?? null)) {
     setSelectionAccount(account?.toLowerCase() ?? null);
@@ -102,6 +117,7 @@ export default function IntentBuilder({ market, account, approved, busy, onAppro
       const number = index + 1;
       const expanded = step === number && !completed;
       const visited = reached >= number;
+      if (!visited && !expanded) return null;
       return <section key={title} className={`workspace-panel intent-step ${expanded ? 'is-expanded' : visited ? 'is-complete' : 'is-future'}`} data-step={number} data-expanded={expanded}>
         <div className="step-heading"><h2 ref={element => { stepTitles.current[index] = element; }} tabIndex={-1} id={`step-title-${number}`}>
           {!expanded && (number < reached || completed) && <span className="step-check" aria-label="Completed">✓</span>}{title}
@@ -142,7 +158,7 @@ export default function IntentBuilder({ market, account, approved, busy, onAppro
             </>}
             {!intent.offered.length && <p className="quiet">Select the tickets you want to offer above to review your request.</p>}
             {toDeposit.length > 0 && <p className="quiet">Deposit your selected tickets above before signing.</p>}
-            <button className="primary full sign-intent" disabled={busy || !account || !quote || !intent.offered.length || toDeposit.length > 0 || choiceInvalid || timingUnavailable} onClick={() => void onSign(intent, setPrepared, complete)}>{quote && quote.paymentAmount > 0n ? `Approve ${formatUSDC(quote.paymentAmount)} USDC & create intent` : 'Create intent'} <span>↗</span></button>
+            <button className="primary full sign-intent" disabled={busy || !account || !quote || !intent.offered.length || toDeposit.length > 0 || choiceInvalid || timingUnavailable} onClick={() => void onSign(intent, setPrepared, confirmed => { complete(confirmed); onComplete(); })}>{quote && quote.paymentAmount > 0n ? `Approve ${formatUSDC(quote.paymentAmount)} USDC & create intent` : 'Create intent'} <span>↗</span></button>
             {quote && quote.paymentAmount > 0n && <p className="quiet">{ALLOWANCE_NOTE}</p>}
             </div>
           </>}
@@ -167,7 +183,13 @@ export default function IntentBuilder({ market, account, approved, busy, onAppro
         </div>}
       </section>;
     })}
-    <details className="workspace-panel seat-map"><summary>Seat map</summary><div className="seat-map-content">
+    <dialog ref={seatMapRef} className="intent-pool-dialog seat-map-dialog" aria-labelledby="seat-map-title" onClose={onSeatMapClose} onClick={event => {
+      if (event.target !== event.currentTarget) return;
+      const bounds = event.currentTarget.getBoundingClientRect();
+      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) event.currentTarget.close();
+    }}>
+      <div className="panel-heading"><h2 id="seat-map-title">Seat Map</h2><button className="secondary" onClick={() => seatMapRef.current?.close()} aria-label="Close seat map">Close ×</button></div>
+      <div className="seat-map-content">
       {maskClasses(intent.sessionMask).flatMap(session => maskClasses(intent.sectionMask).map(section => {
         const visible = getSeatCustody(session, section, market, intent.eventId);
         const rows = [...new Set(visible.map(t => t.row))].sort((a, b) => a - b);
@@ -183,6 +205,7 @@ export default function IntentBuilder({ market, account, approved, busy, onAppro
       }))}
       <div className="seat-legend"><span>□ Escrowed</span><span>▣ Held by you</span><span>▧ Other wallet</span><span>· Unissued</span><span>× USED</span></div>
       <p className="quiet">{ADJACENCY_NOTE}</p>
-    </div></details>
+      </div>
+    </dialog>
   </div>;
 }
