@@ -540,11 +540,15 @@ export default function Market() {
               <div className="hero-grid">
                 <div className="hero-text-block">
                   <div className="eyebrow">An outcome market for tickets</div>
-                  <h1>{HERO_TITLE_LINES[0]}<br /><span>{HERO_TITLE_LINES[1]}</span></h1>
+                  <h1>
+                    {HERO_TITLE_LINES[0]}
+                    <br />
+                    <span>{HERO_TITLE_LINES[1]}</span>
+                  </h1>
                   <div className="hero-cta-wrap">
                     <SpecularButton
-                      size="lg"
-                      radius={18}
+                      size="md"
+                      radius={16}
                       tint="#ffffff"
                       tintOpacity={1}
                       blur={0}
