@@ -15,6 +15,6 @@ export async function GET(request: Request) {
     if (error instanceof SubgraphLagError) return Response.json({ error: 'SubgraphLagError: waiting for the block of your last transaction.', indexedBlock: error.indexedBlock?.toString() ?? null }, { status: 409, headers: { 'Cache-Control': 'no-store' } });
     if (error instanceof SubgraphIndexingError) return Response.json({ error: error.message }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
     console.error('Market read failed:', error instanceof Error ? error.name : 'Unknown', error instanceof Error && error.name === 'Error' ? error.message : 'Upstream read failed');
-    return Response.json({ error: 'Public chain reads are unavailable. Retry shortly; wallet connection is not required.' }, { status: 503 });
+    return Response.json({ error: 'Public chain reads are unavailable. Retry shortly; wallet connection is not required.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
   }
 }

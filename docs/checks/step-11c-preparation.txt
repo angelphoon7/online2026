@@ -1,0 +1,30 @@
+Step 11-C preparation verification — 2026-09-13
+Scope: local configuration, documentation and checker regression tests only.
+Status: PREPARED; PUBLIC URL FOUND, BACKEND ACCEPTANCE AND TEAM ATTESTATIONS PENDING.
+
+node --test scripts/test-hosted-check.mjs
+PASS: 7 tests, 0 failures; injected fixtures cannot return PASS_PUBLIC_HTTP.
+Covers local/credentialed origins, no-model answers, mismatched evidence, stale blocks,
+wrong intent, production readiness failures, model fallback and conflicting tool blocks.
+The failure-report regression also confirms that a real 503 health body is retained.
+
+node node_modules/eslint/bin/eslint.js next.config.ts scripts/check-docs.mjs scripts/check-hosted.mjs scripts/lib/hosted-check.mjs scripts/test-hosted-check.mjs
+PASS: exit 0, no diagnostics.
+
+npm run build
+PASS: Next.js 16.3.4 production build, including TypeScript and all frontend/API routes.
+Generated pages include /, /demo and /reshuffle; dynamic handlers include /api/solve,
+/api/agent/ask, /api/agent/diagnose/[hash] and /api/health.
+
+Post-build inspection of .next/server/**/*.nft.json
+PASS: 32 server traces contain no local .env*, .data, broadcast or .arc-*.json journals.
+The /api/demo/offline function trace includes deployments/offline-demo.json.
+This inspects path membership in production traces, not remote provider settings.
+
+Final documentation/setup output: step-11c-docs.txt.
+
+No hosting project, public hostname, paid service, model request or transaction created.
+Existing public repository and app found through anonymous GitHub metadata.
+The separate actual public HTTP run is hosted-acceptance.json: frontend 200, health 503.
+No claim of hosted Redis persistence, multi-IP admission or laptop-off operation.
+No actual bounty submission or team eligibility/asset permission declaration performed.

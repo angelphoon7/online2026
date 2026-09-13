@@ -1,0 +1,39 @@
+{
+  "checkedAt": "2026-09-12T23:25:53.658Z",
+  "origin": "https://online2026.vercel.app",
+  "frontendUrl": "https://online2026.vercel.app/",
+  "backendUrl": "https://online2026.vercel.app/api",
+  "status": "FAILED",
+  "mocked": false,
+  "modelRequested": true,
+  "transactionsSent": 0,
+  "checks": [
+    {
+      "path": "/",
+      "httpStatus": 200
+    },
+    {
+      "path": "/api/health",
+      "httpStatus": 503
+    }
+  ],
+  "evidence": {
+    "health": {
+      "ready": false,
+      "checks": {
+        "agentRateLimit": false,
+        "storage": false,
+        "graph": false,
+        "demoGroups": false,
+        "judgeAccess": false,
+        "judgeSigners": false,
+        "ticketIssuer": false,
+        "signingIdle": false
+      },
+      "storage": null,
+      "snapshotBlock": null
+    }
+  },
+  "scope": "Anonymous HTTP frontend, Graph solver/simulation, saved evidence, diagnosis and judge-access checks; no wallet writes, restart or laptop-off claim.",
+  "error": "/api/health: HTTP 503"
+}

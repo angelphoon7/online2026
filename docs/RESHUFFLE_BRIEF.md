@@ -187,6 +187,12 @@ Two load-bearing sponsors beat three where one is decoration.
 
 ## 7. Prizes
 
+**Historical planning assumptions below, superseded on 13 September 2026.** Use the
+[current official categories and pending eligibility declaration](SUBMISSION_STATUS.md)
+for submission. The older Launch target, mainnet timing and prize strategy below are not
+current requirements. Network migration also changes the signing domain; it is not an
+RPC-only change. Follow [mainnet release gates](MAINNET_READINESS.md).
+
 ### Primary — Arc: Launch on Arc Testnet & Push to Mainnet
 
 $3,500 · 1st $2,500 · 2nd $1,000 · **two places**

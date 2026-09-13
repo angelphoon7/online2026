@@ -2,6 +2,8 @@
 
 Prepared 2026-09-12 for step 11 of the [supplied plan](RESHUFFLE_GRAPH_PLAN.md).
 These are reviewable form answers and a checklist; no submission has been sent.
+The [13 September submission status](SUBMISSION_STATUS.md) tracks the actual URL,
+hosting acceptance, final selections and outstanding team declarations.
 
 ## Partner and track selection
 
@@ -87,14 +89,17 @@ direction and hypothetical qualifications. [Block evidence](GRAPH_7A_7D.md) and
 | Graph recording guide | [Run of show](DEMO_GRAPH.md) |
 | Arc execution proof | [Confirmed settlement transactions](../README.md#confirmed-arc-testnet-settlements) |
 | Architecture | [PNG](diagrams/architecture.png), [SVG](diagrams/architecture.svg) |
-| AI disclosure and specs | [AI usage](../README.md#ai-usage), [planning index](PLANNING_ARTIFACTS.md) |
+| AI disclosure and specs | [AI usage](../README.md#ai-usage), [file/asset provenance](PROVENANCE.md), [planning index](PLANNING_ARTIFACTS.md) |
+| Public deployment and final declarations | [Step 11-C status](SUBMISSION_STATUS.md), [hosted verification command](JUDGING_SETUP.md#verify-before-handing-it-to-judges) |
+| Public app / backend | [Frontend](https://online2026.vercel.app/), [backend health](https://online2026.vercel.app/api/health): currently 200 / 503 respectively; [actual check](checks/hosted-acceptance.json) |
 
 ## Submission checklist
 
 - [x] README names the Graph track and explains the indexer, agent, trust boundaries,
   environment, commands and limitations.
 - [x] Public endpoint and a current read-only parity result are recorded.
-- [x] AI assistance is disclosed with file paths and planning artifacts indexed.
+- [x] Known AI assistance is disclosed with file paths and planning artifacts indexed;
+  the separate complete team/asset attestation remains open below.
 - [x] Tracked environment template and non-overwriting setup command are available.
 - [x] Local real Anthropic acceptance passed; all three tools and conflicting instructions
   are covered with provider provenance.
@@ -105,7 +110,9 @@ direction and hypothetical qualifications. [Block evidence](GRAPH_7A_7D.md) and
   that cannot be established from this workspace.
 - [ ] Commit the reviewed implementation and documentation to the public repository;
   verify access from a signed-out browser and record its URL in the submission form.
-- [ ] Add the hosted frontend/backend URL. Localhost is a local review option, not a hosted demo.
+- [x] Identify the hosted frontend/backend URL and verify anonymous repository access.
+- [ ] Restore hosted backend readiness. The public check failed at `/api/health` (503);
+  publishing a hostname alone does not establish a working backend.
 - [ ] Check model narration on the hosted URL. Local provider acceptance does not establish
   the hosted credentials, ingress, rate limits or persistence.
 - [ ] Upload the demo and presentation, then complete the actual partner selections.

@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     if (!body || Array.isArray(body) || body.jsonrpc !== '2.0' || !Array.isArray(body.params ?? [])) throw new Error('Invalid request');
     if (typeof body.id === 'string' || typeof body.id === 'number') id = body.id;
     if (!methods.has(body.method)) return Response.json({ jsonrpc: '2.0', id, error: { code: -32601, message: 'Only supported read methods are allowed' } }, { status: 400, headers });
-    const { addresses, usdc } = chainConfig();
+    const { addresses, usdc, rpcUrl } = chainConfig();
     const allowed = new Set([...Object.values(addresses), usdc].map(a => a.toLowerCase()));
     if (body.method === 'eth_call' || body.method === 'eth_getLogs') {
       const target = body.params?.[0];
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
         if (span < 0n || span >= 10000n) throw new Error('Log range exceeds 10000 blocks');
       }
     }
-    const upstream = await fetch(process.env.ARC_RPC!, {
+    const upstream = await fetch(rpcUrl, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id, method: body.method, params: body.params ?? [] }),
       signal: AbortSignal.timeout(15000), cache: 'no-store',

@@ -3,12 +3,13 @@
 // One implementation for both sides, so getPoolSnapshot() and waitForIndexed() are written
 // once rather than twice:
 //
-//   server  -> Studio directly, using SUBGRAPH_URL (and the key, if there is one)
-//   browser -> /api/graph, the same-origin proxy, so no endpoint or key reaches the bundle
+//   server  -> Graph provider, using SUBGRAPH_URL or the selected deployment's public URL
+//   browser -> /api/graph; runtime endpoint overrides and API keys remain server-side
 //
-// The endpoint is deliberately not a NEXT_PUBLIC_ variable. The Studio query URL is
-// version-pinned (…/reshuffle/v0.1.1), so baking it into the client bundle would freeze a
-// version into a build; the proxy reads it per request instead.
+// The public deployment record supplies the default. A server SUBGRAPH_URL override can
+// select another query endpoint at runtime without changing the signed contract domain.
+import { DEPLOYMENT } from '../../lib/deployment';
+import { retryAfterSeconds } from '../retry-after';
 
 export class GraphError extends Error {
   constructor(
@@ -17,6 +18,13 @@ export class GraphError extends Error {
   ) {
     super(errors.map((e) => e.message).join('; '));
     this.name = 'GraphError';
+  }
+}
+
+export class SubgraphRateLimited extends GraphError {
+  constructor(public retryAfterSeconds: number) {
+    super([{ message: `Live market data is temporarily rate-limited by The Graph. Retry in at least ${retryAfterSeconds} seconds.` }], 429);
+    this.name = 'SubgraphRateLimited';
   }
 }
 
@@ -75,10 +83,10 @@ function asLagError(messages: string[]): SubgraphLagError | null {
 }
 
 export function subgraphEndpoint(): string {
-  const url = process.env.SUBGRAPH_URL;
+  const url = process.env.SUBGRAPH_URL?.trim() || DEPLOYMENT.subgraphUrl;
   if (!url) {
     throw new Error(
-      'SUBGRAPH_URL is not set. Deploy the subgraph (npm run subgraph:deploy vX.Y.Z), which records it.'
+      'No subgraph endpoint is configured for this deployment. Set SUBGRAPH_URL or record its deployed query URL.'
     );
   }
   return url;
@@ -90,26 +98,37 @@ export type GqlOptions = {
   signal?: AbortSignal;
 };
 
+// Respect an upstream refusal across Graph consumers in this process. This is a provider
+// cooldown, not cached market data or a deployment-wide user quota. Keys never leave memory.
+const cooldowns = new Map<string, number>();
+export async function fetchGraph(body: string, options: GqlOptions = {}): Promise<Response> {
+  options.signal?.throwIfAborted();
+  const url = options.url ?? (isServer ? subgraphEndpoint() : '/api/graph');
+  const key = isServer ? process.env.SUBGRAPH_API_KEY : undefined;
+  const identity = `${url}\n${key ?? ''}`, now = Date.now();
+  for (const [entry, until] of cooldowns) if (until <= now) cooldowns.delete(entry);
+  const until = cooldowns.get(identity);
+  if (until && until > now) throw new SubgraphRateLimited(Math.ceil((until - now) / 1000));
+  const response = await fetch(url, {
+    method: 'POST', headers: { 'content-type': 'application/json', ...(key ? { authorization: `Bearer ${key}` } : {}) },
+    body, signal: options.signal, cache: 'no-store',
+  });
+  if (response.status === 429) {
+    const retry = retryAfterSeconds(response.headers.get('Retry-After'));
+    if (cooldowns.size >= 16) cooldowns.delete(cooldowns.keys().next().value!);
+    cooldowns.set(identity, Date.now() + retry * 1000);
+    void response.body?.cancel().catch(() => {});
+    throw new SubgraphRateLimited(retry);
+  }
+  return response;
+}
+
 export async function gql<T>(
   query: string,
   variables: Record<string, unknown> = {},
   options: GqlOptions = {}
 ): Promise<T> {
-  const url = options.url ?? (isServer ? subgraphEndpoint() : '/api/graph');
-  // Server-side only: the key must never be bundled. It is optional — Studio's dev query
-  // endpoint does not authenticate (see docs/graph-acceptance.md).
-  const key = isServer ? process.env.SUBGRAPH_API_KEY : undefined;
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      ...(key ? { authorization: `Bearer ${key}` } : {}),
-    },
-    body: JSON.stringify({ query, variables }),
-    signal: options.signal,
-    cache: 'no-store',
-  });
+  const response = await fetchGraph(JSON.stringify({ query, variables }), options);
 
   let body: { data?: T; errors?: { message: string }[] };
   try {

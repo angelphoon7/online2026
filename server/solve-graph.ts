@@ -3,6 +3,7 @@ import type { Hex } from 'viem';
 import type { Intent } from '../solver/src/types';
 import { getPoolSnapshot, type Snapshot, type Exclusion } from '@/shared/graph';
 import { solveOnChain, type PoolSource } from './solve';
+import { subgraphEndpoint } from '@/shared/graph/client';
 
 // Solver discovery from The Graph — step 6-C of docs/RESHUFFLE_GRAPH_PLAN.md.
 //
@@ -63,7 +64,7 @@ const source = (snapshot: Snapshot, liveIntents: number, excluded: Excluded[]): 
   excluded,
   kind: 'subgraph',
   snapshotBlock: snapshot.block.toString(),
-  endpoint: process.env.SUBGRAPH_URL ?? null,
+  endpoint: subgraphEndpoint(),
 });
 
 /**

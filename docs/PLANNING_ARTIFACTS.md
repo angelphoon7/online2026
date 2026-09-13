@@ -18,6 +18,8 @@ were implemented. Follow the [README](../README.md#the-graph) for current execut
 | [RESHUFFLE_GRAPH_PLAN.md](RESHUFFLE_GRAPH_PLAN.md) | Unmodified user-supplied Graph integration plan copied from the supplied Downloads file |
 | [DEMO_GRAPH.md](DEMO_GRAPH.md) | Working Graph rehearsal and recording plan |
 | [STEP_11_REVIEW.md](STEP_11_REVIEW.md) | Checked implementation, evidence and differences from the supplied plan |
+| [PROVENANCE.md](PROVENANCE.md) | Known human/AI contributions and artwork inventory, with unknown sources and rights explicitly pending |
+| [SUBMISSION_STATUS.md](SUBMISSION_STATUS.md) | Current prize categories, hosting handoff and team declarations required before submission |
 
 The snapshots preserve the submitted instructions; the root versions remain the working
 instructions. This index does not claim that every historical prompt is present. The two

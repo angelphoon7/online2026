@@ -332,6 +332,10 @@ observable rather than a feeling.
 
 ## 11. Open items — resolve before or during day one
 
+This list records original planning questions. For current dates, prize targets, actual
+evidence and remaining team declarations, use [submission status](SUBMISSION_STATUS.md)
+and the [Step 11 review](STEP_11_REVIEW.md). The older Launch wording below is superseded.
+
 1. Submission deadline. Sources conflict between 13 and 16 September. Check the event page.
 2. Arc Testnet RPC, chainId, USDC address, faucet.
 3. What Arc accepts as "deployment-ready" — ask in their Discord channel. It decides whether

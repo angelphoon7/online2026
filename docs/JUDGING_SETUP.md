@@ -118,6 +118,8 @@ The public-IP check needs two real networks, such as broadband and a mobile hots
 changing a forwarding header does not create a second client. No Vercel deployment has
 been made as part of this rate-limit change.
 
+For a hosted public-read error, see [public-read troubleshooting](#public-read-troubleshooting).
+
 ## Move existing local data
 
 Tickets, escrow, intent state and settlements already live on Arc, and indexed entities
@@ -194,11 +196,21 @@ budget change is not atomic; a revoke can succeed while the replacement needs re
 
 ## Verify before handing it to judges
 
+The root `vercel.json` installs both dependency trees and uses the existing Next build.
+`.vercelignore` and Next's trace exclusions keep local secrets and journals out of uploaded
+source/function traces. This prepares a deployment; it does not create a hosting account or
+a public URL. See [Step 11-C status](SUBMISSION_STATUS.md).
+The existing URL was subsequently identified as [online2026.vercel.app](https://online2026.vercel.app/).
+Its first public check returned frontend 200 but health 503; see the
+[actual failure record](checks/hosted-acceptance.json) and
+[configuration follow-up](SUBMISSION_STATUS.md#actual-hosting-failure-and-next-configuration-step).
+
 ```sh
 npm test
 npm run build
 npm start
-npm run judge:check -- https://your-public-app.example
+npm run judge:check -- https://online2026.vercel.app
+npm run submission:check:hosted -- https://online2026.vercel.app --model
 ```
 
 `GET /api/health` checks trusted Agent client identity and Redis admission, shared-storage
@@ -221,8 +233,65 @@ These external checks require an actual hosted URL, persistent credentials and t
 passing local fixture tests does not establish them. Refresh inventory after a settlement
 before the next judge's session.
 
+`submission:check:hosted` records anonymous frontend/API responses, real Graph-backed
+simulation, saved evidence, same-intent diagnosis and anonymous judge denial in
+`docs/checks/hosted-acceptance.json`. With `--model` it also requires a real hosted model
+response with provider IDs and no guard fallback. It sends no wallet transactions; solver
+requests save evidence, and model questions consume the host's API allowance. Its
+`PASS_PUBLIC_HTTP` result is separate from restart, different-network quota, wallet-write
+and laptop-off acceptance. Redirects to deployment login cannot pass. Fixture tests produce
+`PASS_FIXTURE`, never a public acceptance record.
+
 Local validation on September 12 is recorded in [judging-readiness.json](checks/judging-readiness.json):
 12 pair checks, four successful three-user simulations and 16 evidence records unchanged
 across a local production-server restart. This used live Graph/Arc data and local persistent
 storage, with no settlement broadcasts. Hosted Redis and a laptop-off public deployment
 are explicitly marked unverified in that report.
+
+## Public-read troubleshooting
+
+A connected wallet does not configure the hosted server. On September 13, the public
+`online2026.vercel.app` Graph proxy returned `SUBGRAPH_URL is not set`, while its RPC
+proxy failed to use the RPC URL already present in the deployment record. Local Graph
+requests also received HTTP 429 from the Studio provider. These are separate failures.
+
+The fix uses the selected public deployment record when `SUBGRAPH_URL` or `ARC_RPC` is
+absent/blank. Arc Testnet discovery defaults to Graph even without environment overrides;
+the browser RPC proxy uses the same resolved RPC URL as the server. Explicit overrides
+remain supported. Public browsing needs no wallet private key. Agent admission, evidence
+storage and judge controls retain their separate configuration requirements above.
+
+To configure an existing Vercel deployment explicitly, add these **Production** variables
+under Project Settings → Environment Variables, then redeploy:
+
+```dotenv
+READ_SOURCE=graph
+ARC_RPC=https://rpc.testnet.arc.io
+SUBGRAPH_URL=https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1
+```
+
+Keep API keys in server-only variables. Deploy the updated repository to receive the
+fallback and throttling fixes; editing local `.env` cannot update the public website.
+[Vercel applies environment changes to new deployments](https://vercel.com/docs/environment-variables).
+
+`SubgraphRateLimited` / HTTP 429 means The Graph refused further queries. The client and
+proxy now preserve `Retry-After`, return readable JSON even if the provider returned HTML,
+and pause repeat requests during the cooldown. A retry never substitutes an older snapshot
+or discards the receipt-block floor. Other provider failures return `GraphProviderUnavailable`.
+The cooldown is per browser/process and does not replace a suitable hosted query allowance.
+
+Respect the provider's retry time. If limits persist, configure a working production query
+endpoint for this subgraph and its matching server-side `SUBGRAPH_API_KEY`; Studio's
+[development query endpoint has usage limits](https://thegraph.com/docs/en/subgraphs/developing/deploying-publishing/using-subgraph-studio/).
+An API key does not automatically remove the Studio development endpoint's limit. The
+[production query guide](https://thegraph.com/docs/en/subgraphs/querying/from-an-application/)
+describes the separate production endpoint. Do not switch to static data to conceal a
+provider failure.
+
+Verification: 10 new public-read regressions and **287 total server/Graph checks pass**;
+TypeScript, changed-file ESLint and production build pass. A real Arc read without any
+RPC override returned chain ID 5042002; the real Graph market read remained throttled.
+The [live handler report](checks/public-read-fix.json) records the provider retry time and
+explicitly states that the hosted deployment was not updated. These local fixes still
+need deploying to Vercel, and live market recovery requires the Graph provider to accept
+queries again.

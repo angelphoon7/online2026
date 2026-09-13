@@ -62,7 +62,8 @@ try {
 
   const docs = ['README.md', 'server/README.md', 'docs/JUDGING_SETUP.md', 'docs/STEP_11_REVIEW.md',
     'docs/THE_GRAPH_SUBMISSION.md', 'docs/GRAPH_7A_7D.md', 'docs/GRAPH_7G_7H.md', 'docs/GRAPH_7I.md',
-    'docs/GRAPH_STUDIO_REVIEW.md', 'docs/CIRCLE_INTEGRATION.md', 'docs/SUBGRAPH_STUDIO_ARC_CHECK.md'];
+    'docs/GRAPH_STUDIO_REVIEW.md', 'docs/CIRCLE_INTEGRATION.md', 'docs/SUBGRAPH_STUDIO_ARC_CHECK.md',
+    'docs/SUBMISSION_STATUS.md', 'docs/PROVENANCE.md', 'docs/PLANNING_ARTIFACTS.md'];
   for (const name of docs) {
     const source = read(name);
     for (const match of source.matchAll(/\[[^\]\n]*\]\(([^)\n]+)\)/g)) {

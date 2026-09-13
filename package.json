@@ -12,6 +12,8 @@
     "lint": "eslint",
     "setup:env": "node scripts/setup-env.mjs",
     "docs:check": "node scripts/check-docs.mjs",
+    "submission:check:hosted": "node scripts/check-hosted.mjs",
+    "test:hosted-check": "node --test scripts/test-hosted-check.mjs",
     "judge:setup": "node scripts/judge-setup.mjs",
     "judge:check": "node scripts/check-judging.mjs",
     "demo:catalog": "npx --yes tsx --conditions=react-server scripts/publish-demo-catalog.mts",

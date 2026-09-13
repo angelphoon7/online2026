@@ -1,0 +1,1 @@
+PASS 348 documentation/setup checks. Existing env files untouched; no provider calls or transactions.

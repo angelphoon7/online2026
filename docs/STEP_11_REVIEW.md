@@ -20,7 +20,7 @@ evidence; they are not a new replay of transactions, a hosted deployment or a su
 | 7-D / E / F / H; 8 | Bounded supply claims, strict hypothetical inputs, per-intent commitment links and drawer identity checks implemented | [Integrity](GRAPH_AGENT_INTEGRITY.md), [drawer](GRAPH_8_EVIDENCE.md) |
 | 7-I | Both routes have overall deadlines; production admission requires shared Redis and trusted client identity | [Current policy and test scope](GRAPH_7I.md) |
 | 4-A / 6-C | Public health/parity, transaction indexing delay and Graph solver source evidence recorded; authenticated Studio review remains open | [Measured results](GRAPH_4A_6C.md), [remaining panel checks](GRAPH_STUDIO_REVIEW.md) |
-| 11-A / C | README and submission draft now link these results and distinguish local proof from hosted acceptance | [Draft](THE_GRAPH_SUBMISSION.md) |
+| 11-A / C | Public app/repository identified and anonymous check recorded: frontend 200, health 503. Production configuration/tooling and attribution inventory prepared; backend acceptance and team declarations remain open | [Draft](THE_GRAPH_SUBMISSION.md), [13 September status](SUBMISSION_STATUS.md) |
 
 Run `npm run docs:check` before sharing the repo. It checks the tracked template, safe setup,
 documentation links and recorded completion evidence without reading private environment files
@@ -86,7 +86,7 @@ historical gas-report measurements.
 | 7–8: agent and drawer | Exact-block diagnosis, strict tool inputs, evidence-bound guard and drawer; real-provider acceptance now passed, with bounded-search limitations retained |
 | 9: testing | Named wait/freshness assertions and later regression suites pass; see the dated follow-up records above |
 | 10: live recording | Rehearsal remains read-only; separate real Apply budget receipts and browser captures now establish the N-to-M transition |
-| 11: submission package | Local documentation and draft prepared. Hosted URL, public publication, final video and actual form submission remain external deliverables |
+| 11: submission package | Documentation, attribution inventory and public URLs recorded. Backend readiness, final revision, team declarations, video and actual form submission remain open |
 
 ## Remaining external checks
 
@@ -95,6 +95,8 @@ historical gas-report measurements.
 2. **Hosted acceptance:** local real-provider calls and local production-server persistence
    do not establish a public deployment with the developer's laptop off. Verify the hosted
    URL, Redis persistence, actual ingress identity and model calls there.
+   The URL is now recorded; its first anonymous run failed backend readiness (HTTP 503).
+   [Live result and production follow-up](SUBMISSION_STATUS.md).
    [Hosting checklist and recorded scope](JUDGING_SETUP.md).
    The Step 7-I rate-limit follow-up adds 15 passing regression tests for trusted IPs,
    shared admission wiring, Redis failures/deadlines and health readiness (277 total
@@ -103,6 +105,9 @@ historical gas-report measurements.
    [Assertion scripts and recorded deployment status](GRAPH_7I.md#deployment-acceptance).
 3. **11-C:** the team must confirm Start Fresh eligibility, full AI/asset attribution,
    public repository access, final video/presentation and actual form/prize selections.
+   [Current official categories and deployment handoff](SUBMISSION_STATUS.md) and
+   [known assistance / asset source inventory](PROVENANCE.md) are prepared. These documents
+   explicitly leave unverified team facts open.
    The draft has not been submitted by this documentation update.
 4. **12:** Arc Mainnet deployment and release gates remain separate and incomplete.
    [Readiness package](MAINNET_READINESS.md).

@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-09-12T23:23:22.682Z",
+  "overridesAbsent": true,
+  "fixtures": false,
+  "transactionsSent": 0,
+  "hostedDeploymentUpdated": false,
+  "rpc": {
+    "http": 200,
+    "chainId": "0x4cef52"
+  },
+  "market": {
+    "http": 429,
+    "code": "SubgraphRateLimited",
+    "error": "Live market data is temporarily rate-limited by The Graph. Retry in at least 773 seconds.",
+    "retryAfter": "773"
+  },
+  "status": "BLOCKED_PROVIDER"
+}

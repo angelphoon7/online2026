@@ -6,9 +6,9 @@ Swap tickets without selling first.
 
 The current demo is a single page at `/`: open the live event poster to use the workspace, then inspect receipts in place. [UI flow, contract mappings and validation](docs/UI_IMPLEMENTATION.md).
 
-**Target Arc bounties: Best DeFi / Onchain Finance · Launch on Testnet & Push to Mainnet — [category confirmation pending](#bounty-category-verification).**
+**Target Arc bounty: Best DeFi/Onchain Finance Application.** [Current category and mainnet condition](#bounty-category-verification).
 
-**Target The Graph bounty: Best AI Tooling or AI Use Case with The Graph (From Scratch) · AI Use Case path · Start Fresh pool.** See [submission draft and eligibility checks](docs/THE_GRAPH_SUBMISSION.md).
+**Target The Graph bounty: Best AI Tooling or AI Use Case with The Graph (From Scratch) · AI Use Case path.** Start Fresh requires the team's history declaration; [submission status and remaining confirmations](docs/SUBMISSION_STATUS.md).
 
 **A market for outcomes, not listings.**
 
@@ -18,7 +18,10 @@ You never give up your tickets unless the whole replacement arrives.
 
 [Mainnet readiness: deployment tooling, network configuration, verification checklist and actual admin permissions](docs/MAINNET_READINESS.md). Local deployment rehearsal passed; official mainnet parameters and production release gates remain pending.
 
-<!-- Live demo: TBD · Video: TBD -->
+**Public app:** [online2026.vercel.app](https://online2026.vercel.app/) · [Backend health](https://online2026.vercel.app/api/health).
+The first public check reached the frontend (200) but backend readiness returned 503.
+[Recorded result and production configuration follow-up](docs/SUBMISSION_STATUS.md).
+<!-- Video: TBD -->
 
 ---
 
@@ -314,10 +317,10 @@ storage or an explicitly enabled persistent volume. [Hosting and data migration]
 |---|---|---|
 | `DEPLOYMENT` | Deployment/subgraph CLI scripts | Selects `deployments/<network>.json`; default `arc-testnet` |
 | `NEXT_PUBLIC_DEPLOYMENT` | Next frontend and backend chain configuration | Selects generated public deployment record at build time; keep equal to `DEPLOYMENT` |
-| `SUBGRAPH_URL` | Backend and shared Graph client | Required for Graph reads; set to the versioned query endpoint above |
+| `SUBGRAPH_URL` | Backend and shared Graph client | Optional override of the selected deployment's recorded query endpoint; Arc Testnet defaults to the versioned Studio endpoint above |
 | `SUBGRAPH_API_KEY` | Backend | Optional query credential; never a `NEXT_PUBLIC_` value |
 | `SUBGRAPH_DEPLOY_KEY` | Deployment CLI | Deploying versions to Studio; not needed to run the app or query the existing subgraph |
-| `READ_SOURCE` | Backend market and solver discovery | `graph` or `rpc`; defaults to `graph` when `SUBGRAPH_URL` is set, otherwise `rpc`. Local Anvil uses `rpc` |
+| `READ_SOURCE` | Backend market and solver discovery | `graph` or `rpc`; defaults to `graph` when an override or recorded subgraph URL exists. Local Anvil without a subgraph uses `rpc` |
 | `ARC_RPC` | Backend and CLI | RPC used for chain verification, capacity and simulation; defaults to selected deployment RPC in the backend |
 | `ARC_CHAIN_ID` | Backend consistency check / CLI | If set, must agree with the deployment; Arc Testnet is `5042002` |
 | `NEXT_PUBLIC_RPC_URL` | Browser chain configuration | Public RPC override; browser public reads use the same-origin transport |
@@ -473,6 +476,8 @@ does not assign authorship to every earlier file: the team should complete any a
 tool/file/asset attribution before submission. The application itself optionally uses Claude
 to narrate deterministic evidence; that runtime use is distinct from coding assistance.
 [Specifications, instructions and planning artifacts](docs/PLANNING_ARTIFACTS.md).
+The [provenance inventory](docs/PROVENANCE.md) identifies confirmed assistance, reused
+dependencies, user-supplied artwork and the outstanding author/source confirmations.
 
 ---
 
@@ -620,7 +625,7 @@ flowchart TB
     subgraph ARC["ARC"]
         direction TB
         A1["Best DeFi / Onchain Finance<br/>conditional delivery plus<br/>multi-party net settlement"]
-        A2["Launch on Testnet and Mainnet<br/>escrow and stablecoin settlement<br/>added to a marketplace"]
+        A2["Arc Testnet deployment<br/>escrow and stablecoin settlement<br/>with real transaction evidence"]
         A3["USDC as native gas<br/>no separate gas token<br/>for users"]
     end
 
@@ -1231,13 +1236,18 @@ sequenceDiagram
 
 ### Bounty category verification
 
-The two Arc targets stated above are the project's originally selected categories. Checked on 2026-09-10: the [current official ETHOnline 2026 prize page](https://ethglobal.com/events/ethonline2026/prizes#arc) does not list “Launch on Testnet & Push to Mainnet”. It makes $2,500 of the Best DeFi/Onchain Finance award conditional on the same project actually deploying to Arc Mainnet by September 30; it does not state that deployment readiness substitutes for deployment. See the [readiness package and pending release gates](docs/MAINNET_READINESS.md). Confirm current category names and availability before submitting; this README does not establish eligibility or register either bounty.
+Checked on 2026-09-13: the [official prize page](https://ethglobal.com/events/ethonline2026/prizes#arc)
+lists **Best DeFi/Onchain Finance Application**. Its $2,500 mainnet portion requires actual
+deployment by September 30; the readiness package does not substitute for deployment.
+“Launch on Testnet & Push to Mainnet” is not a separate listed prize. If the team belongs in
+Continuity, the corresponding Arc category is **Best DeFi or Agentic Application**, and
+The Graph has a separate **Continuity** AI track. The [submission record](docs/SUBMISSION_STATUS.md)
+keeps team eligibility and dashboard selections unconfirmed until evidenced. [Mainnet release gates](docs/MAINNET_READINESS.md).
 
 | Sponsor | Track | Why |
 |---|---|---|
-| **Arc** | Best DeFi / Onchain Finance | Conditional delivery and multi-party net settlement for non-fungible entitlements. Ticket delivery determines whether payment is permitted; every participant's debits and credits correspond within one settlement |
-| **The Graph** | AI Use Case — From Scratch | Live indexed data drives the solver and the agent. Change a budget and the answer changes, because the pool is re-queried |
-| **Arc** | Launch on Testnet & Push to Mainnet | *Conditional.* Its examples include stablecoin settlement and escrow logic added to a marketplace. Mainnet readiness is a separate bar — confirming what qualifies before committing |
+| **Arc** | Best DeFi/Onchain Finance Application | Conditional delivery and multi-party net settlement for non-fungible entitlements. Ticket delivery determines whether payment is permitted; every participant's debits and credits correspond within one settlement |
+| **The Graph** | Best AI Tooling or AI Use Case with The Graph (From Scratch), AI Use Case path | Live indexed data drives the solver and the agent. Change a budget and the answer changes, because the pool is re-queried |
 
 ### App Kits evaluation
 
