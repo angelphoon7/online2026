@@ -17,6 +17,7 @@
 .workspace-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:24px;margin-bottom:28px;padding-bottom:18px;border-bottom:1px solid var(--line)}.workspace-header .back-nav-btn{margin-bottom:0}.workspace-nav{display:flex;align-items:center;flex-wrap:wrap;gap:24px}.workspace-nav button{color:var(--muted);font-size:12px;font-weight:500;letter-spacing:.02em;text-decoration:underline;text-underline-offset:5px;transition:color .2s ease}.workspace-nav button:hover{color:var(--ink)}
 @media(max-width:768px){.workspace-header{align-items:flex-start}.workspace-header h2{font-size:32px}.workspace-nav{width:100%;gap:16px}}
 .seat-map-dialog{width:min(960px,calc(100% - 32px))}.seat-map-dialog .seat-map-content{overflow-x:auto}
+.seat-map-dialog #seat-map-title{font-weight:700}
 .history-dialog .history-list{margin-top:16px}
 @media(max-width:768px){.two-line-nav{position:static;transform:none;padding:4px 8px;gap:16px;border-top:none;border-bottom:none}}
 .hero{position:relative;min-height:calc(100svh - 76px);padding:4vh 6% 40px;display:flex;flex-direction:column;justify-content:center;background:transparent;overflow:hidden}
@@ -118,3 +119,4 @@
 .section-heading .workspace-chain-status,.workspace-header .workspace-chain-status{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 12px;max-width:none;margin:0 0 8px}
 .workspace-block-link{display:inline-flex;align-items:center;gap:8px;font-size:clamp(18px,1.6vw,22px);font-weight:600;line-height:1.4;color:var(--ink);text-decoration:underline;text-decoration-color:rgba(255,255,255,.35);text-underline-offset:5px}
 .workspace-block-link:hover{color:#ef9675;text-decoration-color:currentColor}
+.step-heading h2{font-weight:600}
