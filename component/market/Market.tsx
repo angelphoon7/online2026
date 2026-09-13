@@ -38,7 +38,7 @@ import { MarketFreshness } from '@/lib/market-freshness';
 import { indexingMessage, INDEXING_PENDING } from '@/lib/ui-copy';
 import { getMarketSnapshot, getIntentPool, getTicketsFor, getSettlements, getTicketsApproved, getTicketDepositor, getUSDCAllowance, getUnusedNonce, getSettlementReceipt, waitForReceipt, waitForSuccess, ticketHolder as holder } from '@/lib/chain-reads';
 import { nextRecordedNonce } from '@/lib/intent-draft';
-import { demoPriceQuote } from '@/lib/demo-pricing';
+import { demoPriceQuote, DEMO_SECTION_PRICES } from '@/lib/demo-pricing';
 import rejectionDemo from '@/deployments/act-three.json';
 
 import ConnectWalletButton from '@/component/connectWallet/ConnectWalletButton';
@@ -90,13 +90,15 @@ export default function Market() {
   const [attack, setAttack] = useState<Attack>('siphon');
   const [resetEnabled, setResetEnabled] = useState(false);
   const [operator, setOperator] = useState('');
-  const [currentView, setCurrentView] = useState<'home' | 'events' | 'workspace'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'events' | 'workspace' | 'tickets'>('home');
 
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash;
       if (hash === '#workspace') {
         setCurrentView('workspace');
+      } else if (hash === '#tickets') {
+        setCurrentView('tickets');
       } else if (hash === '#events' || hash === '#market') {
         setCurrentView('events');
       } else if (hash === '#home' || hash === '') {
@@ -112,10 +114,14 @@ export default function Market() {
     };
   }, []);
 
-  const navigateTo = (view: 'home' | 'events' | 'workspace') => {
+  const navigateTo = (view: 'home' | 'events' | 'workspace' | 'tickets') => {
     setCurrentView(view);
     if (view === 'workspace') {
-      window.history.pushState(null, '', '#workspace');
+      if (window.location.hash !== '') {
+        window.history.pushState(null, '', '#workspace');
+      }
+    } else if (view === 'tickets') {
+      window.history.pushState(null, '', '#tickets');
     } else if (view === 'events') {
       window.history.pushState(null, '', '#events');
     } else {
@@ -468,6 +474,7 @@ export default function Market() {
   const live = market ? getIntentPool(market) : [];
   const request = market ? latestRequest(market, account) : undefined;
   const tickets = market ? getTicketsFor(null, market) : [];
+  const userTickets = market && account ? getTicketsFor(account, market) : [];
   const sessions = [...new Set(tickets.map(t => t.sessionId))].sort((a, b) => a - b);
   const participants = [...new Set(market?.intents.map(i => i.owner.toLowerCase()) ?? [])].sort();
   const walletLabel = (address: string) => equal(address, account) ? 'You' : participants.includes(address.toLowerCase()) ? `Wallet ${participants.indexOf(address.toLowerCase()) + 1}` : truncateAddress(address);
@@ -498,10 +505,17 @@ export default function Market() {
         </button>
         <button
           type="button"
-          className={`two-line-nav-item ${currentView !== 'home' ? 'active' : ''}`}
+          className={`two-line-nav-item ${currentView === 'events' ? 'active' : ''}`}
           onClick={() => navigateTo('events')}
         >
           Events
+        </button>
+        <button
+          type="button"
+          className={`two-line-nav-item ${currentView === 'tickets' ? 'active' : ''}`}
+          onClick={() => navigateTo('tickets')}
+        >
+          Tickets {userTickets.length > 0 && <span className="nav-count-badge mono">{userTickets.length}</span>}
         </button>
       </nav>
       <div className="header-actions">
@@ -512,75 +526,88 @@ export default function Market() {
       </div>
     </header>
     <main>
-      {currentView === 'home' && (
-        <section className="hero">
-          <div className="hero-grid">
-            <div className="hero-text-block">
-              <div className="eyebrow">An outcome market for tickets</div>
-              <h1>{HERO_TITLE_LINES[0]}<br /><span>{HERO_TITLE_LINES[1]}</span></h1>
-              <div className="hero-cta-wrap">
-                <SpecularButton
-                  size="lg"
-                  radius={18}
-                  tint="#ffffff"
-                  tintOpacity={1}
-                  blur={0}
-                  textColor="#08080a"
-                  lineColor="#ea7833"
-                  baseColor="#e66e4b"
-                  intensity={1}
-                  shineSize={10}
-                  shineFade={40}
-                  thickness={1.5}
-                  speed={0.35}
-                  followMouse
-                  proximity={250}
-                  autoAnimate={false}
-                  onClick={() => navigateTo('events')}
-                >
-                  Explore Events
-                </SpecularButton>
+      {(currentView === 'home' || currentView === 'events') && (
+        <>
+          {currentView === 'home' && (
+            <section className="hero">
+              <div className="hero-grid">
+                <div className="hero-text-block">
+                  <div className="eyebrow">An outcome market for tickets</div>
+                  <h1>{HERO_TITLE_LINES[0]}<br /><span>{HERO_TITLE_LINES[1]}</span></h1>
+                  <div className="hero-cta-wrap">
+                    <SpecularButton
+                      size="lg"
+                      radius={18}
+                      tint="#ffffff"
+                      tintOpacity={1}
+                      blur={0}
+                      textColor="#08080a"
+                      lineColor="#ea7833"
+                      baseColor="#e66e4b"
+                      intensity={1}
+                      shineSize={10}
+                      shineFade={40}
+                      thickness={1.5}
+                      speed={0.35}
+                      followMouse
+                      proximity={250}
+                      autoAnimate={false}
+                      onClick={() => {
+                        const el = document.getElementById('events');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                        else navigateTo('events');
+                      }}
+                    >
+                      Explore Events
+                    </SpecularButton>
+                  </div>
+                </div>
+                <div className="hero-visual">
+                  <div className="hero-icon-card">
+                    <AnimatedTicketIcon />
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="hero-visual">
-              <div className="hero-icon-card">
-                <AnimatedTicketIcon />
+            </section>
+          )}
+          <section id="events" className="event-section">
+            <div className="section-heading">
+              <div>
+                {currentView === 'events' ? (
+                  <button
+                    type="button"
+                    className="back-nav-btn"
+                    onClick={() => navigateTo('home')}
+                  >
+                    ← Back to Home
+                  </button>
+                ) : (
+                  <div>
+                    <span className="eyebrow">Upcoming & Live</span>
+                    <h2>Event Programme</h2>
+                  </div>
+                )}
               </div>
+              <p>{currentView === 'events' ? <br /> : 'Explore live outcome pools and exchange event tickets.'}</p>
             </div>
-          </div>
-        </section>
-      )}
-      {currentView === 'events' && (
-        <section id="events" className="event-section">
-          <div className="section-heading">
-            <div>
+            <div className="posters">
               <button
                 type="button"
-                className="back-nav-btn"
-                onClick={() => navigateTo('home')}
+                className="poster poster-live"
+                onClick={() => navigateTo('workspace')}
               >
-                ← Back to Home
+                <span className="poster-top mono">RESHUFFLE PRESENTS / EVENT 1</span>
+                <span className="poster-photo"><Image src={maydayPoster} alt="Mayday concert poster" fill sizes="(max-width: 720px) 84vw, 28vw" /></span>
+                <span className="poster-title">AFTER<br />HOURS</span>
+                <span className="poster-sub">Demo concert · issuer-native tickets</span>
+                <span className="poster-dates mono">{sessions.length ? sessions.map(n => `SESSION ${n}`).join(' / ') : 'READING SESSIONS'}</span>
+                <span className="poster-status"><span className="mono">{market ? `${live.length} ${POOL_LABEL}` : 'Reading live intents…'}</span><span>Open workspace ↗</span></span>
               </button>
+              {[{ name: 'INTERLUDE', photo: sarahPoster, alt: 'Sarah Kang in Seoul concert poster' }, { name: 'ENCORE', photo: taylorPoster, alt: 'Taylor Swift The Eras Tour concert poster' }].map(({ name, photo, alt }, n) => <div key={name} className="poster poster-inert" aria-disabled="true"><span className="poster-top mono">UPCOMING PROGRAMME / 0{n + 2}</span><span className="poster-photo"><Image src={photo} alt={alt} fill sizes="(max-width: 720px) 84vw, 28vw" /></span><span className="poster-title">{name}</span><span className="poster-sub">Event details to be announced</span><span className="poster-dates mono">VENUE & DATES UNANNOUNCED</span><span className="poster-status">No live intents</span></div>)}
             </div>
-            <p><br /></p>
-          </div>
-          <div className="posters">
-            <button
-              type="button"
-              className="poster poster-live"
-              onClick={() => navigateTo('workspace')}
-            >
-              <span className="poster-top mono">RESHUFFLE PRESENTS / EVENT 1</span>
-              <span className="poster-photo"><Image src={maydayPoster} alt="Mayday concert poster" fill sizes="(max-width: 720px) 84vw, 28vw" /></span>
-              <span className="poster-title">AFTER<br />HOURS</span>
-              <span className="poster-sub">Demo concert · issuer-native tickets</span>
-              <span className="poster-dates mono">{sessions.length ? sessions.map(n => `SESSION ${n}`).join(' / ') : 'READING SESSIONS'}</span>
-              <span className="poster-status"><span className="mono">{market ? `${live.length} ${POOL_LABEL}` : 'Reading live intents…'}</span><span>Open workspace ↗</span></span>
-            </button>
-            {[{ name: 'INTERLUDE', photo: sarahPoster, alt: 'Sarah Kang in Seoul concert poster' }, { name: 'ENCORE', photo: taylorPoster, alt: 'Taylor Swift The Eras Tour concert poster' }].map(({ name, photo, alt }, n) => <div key={name} className="poster poster-inert" aria-disabled="true"><span className="poster-top mono">UPCOMING PROGRAMME / 0{n + 2}</span><span className="poster-photo"><Image src={photo} alt={alt} fill sizes="(max-width: 720px) 84vw, 28vw" /></span><span className="poster-title">{name}</span><span className="poster-sub">Event details to be announced</span><span className="poster-dates mono">VENUE & DATES UNANNOUNCED</span><span className="poster-status">No live intents</span></div>)}
-          </div>
-          {readError && <p role="alert" className="read-error">{readError} <button onClick={() => void refresh(true)}>Retry public reads</button></p>}
-        </section>
+            {readError && <p role="alert" className="read-error">{readError} <button onClick={() => void refresh(true)}>Retry public reads</button></p>}
+          </section>
+        </>
       )}
       {currentView === 'workspace' && (
         <>
@@ -595,6 +622,13 @@ export default function Market() {
                   ← Back to Events
                 </button>
                 <nav className="workspace-nav" aria-label="Workspace navigation">
+                  <button
+                    type="button"
+                    className="workspace-tickets-nav-btn"
+                    onClick={() => navigateTo('tickets')}
+                  >
+                    My Tickets {userTickets.length > 0 ? `(${userTickets.length})` : ''}
+                  </button>
                   <button type="button" aria-haspopup="dialog" aria-expanded={poolOpen} onClick={() => setPoolOpen(true)}>{indexingBlock !== null ? 'Intent pool: indexing' : `Intent Pool (${live.length})`}</button>
                   <button type="button" aria-haspopup="dialog" aria-expanded={seatMapOpen} onClick={() => setSeatMapOpen(true)}>Seat Map</button>
                   <button type="button" aria-haspopup="dialog" aria-expanded={historyOpen} onClick={() => setHistoryOpen(true)}>Past Settlements <span className="mono">({getSettlements(market).length})</span></button>
@@ -769,7 +803,35 @@ export default function Market() {
                 {readError && <p role="alert">{readError}</p>}
                 <button className="secondary" onClick={() => void refresh(true)}>Retry indexing</button>
               </section>}
-              {nftClaim && equal(nftClaim.owner, account) && <section className="wallet-nft-import"><h3>Your free tickets</h3><p role="status">{nftClaim.message}</p><p className="quiet">{WALLET_IMPORT_NOTE}</p><span className="mono hash">NFT contract: {CONTRACTS.ticketNFT}</span><ul>{nftClaim.tokenIds.map((id, n) => <li key={id} className="mono">Token ID: {id} / <a href={`${EXPLORER}/tx/${nftClaim.hashes[n]}`} target="_blank" rel="noreferrer">Mint receipt</a></li>)}</ul><button className="secondary" disabled={disabled} onClick={() => void retryNFTImport()}>Add to wallet</button></section>}
+              {nftClaim && equal(nftClaim.owner, account) && (
+                <section className="wallet-nft-import">
+                  <div className="wallet-nft-import-header">
+                    <div className="wallet-nft-import-title-group">
+                      <span className="badge badge-escrowed"><span className="badge-dot" />MINT CONFIRMED</span>
+                      <h3>Your free tickets</h3>
+                    </div>
+                    <button type="button" className="wallet-nft-dismiss-btn" onClick={() => setNftClaim(null)} aria-label="Dismiss notification">✕</button>
+                  </div>
+                  <p role="status">{nftClaim.message}</p>
+                  <p className="quiet">{WALLET_IMPORT_NOTE}</p>
+                  <span className="mono hash">NFT contract: {CONTRACTS.ticketNFT}</span>
+                  <ul>
+                    {nftClaim.tokenIds.map((id, n) => (
+                      <li key={id} className="mono">
+                        Token ID: {id} / <a href={`${EXPLORER}/tx/${nftClaim.hashes[n]}`} target="_blank" rel="noreferrer">Mint receipt</a>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="wallet-nft-import-actions">
+                    <button type="button" className="view-tickets-btn" onClick={() => navigateTo('tickets')}>
+                      View in Tickets Interface →
+                    </button>
+                    <button className="secondary" disabled={disabled} onClick={() => void retryNFTImport()}>
+                      Add to wallet
+                    </button>
+                  </div>
+                </section>
+              )}
               <div hidden={indexingBlock !== null}>
               <div className="workspace-stack">
                 {workflowView === 'intent' ? <IntentBuilder onConnect={async () => { await wallet.connect(); await refresh(true); }} connectionError={wallet.error} market={market} account={account} approved={approved} busy={disabled} seatMapOpen={seatMapOpen} onSeatMapClose={() => setSeatMapOpen(false)} onComplete={() => setWorkflowView('matching')} onCustody={custody} onDepositSelected={depositSelected} onSign={sign} onDemo={claimDemo} onApprove={() => action('Approve tickets', async address => { await track(await approveNFTsForEscrow(address)); setApproved(true); })} /> : <>
@@ -816,6 +878,202 @@ export default function Market() {
           </section>}<div className="redeem-list">{receipt.participants.filter(p => equal(p.owner, account)).flatMap(p => p.receives).map(id => { const t = tickets.find(t => t.tokenId === id); return <div key={id}><span className="mono">Ticket #{id}</span>{t?.status === 1 ? <span className="badge">USED</span> : <button disabled={disabled || !t || !equal(t.owner, account)} onClick={() => void action('Redeem', async address => { await track(await redeemTicket(address, BigInt(id))); await refreshWritten(); })}>Redeem</button>}</div>; })}</div><p className="quiet">Redeem marks your ticket used permanently. Only its current holder can redeem it.</p></section>}
           <AgentDrawer open={agentOpen} onClose={() => setAgentOpen(false)} intentHash={agentHash} chainBlock={chainBlock} freshness={freshness} label={walletLabel} />
         </>
+      )}
+      {currentView === 'tickets' && (
+        <section id="tickets-view" className="tickets-view-section">
+          <div className="tickets-view-header">
+            <div className="tickets-view-header-main">
+              <div className="tickets-view-badge-row">
+                <span className="tickets-event-tag">AFTER HOURS / EVENT 1</span>
+                <span className="tickets-network-tag">ARC TESTNET</span>
+              </div>
+              <h1>My Tickets</h1>
+              <p className="tickets-view-sub">
+                Any tickets in your wallet or held in the reshuffle escrow pool appear here.
+              </p>
+            </div>
+            <div className="tickets-view-actions">
+              <button
+                type="button"
+                className="primary enter-market-btn"
+                onClick={() => navigateTo('workspace')}
+              >
+                Enter Reshuffle Market ↗
+              </button>
+            </div>
+          </div>
+
+          {nftClaim && equal(nftClaim.owner, account) && (
+            <section className="wallet-nft-import">
+              <div className="wallet-nft-import-header">
+                <div className="wallet-nft-import-title-group">
+                  <span className="badge badge-escrowed"><span className="badge-dot" />MINT CONFIRMED</span>
+                  <h3>Your free tickets</h3>
+                </div>
+                <button type="button" className="wallet-nft-dismiss-btn" onClick={() => setNftClaim(null)} aria-label="Dismiss notification">✕</button>
+              </div>
+              <p role="status">{nftClaim.message}</p>
+              <p className="quiet">{WALLET_IMPORT_NOTE}</p>
+              <span className="mono hash">NFT contract: {CONTRACTS.ticketNFT}</span>
+              <ul>
+                {nftClaim.tokenIds.map((id, n) => (
+                  <li key={id} className="mono">
+                    Token ID: {id} / <a href={`${EXPLORER}/tx/${nftClaim.hashes[n]}`} target="_blank" rel="noreferrer">Mint receipt</a>
+                  </li>
+                ))}
+              </ul>
+              <div className="wallet-nft-import-actions">
+                <button className="secondary" disabled={disabled} onClick={() => void retryNFTImport()}>
+                  Add to wallet
+                </button>
+              </div>
+            </section>
+          )}
+
+          {!account ? (
+            <div className="tickets-empty-card">
+              <div className="tickets-empty-icon" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="20" height="14" x="2" y="5" rx="2" />
+                  <line x1="2" x2="22" y1="10" y2="10" />
+                </svg>
+              </div>
+              <h3>Wallet not connected</h3>
+              <p>Connect your wallet to inspect your event tickets, custody status, and mint receipts.</p>
+              <button type="button" className="primary" onClick={() => void wallet.connect()}>
+                Connect Wallet
+              </button>
+            </div>
+          ) : userTickets.length === 0 ? (
+            <div className="tickets-empty-card">
+              <div className="tickets-empty-icon" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+                  <path d="M13 5v2" />
+                  <path d="M13 17v2" />
+                  <path d="M13 11v2" />
+                </svg>
+              </div>
+              <h3>No tickets in your wallet</h3>
+              <p>
+                You currently hold no tickets for Event 1 (After Hours). You can receive two free demo tickets on Arc Testnet to test swaps, custody, and settlements.
+              </p>
+              <div className="tickets-empty-actions">
+                <button
+                  type="button"
+                  className="primary"
+                  disabled={disabled}
+                  onClick={() => void claimDemo()}
+                >
+                  Get free tickets
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => navigateTo('events')}
+                >
+                  Browse Events
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="tickets-content">
+              <div className="tickets-meta-bar">
+                <div className="tickets-meta-counts">
+                  <span className="tickets-count-pill mono">
+                    <strong>{userTickets.length}</strong> Total Ticket{userTickets.length === 1 ? '' : 's'}
+                  </span>
+                  <span className="tickets-count-pill mono">
+                    <strong>{userTickets.filter(t => t.depositor === '0x0000000000000000000000000000000000000000').length}</strong> In Wallet
+                  </span>
+                  <span className="tickets-count-pill mono">
+                    <strong>{userTickets.filter(t => t.depositor !== '0x0000000000000000000000000000000000000000').length}</strong> In Escrow
+                  </span>
+                </div>
+                <div className="tickets-contract-pill">
+                  <span className="quiet">Contract:</span>
+                  <a
+                    href={`${EXPLORER}/address/${CONTRACTS.ticketNFT}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mono hash"
+                  >
+                    {truncateAddress(CONTRACTS.ticketNFT)} ↗
+                  </a>
+                </div>
+              </div>
+
+              <div className="tickets-grid">
+                {userTickets.map(t => {
+                  const escrowed = t.depositor !== '0x0000000000000000000000000000000000000000';
+                  const committed = market?.intents.some(i => i.state === 1 && !i.expired && restoreIntent(i).offered.includes(BigInt(t.tokenId)));
+                  return (
+                    <div key={t.tokenId} className={`ticket-pass-card ${escrowed ? 'is-escrowed' : ''}`}>
+                      <div className="ticket-pass-header">
+                        <div className="ticket-pass-chips">
+                          <span className="ticket-pass-token-chip mono">#{t.tokenId}</span>
+                          <span className="ticket-pass-session-chip">{sessionLabel(t.sessionId)}</span>
+                          <span className="ticket-pass-cat-chip">CAT {t.sectionId}</span>
+                        </div>
+                        <span className={`badge badge-${t.status === 1 ? 'used' : committed ? 'committed' : escrowed ? 'escrowed' : 'wallet'}`}>
+                          <span className="badge-dot" aria-hidden="true" />
+                          {t.status === 1 ? 'USED' : committed ? 'COMMITTED' : escrowed ? 'ESCROWED' : 'WALLET'}
+                        </span>
+                      </div>
+
+                      <div className="ticket-pass-seat-display">
+                        <div className="ticket-pass-seat-col">
+                          <span className="seat-label">ROW</span>
+                          <span className="seat-value mono">{t.row}</span>
+                        </div>
+                        <div className="ticket-pass-seat-divider" />
+                        <div className="ticket-pass-seat-col">
+                          <span className="seat-label">SEAT</span>
+                          <span className="seat-value mono">{t.seat}</span>
+                        </div>
+                        <div className="ticket-pass-seat-divider" />
+                        <div className="ticket-pass-seat-col">
+                          <span className="seat-label">SECTION</span>
+                          <span className="seat-value mono">CAT {t.sectionId}</span>
+                        </div>
+                      </div>
+
+                      <div className="ticket-pass-footer">
+                        <div className="ticket-pass-price-info">
+                          <span className="quiet mono">
+                            {DEMO_SECTION_PRICES[t.sectionId] !== undefined
+                              ? `${formatUSDC(DEMO_SECTION_PRICES[t.sectionId])} USDC (Demo Ref)`
+                              : 'Standard Admission'}
+                          </span>
+                        </div>
+                        <div className="ticket-pass-actions">
+                          {t.status !== 1 && (
+                            <button
+                              type="button"
+                              className="position-custody-btn"
+                              disabled={disabled}
+                              onClick={() => void custody(t, escrowed ? 'withdraw' : 'deposit')}
+                            >
+                              {escrowed ? 'Withdraw' : 'Deposit'}
+                            </button>
+                          )}
+                          <a
+                            href={`${EXPLORER}/token/${CONTRACTS.ticketNFT}?a=${t.tokenId}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="ticket-explorer-link mono"
+                          >
+                            Arcscan ↗
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </section>
       )}
     </main>
     <ActivityNotification busy={busy} notice={notice} hash={txHash} confirmation={confirmedWrite} open={activityOpen} onOpen={() => setActivityOpen(true)} onClose={() => setActivityOpen(false)} />
