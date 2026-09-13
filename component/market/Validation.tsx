@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { NamedRejection } from '@/lib/proposal-controls';
 import { EXPLORER } from '@/lib/ui-copy';
 
@@ -13,20 +13,44 @@ const failures: Record<string, number> = { MalformedSettlement: 0, DuplicateInte
   IntentNotLive: 1, IntentExpired: 1, TicketNotEscrowed: 2, WrongEvent: 2, TicketRedeemed: 3,
   ConservationViolated: 4, CountMismatch: 5, SessionNotAccepted: 5, SectionNotAccepted: 5, NotSameSession: 5,
   NotSameSection: 5, SeatsNotAdjacent: 5, BudgetExceeded: 6, PaymentImbalance: 7, InsufficientPaymentCapacity: 8 };
-export default function Validation({ status, hash, rejection }: { status: string; hash?: string; rejection?: NamedRejection | null }) {
+export default function Validation({
+  status,
+  hash,
+  rejection,
+  onComplete,
+  onViewReceipt,
+}: {
+  status: string;
+  hash?: string;
+  rejection?: NamedRejection | null;
+  onComplete?: () => void;
+  onViewReceipt?: () => void;
+}) {
   const [shown, setShown] = useState(0);
   const done = status === 'confirmed' || status === 'reverted';
   const stop = rejection ? failures[rejection.name] : undefined;
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
   useEffect(() => {
     if (!done) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      const timer = setTimeout(() => setShown(checks.length), 0);
+      const timer = setTimeout(() => {
+        setShown(checks.length);
+        if (status === 'confirmed') onCompleteRef.current?.();
+      }, 0);
       return () => clearTimeout(timer);
     }
     let n = 0;
-    const timer = setInterval(() => { setShown(++n); if (n >= checks.length) clearInterval(timer); }, 120);
+    const timer = setInterval(() => {
+      n++;
+      setShown(n);
+      if (n >= checks.length) {
+        clearInterval(timer);
+        if (status === 'confirmed') onCompleteRef.current?.();
+      }
+    }, 120);
     return () => clearInterval(timer);
-  }, [done, hash, rejection?.name]);
+  }, [done, hash, rejection?.name, status]);
   return <section className="validation" aria-live="polite">
     <div className="panel-heading"><span className="eyebrow">Contract validation</span><span className="mono">{status}</span></div>
     {hash && <a className="hash" href={`${EXPLORER}/tx/${hash}`} target="_blank" rel="noreferrer">{hash} ↗</a>}
@@ -36,6 +60,16 @@ export default function Validation({ status, hash, rejection }: { status: string
       const failed = status === 'reverted' && stop === index && index < shown;
       return <li key={code} className={passed ? 'passed' : failed ? 'rejected' : ''}><span className="mono">{passed ? '✓' : failed ? '×' : '·'} {code}</span>{label}</li>;
     })}</ol>
+    {status === 'confirmed' && (
+      <div className="validation-confirmed-banner">
+        <p className="passed">✓ All 9 contract conditions verified on-chain.</p>
+        {onViewReceipt && (
+          <button type="button" className="primary" onClick={onViewReceipt}>
+            View Swap Confirmation ↗
+          </button>
+        )}
+      </div>
+    )}
     {rejection && <div className="rejection" role="alert"><h2>{rejection.name}({rejection.args.join(', ')})</h2>
       <p>{hash ? 'The receipt confirms failure. Error arguments come from replaying the transaction at the preceding block; intermediate checks are not individually traced.' : 'Decoded from eth_call. No transaction was broadcast.'}</p></div>}
   </section>;

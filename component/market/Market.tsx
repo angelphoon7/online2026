@@ -88,7 +88,7 @@ export default function Market() {
   const [attack, setAttack] = useState<Attack>('siphon');
   const [resetEnabled, setResetEnabled] = useState(false);
   const [operator, setOperator] = useState('');
-  const [currentView, setCurrentView] = useState<'home' | 'events' | 'workspace' | 'tickets'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'events' | 'workspace' | 'tickets' | 'receipt'>('home');
 
   useEffect(() => {
     const handleHash = () => {
@@ -99,6 +99,8 @@ export default function Market() {
         setCurrentView('tickets');
       } else if (hash === '#events' || hash === '#market') {
         setCurrentView('events');
+      } else if (hash === '#receipt') {
+        setCurrentView('receipt');
       } else if (hash === '#home' || hash === '') {
         setCurrentView('home');
       }
@@ -112,7 +114,7 @@ export default function Market() {
     };
   }, []);
 
-  const navigateTo = (view: 'home' | 'events' | 'workspace' | 'tickets') => {
+  const navigateTo = (view: 'home' | 'events' | 'workspace' | 'tickets' | 'receipt') => {
     setCurrentView(view);
     if (view === 'workspace') {
       if (window.location.hash !== '') {
@@ -122,6 +124,8 @@ export default function Market() {
       window.history.pushState(null, '', '#tickets');
     } else if (view === 'events') {
       window.history.pushState(null, '', '#events');
+    } else if (view === 'receipt') {
+      window.history.pushState(null, '', '#receipt');
     } else {
       window.history.pushState(null, '', '#home');
     }
@@ -411,9 +415,16 @@ export default function Market() {
     // track() already refreshed at the confirmed commit block. Reuse that read-back.
     setNotice('Intent committed. Matching will run once after your request is indexed.');
   });
-  const openReceipt = async (hash: Hex) => {
+  const openReceipt = async (hash: Hex, navigate = false) => {
     const result = await getSettlementReceipt(hash);
-    if (result.status === 'success') { setReceipt(result); setTimeout(() => scrollTo(receiptPanel.current), 50); }
+    if (result.status === 'success') {
+      setReceipt(result);
+      if (navigate) {
+        navigateTo('receipt');
+      } else {
+        setTimeout(() => scrollTo(receiptPanel.current), 50);
+      }
+    }
     return result;
   };
   const settle = (malicious?: Attack) => action(malicious ? 'Submit dishonest proposal' : 'Propose and settle', async address => {
@@ -839,6 +850,17 @@ export default function Market() {
                   </div>
                 </section>
               )}
+              {receipt && (
+                <div className="activity workspace-receipt-banner">
+                  <div>
+                    <p className="passed">✓ Swap confirmed on Arc Testnet</p>
+                    <p className="quiet mono">{receipt.hash.slice(0, 16)}… · {receipt.ticketTransfers} ticket transfers</p>
+                  </div>
+                  <button type="button" className="primary" onClick={() => navigateTo('receipt')}>
+                    View Swap Confirmation ↗
+                  </button>
+                </div>
+              )}
               <div hidden={indexingBlock !== null}>
               <div className="workspace-stack">
                 {workflowView === 'intent' ? <IntentBuilder onConnect={async () => { await wallet.connect(); await refresh(true); }} connectionError={wallet.error} market={market} account={account} approved={approved} busy={disabled} seatMapOpen={seatMapOpen} onSeatMapClose={() => setSeatMapOpen(false)} onComplete={() => setWorkflowView('matching')} onCustody={custody} onDepositSelected={depositSelected} onSign={sign} onDemo={claimDemo} onApprove={() => action('Approve tickets', async address => { await track(await approveNFTsForEscrow(address)); setApproved(true); })} /> : <>
@@ -855,7 +877,20 @@ export default function Market() {
                 </>}
               </div>
               </div>
-              {(status !== 'idle' || rejection) && <Validation key={`${status}:${txHash}`} status={status} hash={txHash} rejection={rejection} />}
+              {(status !== 'idle' || rejection) && (
+                <Validation
+                  key={`${status}:${txHash}`}
+                  status={status}
+                  hash={txHash}
+                  rejection={rejection}
+                  onComplete={() => {
+                    setTimeout(() => {
+                      navigateTo('receipt');
+                    }, 500);
+                  }}
+                  onViewReceipt={() => navigateTo('receipt')}
+                />
+              )}
               <dialog ref={historyDialog} className="intent-pool-dialog history-dialog" aria-labelledby="history-title" onClose={() => setHistoryOpen(false)} onClick={event => {
                 if (event.target !== event.currentTarget) return;
                 const bounds = event.currentTarget.getBoundingClientRect();
@@ -863,7 +898,7 @@ export default function Market() {
               }}>
                 <div className="panel-heading"><h2 id="history-title">Past Settlements</h2><button className="secondary" onClick={() => historyDialog.current?.close()} aria-label="Close past settlements">Close ×</button></div>
                 <p className="quiet">{getSettlements(market).length} recorded swaps</p>
-                <div className="history-list">{getSettlements(market).map((r, index) => <button key={r.hash} title={r.hash} onClick={() => { setHistoryOpen(false); void openReceipt(r.hash).catch(e => setNotice(e.message)); }}><span>Swap {getSettlements(market).length - index}</span><span>{r.participants} participants</span><span>Open receipt ↗</span></button>)}</div>
+                <div className="history-list">{getSettlements(market).map((r, index) => <button key={r.hash} title={r.hash} onClick={() => { setHistoryOpen(false); void openReceipt(r.hash, true).catch(e => setNotice(e.message)); }}><span>Swap {getSettlements(market).length - index}</span><span>{r.participants} participants</span><span>Open receipt ↗</span></button>)}</div>
                 {!getSettlements(market).length && <p className="quiet">No settlements recorded yet.</p>}
               </dialog>
             </section>
@@ -873,11 +908,6 @@ export default function Market() {
               <EventLoadingDialog error={readError} onRetry={() => refresh(true)} onBack={() => navigateTo('events')} />
             </section>
           )}
-          {receipt && <section ref={receiptPanel} className="receipt-section"><div className="section-heading"><div><span className="eyebrow passed">Settlement confirmed</span><h2>{receiptTitle(receipt, account)}</h2></div><span className="receipt-stamp passed">✓</span></div>
-            <ClaimTickets key={receipt.hash} receipt={receipt} wallet={wallet} disabled={!!busy} />
-            {receiptRows.every(row => !walletChangesTickets(receipt.participants, row.owner)) && <p className="quiet">This transaction returned tickets to their existing owner. Ticket ownership did not change.</p>}
-            {account && !receiptRows.some(row => equal(row.owner, account)) && <div className="activity"><p>This settlement did not include your wallet or settle your request.</p><p>Your deposited tickets: {tickets.filter(ticket => equal(ticket.depositor, account) && equal(ticket.owner, CONTRACTS.escrow)).map(ticket => `#${ticket.tokenId}`).join(', ') || 'None in the loaded state'}</p><button className="secondary" disabled={disabled || solving || !requiredHash} onClick={() => { setWorkflowView('matching'); setWholePool(true); void runSolver([], true); scrollTo(workspace.current); }}>Find my match</button></div>}
-            <a className="hash" href={`${EXPLORER}/tx/${receipt.hash}`} target="_blank" rel="noreferrer">{receipt.hash} ↗</a><p className="receipt-count mono">{receipt.ticketTransfers} ticket transfers · {receipt.payments ? `${formatUSDC(BigInt(receipt.payments.totalTransferred))} USDC transferred` : 'USDC amount unavailable'} · 1 transaction</p><table className="receipt-table"><thead><tr><th>Participant</th><th>Before / offered</th><th>After / received</th><th>USDC payment</th></tr></thead><tbody>{receiptRows.map((p, n) => <tr key={`${p.owner}:${n}`}><td><a href={`${EXPLORER}/address/${p.owner}`} title={p.owner} target="_blank" rel="noreferrer">{walletLabel(p.owner)} · {truncateAddress(p.owner)}</a></td><td className="mono">{p.offered.map(id => `#${id}`).join(', ') || '—'}</td><td className="mono">{p.receives.map(id => `#${id}`).join(', ') || '—'}</td><td className="mono">{(() => { const payment = receipt.payments?.wallets.find(item => equal(item.owner, p.owner)); return !payment ? 'Unavailable' : BigInt(payment.paid) > 0n ? `Paid ${formatUSDC(BigInt(payment.paid))} USDC` : BigInt(payment.received) > 0n ? `Received ${formatUSDC(BigInt(payment.received))} USDC` : '0 USDC'; })()}</td></tr>)}</tbody><tfoot><tr><td colSpan={3}>Total transferred</td><td className="mono passed">{receipt.payments ? `${formatUSDC(BigInt(receipt.payments.totalTransferred))} USDC` : 'Unavailable'}</td></tr></tfoot></table><p>{receipt.independent ? SOLVER_NOTE : 'Submitted by a participant wallet.'} <a href={`${EXPLORER}/address/${receipt.proposer}`} title={receipt.proposer} target="_blank" rel="noreferrer">{walletLabel(receipt.proposer)}</a></p><p className="quiet">Ticket recipients and USDC payments are verified against receipt logs. Gas is separate.</p><div className="receipt-actions"><a className="secondary" href={`${EXPLORER}/tx/${receipt.hash}`} target="_blank" rel="noreferrer">View on Arc explorer ↗</a><button className="secondary" onClick={() => void navigator.clipboard.writeText(receipt.hash).then(() => setNotice('Hash copied.')).catch(() => setNotice('Clipboard unavailable. Select and copy the displayed hash.'))}>Copy hash</button></div><div className="redeem-list">{receipt.participants.filter(p => equal(p.owner, account)).flatMap(p => p.receives).map(id => { const t = tickets.find(t => t.tokenId === id); return <div key={id}><span className="mono">Ticket #{id}</span>{t?.status === 1 ? <span className="badge">USED</span> : <button disabled={disabled || !t || !equal(t.owner, account)} onClick={() => void action('Redeem', async address => { await track(await redeemTicket(address, BigInt(id))); await refreshWritten(); })}>Redeem</button>}</div>; })}</div><p className="quiet">Redeem marks your ticket used permanently. Only its current holder can redeem it.</p></section>}
           <AgentDrawer open={agentOpen} onClose={() => setAgentOpen(false)} intentHash={agentHash} chainBlock={chainBlock} freshness={freshness} label={walletLabel} />
         </>
       )}
@@ -1073,6 +1103,79 @@ export default function Market() {
             </div>
           )}
         </section>
+      )}
+      {currentView === 'receipt' && (
+        receipt ? (
+          <section id="receipt-view" ref={receiptPanel} className="receipt-section receipt-view-section">
+            <div className="receipt-view-header">
+              <button
+                type="button"
+                className="back-nav-btn"
+                onClick={() => navigateTo('workspace')}
+              >
+                ← Back to Workspace
+              </button>
+              <div className="receipt-view-nav">
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => navigateTo('tickets')}
+                >
+                  My Tickets {userTickets.length > 0 ? `(${userTickets.length})` : ''}
+                </button>
+              </div>
+            </div>
+            <div className="section-heading">
+              <div>
+                <span className="eyebrow passed">Settlement confirmed</span>
+                <h2>{receiptTitle(receipt, account)}</h2>
+              </div>
+              <span className="receipt-stamp passed">✓</span>
+            </div>
+            <ClaimTickets key={receipt.hash} receipt={receipt} wallet={wallet} disabled={!!busy} />
+            {receiptRows.every(row => !walletChangesTickets(receipt.participants, row.owner)) && (
+              <p className="quiet">This transaction returned tickets to their existing owner. Ticket ownership did not change.</p>
+            )}
+            {account && !receiptRows.some(row => equal(row.owner, account)) && (
+              <div className="activity">
+                <p>This settlement did not include your wallet or settle your request.</p>
+                <p>Your deposited tickets: {tickets.filter(ticket => equal(ticket.depositor, account) && equal(ticket.owner, CONTRACTS.escrow)).map(ticket => `#${ticket.tokenId}`).join(', ') || 'None in the loaded state'}</p>
+                <button className="secondary" disabled={disabled || solving || !requiredHash} onClick={() => { navigateTo('workspace'); setWorkflowView('matching'); setWholePool(true); void runSolver([], true); scrollTo(workspace.current); }}>Find my match</button>
+              </div>
+            )}
+            <a className="hash" href={`${EXPLORER}/tx/${receipt.hash}`} target="_blank" rel="noreferrer">{receipt.hash} ↗</a>
+            <p className="receipt-count mono">{receipt.ticketTransfers} ticket transfers · {receipt.payments ? `${formatUSDC(BigInt(receipt.payments.totalTransferred))} USDC transferred` : 'USDC amount unavailable'} · 1 transaction</p>
+            <table className="receipt-table">
+              <thead><tr><th>Participant</th><th>Before / offered</th><th>After / received</th><th>USDC payment</th></tr></thead>
+              <tbody>{receiptRows.map((p, n) => <tr key={`${p.owner}:${n}`}><td><a href={`${EXPLORER}/address/${p.owner}`} title={p.owner} target="_blank" rel="noreferrer">{walletLabel(p.owner)} · {truncateAddress(p.owner)}</a></td><td className="mono">{p.offered.map(id => `#${id}`).join(', ') || '—'}</td><td className="mono">{p.receives.map(id => `#${id}`).join(', ') || '—'}</td><td className="mono">{(() => { const payment = receipt.payments?.wallets.find(item => equal(item.owner, p.owner)); return !payment ? 'Unavailable' : BigInt(payment.paid) > 0n ? `Paid ${formatUSDC(BigInt(payment.paid))} USDC` : BigInt(payment.received) > 0n ? `Received ${formatUSDC(BigInt(payment.received))} USDC` : '0 USDC'; })()}</td></tr>)}</tbody>
+              <tfoot><tr><td colSpan={3}>Total transferred</td><td className="mono passed">{receipt.payments ? `${formatUSDC(BigInt(receipt.payments.totalTransferred))} USDC` : 'Unavailable'}</td></tr></tfoot>
+            </table>
+            <details className="receipt-validation-details" open>
+              <summary>Contract validation verified (9/9 checks passed)</summary>
+              <Validation status="confirmed" hash={receipt.hash} />
+            </details>
+            <p>{receipt.independent ? SOLVER_NOTE : 'Submitted by a participant wallet.'} <a href={`${EXPLORER}/address/${receipt.proposer}`} title={receipt.proposer} target="_blank" rel="noreferrer">{walletLabel(receipt.proposer)}</a></p>
+            <p className="quiet">Ticket recipients and USDC payments are verified against receipt logs. Gas is separate.</p>
+            <div className="receipt-actions">
+              <a className="secondary" href={`${EXPLORER}/tx/${receipt.hash}`} target="_blank" rel="noreferrer">View on Arc explorer ↗</a>
+              <button className="secondary" onClick={() => void navigator.clipboard.writeText(receipt.hash).then(() => setNotice('Hash copied.')).catch(() => setNotice('Clipboard unavailable. Select and copy the displayed hash.'))}>Copy hash</button>
+            </div>
+            <div className="redeem-list">{receipt.participants.filter(p => equal(p.owner, account)).flatMap(p => p.receives).map(id => { const t = tickets.find(t => t.tokenId === id); return <div key={id}><span className="mono">Ticket #{id}</span>{t?.status === 1 ? <span className="badge">USED</span> : <button disabled={disabled || !t || !equal(t.owner, account)} onClick={() => void action('Redeem', async address => { await track(await redeemTicket(address, BigInt(id))); await refreshWritten(); })}>Redeem</button>}</div>; })}</div>
+            <p className="quiet">Redeem marks your ticket used permanently. Only its current holder can redeem it.</p>
+          </section>
+        ) : (
+          <section className="receipt-section receipt-view-section">
+            <button type="button" className="back-nav-btn" onClick={() => navigateTo('workspace')}>← Back to Workspace</button>
+            <div className="section-heading">
+              <div>
+                <span className="eyebrow">No receipt loaded</span>
+                <h2>Swap Confirmation</h2>
+              </div>
+            </div>
+            <p className="quiet">No confirmed settlement is currently loaded in this session.</p>
+            <button type="button" className="primary" onClick={() => navigateTo('workspace')}>Go to Workspace ↗</button>
+          </section>
+        )
       )}
     </main>
     <ActivityNotification busy={busy} notice={notice} hash={txHash} confirmation={confirmedWrite} open={activityOpen} onOpen={() => setActivityOpen(true)} onClose={() => setActivityOpen(false)} />
