@@ -23,7 +23,23 @@ export default function JudgingGuide({ freshness, busy, onSearch }: { freshness:
       setStatus(null); setError(e instanceof Error ? e.message : 'Demo status unavailable');
     }
   }, [freshness]);
-  useEffect(() => { void Promise.resolve().then(load); const timer = setInterval(() => void load(), 30_000); return () => clearInterval(timer); }, [load, floor, indexingBlock]);
+  // Poll only while the tab is actually being looked at. The Studio development endpoint
+  // allows 3,000 queries a day; a single tab left open on a 30s timer spends all of it in a
+  // day and returns 429 for every judge afterwards. A hidden tab is polling nobody reads, so
+  // it stops, and one read runs on the way back to catch up.
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const stop = () => { if (timer) { clearInterval(timer); timer = undefined; } };
+    const start = () => { if (!timer) timer = setInterval(() => void load(), 60_000); };
+    const sync = () => {
+      if (document.visibilityState === 'hidden') return stop();
+      void load();
+      start();
+    };
+    sync();
+    document.addEventListener('visibilitychange', sync);
+    return () => { stop(); document.removeEventListener('visibilitychange', sync); };
+  }, [load, floor, indexingBlock]);
   const waiting = indexingBlock !== null;
   return <details className="dishonest judging-guide">
     <summary>Start here / judge the live demo</summary>

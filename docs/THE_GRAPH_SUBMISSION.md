@@ -53,9 +53,29 @@ direction and hypothetical qualifications. [Block evidence](GRAPH_7A_7D.md) and
 
 ## Developer feedback — observed facts only
 
-- Studio serves the deployed `reshuffle` v0.1.1 subgraph on `arc-testnet`. The ABI/manifest
+- Studio serves the deployed `reshuffle` subgraph on `arc-testnet`. The ABI/manifest
   check passes with the actual event name `TicketRedeemedEvt`; the plan's generic event
   examples needed adaptation to our contracts.
+- **The development query URL is limited to 3,000 queries per day, and the limit is not
+  visible until it is spent.** On 13 September the v0.1.1 URL began returning
+  `429 Too many requests` to every caller, authenticated or not, and kept doing so; the
+  documented allowance resets daily rather than in a short window. The cause on our side was
+  ordinary polling: one browser tab refreshing the judging panel on a 30s timer spends the
+  full daily allowance in a day on its own, and a hidden tab spends it on nobody. Three
+  changes followed, all worth doing regardless: polling stops while the tab is hidden and
+  otherwise runs at 60s, the server snapshot cache serves the last indexed block labelled
+  with its age when the endpoint is unreachable rather than failing the request, and the
+  acceptance scripts send the API key and back off on 429 instead of reporting a throttle as
+  a broken subgraph. What we would have wanted from the provider is the remaining allowance
+  in a response header, and a distinguishable error for "daily allowance spent" versus
+  "slow down" — they need opposite responses from a client, and both arrive as 429.
+- Deploying a new version label mints a new development query URL with its own allowance, and
+  because the manifest was unchanged the deploy resolved to the same deployment hash
+  (`QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL`) and was synced immediately rather than
+  re-indexing from the start block. That is a useful property and we did not find it
+  documented. The version-pinned URL is also a trap worth flagging: every deploy invalidates
+  the previous endpoint, so the URL lives in exactly one place in this repo and one script
+  writes it.
 - The read-only parity audit passed **1,719 checks at block 61754713** across 121 intents
   and 164 tickets. [Recorded output](checks/step-11-parity.txt).
 - `number_gte` allows the client to treat an indexer behind the receipt as an explicit wait;
@@ -75,7 +95,7 @@ direction and hypothetical qualifications. [Block evidence](GRAPH_7A_7D.md) and
 
 | Item | Artifact |
 |---|---|
-| Query endpoint | [Studio v0.1.1](https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1) |
+| Query endpoint | [Studio v0.1.2](https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.2) |
 | Schema and mappings | [Schema](../subgraph/schema.graphql), [mappings](../subgraph/src/) |
 | Setup and executable query | [README](../README.md#the-graph) |
 | Agent source | [Agent](../server/agent/), [API routes](../app/api/agent/) |

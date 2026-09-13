@@ -50,6 +50,26 @@ test('the actual market route uses live Graph transport without wallet credentia
   assert.equal(response.status, 200); assert.equal(body.source, 'graph'); assert.equal(body.blockNumber, '100');
   assert.equal(fetch.mock.callCount(), 1, 'No RPC fallback or signing request');
 });
+
+test('the market route shares Graph reads while fresh requests and newer receipt blocks bypass cached data', async t => {
+  env(t, { SUBGRAPH_URL: 'https://cached-market.invalid', READ_SOURCE: 'graph' });
+  const fetch = t.mock.method(globalThis, 'fetch', async (_url: RequestInfo | URL, init?: RequestInit) => {
+    const floor = JSON.parse(init!.body as string).variables.at.number_gte;
+    const value = page(); value.data._meta.block.number = Math.max(100, floor);
+    return Response.json(value);
+  });
+  const first = await Promise.all([market(marketRequest()), market(marketRequest())]);
+  assert.ok(first.every(response => response.status === 200)); assert.equal(fetch.mock.callCount(), 1);
+  await market(marketRequest()); assert.equal(fetch.mock.callCount(), 1);
+  await market(new Request('https://app.example/api/market?fresh=1&minBlock=100'));
+  assert.equal(fetch.mock.callCount(), 2);
+  const newer = await market(new Request('https://app.example/api/market?minBlock=101'));
+  assert.equal((await newer.json()).blockNumber, '101'); assert.equal(fetch.mock.callCount(), 3);
+  process.env.SUBGRAPH_API_KEY = 'test-key-rotation';
+  await market(marketRequest()); assert.equal(fetch.mock.callCount(), 4, 'Credential changes cannot reuse another provider session cache');
+  process.env.SUBGRAPH_URL = 'https://changed-market.invalid';
+  await market(marketRequest()); assert.equal(fetch.mock.callCount(), 5, 'Endpoint changes must read the new provider');
+});
 test('the browser RPC proxy uses the resolved deployment URL when ARC_RPC is missing', async t => {
   env(t);
   const fetch = t.mock.method(globalThis, 'fetch', async (url: RequestInfo | URL, init?: RequestInit) => {

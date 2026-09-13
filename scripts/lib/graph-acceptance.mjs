@@ -1,14 +1,49 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { loadEnvFile } from 'node:process';
+
+// Pick up SUBGRAPH_API_KEY from .env when the caller has not already loaded it. This does not
+// change what these checks read - the query endpoint and its data are public either way - it
+// only keeps an operator's own runs from being throttled. Without a .env the checks still run.
+if (!process.env.SUBGRAPH_API_KEY && fs.existsSync('.env')) {
+  try { loadEnvFile('.env'); } catch { /* a malformed .env must not fail a public check */ }
+}
 
 export const json = value => JSON.stringify(value, (_, v) => typeof v === 'bigint' ? v.toString() : v, 2) + '\n';
 
-export async function queryGraph(endpoint, query, variables = {}) {
-  const response = await fetch(endpoint, {
-    method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ query, variables }), signal: AbortSignal.timeout(20000),
-  });
-  if (!response.ok) throw new Error(`Graph HTTP ${response.status}`);
-  return response.json();
+// Studio's development endpoint rate limits unauthenticated callers, and these checks issue
+// several large queries in a row. Two consequences, both handled here rather than in each
+// caller:
+//
+//   - Send SUBGRAPH_API_KEY when the environment has one. The checks still run without it, so
+//     a judge holding only the public URL can reproduce them; a key just avoids the throttle.
+//   - Retry 429 and 5xx with backoff. A throttled request is a wait, not a failed check, and
+//     reporting it as "the subgraph is broken" would be wrong.
+export async function queryGraph(endpoint, query, variables = {}, { attempts = 4 } = {}) {
+  const key = process.env.SUBGRAPH_API_KEY;
+  let delay = 1000;
+  for (let attempt = 1; ; attempt++) {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...(key ? { authorization: `Bearer ${key}` } : {}) },
+      body: JSON.stringify({ query, variables }),
+      signal: AbortSignal.timeout(20000),
+    });
+    if (response.ok) return response.json();
+
+    const retryable = response.status === 429 || response.status >= 500;
+    if (!retryable || attempt >= attempts) {
+      const hint = response.status === 429
+        ? ' — rate limited by the Graph endpoint. Set SUBGRAPH_API_KEY, or retry in a minute.'
+        : '';
+      throw new Error(`Graph HTTP ${response.status}${hint}`);
+    }
+    // Honour Retry-After when the endpoint sends one; otherwise back off exponentially.
+    const after = Number(response.headers.get('retry-after'));
+    const wait = Number.isFinite(after) && after > 0 ? after * 1000 : delay;
+    await new Promise(r => setTimeout(r, wait));
+    delay = Math.min(delay * 2, 8000);
+  }
 }
 
 export function verifyIndexedTicket(data, { block, owner, tokenId, deployment }) {

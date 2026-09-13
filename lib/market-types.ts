@@ -17,6 +17,10 @@ export interface MarketSnapshot {
   // Intents the subgraph returned that did not re-hash to the id they were published under
   // (trust rule 1). Dropped from the pool, and named here so the drop is visible.
   hashMismatched: Hex[];
+  // Set when the indexer could not be reached and this is the last snapshot that was, so the
+  // reader can say the pool is from an earlier block rather than implying it is current.
+  // `blockNumber` is still the block this data describes; nothing here is newer than it.
+  stale?: { reason: string; ageMs: number };
 }
 export interface ChainReceipt {
   hash: Hex; blockNumber: string; status: 'success' | 'reverted'; proposer: Address; independent: boolean;

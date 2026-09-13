@@ -7,6 +7,9 @@ import { saveEvidence } from './evidence-store';
 import { readSolverState, solverReadClient } from './solve-rpc';
 
 export const SEARCH_CONFIG = { maxParticipants: 4, maxCandidates: 100, timeoutMs: 2000, requireOwnershipChange: true };
+// One user-triggered match gets more CPU time without issuing more discovery queries.
+// Agent what-if calls retain their smaller per-call budget inside the overall deadline.
+export const MATCH_SEARCH_CONFIG = { ...SEARCH_CONFIG, timeoutMs: 8000 };
 export function parseRequiredIntent(body: unknown): Hex | undefined {
   const value = (body as { mustInclude?: unknown })?.mustInclude;
   if (value === undefined) return undefined;
@@ -111,7 +114,7 @@ export async function solveOnChain(hashes: Hex[], committed?: ReadonlyMap<Hex, I
   }
   await readSolverState(jobs);
   const started = performance.now();
-  const searchConfig = { ...SEARCH_CONFIG, ...(mustInclude ? { mustInclude } : {}) };
+  const searchConfig = { ...MATCH_SEARCH_CONFIG, ...(mustInclude ? { mustInclude } : {}) };
   const result = solve(intents, state, searchConfig);
   const runtimeMs = performance.now() - started;
   const inputExclusions = hashes.flatMap(hash => {

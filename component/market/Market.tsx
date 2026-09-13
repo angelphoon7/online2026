@@ -32,6 +32,7 @@ import AgentDrawer from './AgentDrawer';
 import ActivityNotification from './ActivityNotification';
 import EventLoadingDialog from './EventLoadingDialog';
 import ClaimTickets from './ClaimTickets';
+import GraphDetails from './GraphDetails';
 import { proposalForWallet, receiptOutcomes, receiptTitle, walletChangesTickets } from '@/lib/personal-swap';
 import { automaticSelection, latestRequest } from '@/lib/matching-status';
 import { matchUnavailable } from '@/lib/match-review';
@@ -63,6 +64,8 @@ export default function Market() {
   const refresh = freshness.refresh;
   const [opened, setOpened] = useState(false);
   const [poolOpen, setPoolOpen] = useState(false);
+  const [graphOpen, setGraphOpen] = useState(false);
+  const [graphIntent, setGraphIntent] = useState<string>();
   const [seatMapOpen, setSeatMapOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [workflowView, setWorkflowView] = useState<'intent' | 'matching'>('intent');
@@ -650,6 +653,7 @@ export default function Market() {
                   <button type="button" aria-haspopup="dialog" aria-expanded={poolOpen} onClick={() => setPoolOpen(true)}>{indexingBlock !== null ? 'Intent pool: indexing' : `Intent Pool (${live.length})`}</button>
                   <button type="button" aria-haspopup="dialog" aria-expanded={seatMapOpen} onClick={() => setSeatMapOpen(true)}>Seat Map</button>
                   <button type="button" aria-haspopup="dialog" aria-expanded={historyOpen} onClick={() => setHistoryOpen(true)}>Past Settlements <span className="mono">({getSettlements(market).length})</span></button>
+                  <button type="button" aria-haspopup="dialog" aria-expanded={graphOpen} onClick={() => { setGraphIntent(undefined); setGraphOpen(true); }}>The Graph ↗</button>
                 </nav>
               </header>
               <PoolDialog open={poolOpen} count={live.length} onClose={() => setPoolOpen(false)}>
@@ -744,6 +748,10 @@ export default function Market() {
                                       <a className="hash" href={`${EXPLORER}/address/${i.owner}`} target="_blank" rel="noreferrer">
                                         {i.owner}
                                       </a>
+                                    </div>
+                                    <div className="wallet-detail-line">
+                                      <span className="detail-key">Intent:</span>
+                                      <button className="hash" onClick={() => { setPoolOpen(false); setGraphIntent(i.hash); setGraphOpen(true); }}>{i.hash}</button>
                                     </div>
                                     <div className="wallet-detail-line">
                                       <span className="detail-key">Commit:</span>
@@ -868,7 +876,24 @@ export default function Market() {
                 <section className="workspace-panel matching-panel"><div className="panel-heading"><h2>Matching</h2><span className="eyebrow">{readyMatch && !solving ? 'Ready to settle' : wholePool ? 'All live requests' : 'Selected requests'}</span></div>
                   <div className="solver-actions"><button className="secondary" disabled={solving || disabled || matchAfterCommit || (!wholePool && (selected.length < 2 || selected.length > 4))} onClick={() => void runSolver(selected, wholePool)}>{solving ? 'Reading and searching…' : wholePool ? 'Check all intents' : 'Run solver'}{!wholePool && <span className="mono"> ({selected.length}/4)</span>}</button><button className="text-button" onClick={() => { setAgentHash(current => current ?? request?.hash ?? live[0]?.hash ?? null); setAgentOpen(true); }}>Ask the agent</button>{resetEnabled && equal(account, operator) && <button className="text-button" disabled={disabled} onClick={() => void reset()}>Reset demo</button>}</div>
                   <p className="quiet">{readyMatch && !solving ? 'Your match stays here while you review. Availability is checked again before settlement.' : wholePool ? 'Matching runs once after you create an intent. Click Check all intents whenever you want to search again.' : 'Choose 2–4 requests, then Run solver.'}</p>{!wholePool && <button className="text-button" disabled={disabled || solving || matchAfterCommit} onClick={() => { setWholePool(true); void runSolver([], true); }}>Check all intents</button>}
-                  {solving && <p className="quiet" role="status">Checking current intents and ticket availability...</p>}{evidence?.pool && <details className="search-details" open={searchDetailsOpen} onToggle={event => setSearchDetailsOpen(event.currentTarget.open)}><summary>Search details and evidence</summary><p className="quiet mono">{evidence.pool.liveIntents} live requests / {evidence.pool.searchableIntents} within ticket-count limits / {evidence.pool.excludedIntents} excluded with reasons. Maximum 4 participants per candidate, 100 candidates, 2-second search budget. <a href={`/api/evidence/${evidence.id}`} target="_blank" rel="noreferrer">View search evidence and exclusion reasons</a></p></details>}{evidence?.search && !solving && <p className="quiet">{evidence.search.termination === 'complete' ? 'Search completed within the configured bounds.' : 'Search budget reached. Further combinations may remain unchecked.'}</p>}{solverError && <p role="alert">{solverError}</p>}{evidence && !proposal && !solving && <div className="matching-empty" role="status"><h3>Waiting for a match</h3><p>{EMPTY_RESULT}. New requests may make a swap possible; click Check all intents to search again.</p>{evidence.candidatesExcluded.some(i => /capacity|allowance/i.test(i.reason)) && <p>Insufficient USDC balance or allowance for a candidate. Update spending capacity before settling.</p>}</div>}
+                  {solving && <p className="quiet" role="status">Checking current intents and ticket availability...</p>}
+                  {evidence?.pool && <details className="search-details" open={searchDetailsOpen} onToggle={event => setSearchDetailsOpen(event.currentTarget.open)}>
+                    <summary>Search details and evidence</summary>
+                    <p className="quiet mono">{evidence.pool.liveIntents} live requests / {evidence.pool.searchableIntents} within ticket-count limits / {evidence.pool.excludedIntents} excluded with reasons.
+                      {evidence.bounds && <> Maximum {evidence.bounds.maxParticipants} participants per candidate, {evidence.bounds.maxCandidates} candidates, {evidence.bounds.timeoutMs / 1000}-second search budget.</>}
+                      {' '}<a href={`/api/evidence/${evidence.id}`} target="_blank" rel="noreferrer">View search evidence and exclusion reasons</a>
+                    </p>
+                    {evidence.search?.subsetsChecked !== undefined && <p className="quiet mono">{evidence.search.subsetsChecked} request combinations checked.</p>}
+                    {!!evidence.search?.exclusionsOmitted && <p className="quiet">Discarded request combinations are sampled. The evidence includes every candidate rejection and counts for every exclusion reason.</p>}
+                    {evidence.search && <p className="quiet">{evidence.search.termination === 'complete' ? 'Search completed within the configured bounds.' : proposal ? 'A match was found within the search limits. Further combinations may remain unchecked.' : 'The search reached its processing limit before checking every combination.'}</p>}
+                  </details>}
+                  {solverError && <p role="alert">{solverError}</p>}
+                  {evidence && !proposal && !solving && <div className="matching-empty" role="status">
+                    {evidence.search && evidence.search.termination !== 'complete'
+                      ? <><h3>Search paused</h3><p>Some combinations remain unchecked. Click Check all intents to run another search.</p></>
+                      : <><h3>Waiting for a match</h3><p>{EMPTY_RESULT}. New requests may make a swap possible; click Check all intents to search again.</p></>}
+                    {(evidence.candidatesExcluded.some(i => /capacity|allowance/i.test(i.reason)) || evidence.search?.exclusionsByReason?.some(i => /capacity|allowance/i.test(i.reason))) && <p>Insufficient USDC balance or allowance for a candidate. Update spending capacity before settling.</p>}
+                  </div>}
                   {proposal && <div className="candidate"><p className="eyebrow">{solving ? 'Rechecking previous match' : readyMatch ? 'Candidate found - awaiting settlement' : 'Candidate needs rechecking'}</p><p className="quiet">{solving ? 'The previous result stays visible while current conditions are checked. Settlement is unavailable until this search finishes.' : evidence?.simulationResult?.success ? 'A candidate is not a completed swap. Propose and settle submits it for on-chain validation.' : 'This candidate has not passed simulation and cannot be submitted yet.'}</p><div className="panel-heading"><strong>{settlementShape(proposal)}</strong><span className="mono">{proposal.candidatesFound} candidates</span></div><details className="search-details" open={matchDetailsOpen} onToggle={event => setMatchDetailsOpen(event.currentTarget.open)}><summary>Why this match?</summary><p className="quiet">{RANKING_RULE}. Ties: fewer participants, then ordered intent hashes. Source block <span className="mono">{evidence?.source.blockNumber}</span>.</p></details><table className="net-table"><thead><tr><th>Participant</th><th>Offered tickets</th><th>Receives</th><th>USDC net</th></tr></thead><tbody>{proposal.legs.map((l, index) => <tr key={l.intentHash}><td><a href={`${EXPLORER}/address/${l.owner}`} title={l.owner} target="_blank" rel="noreferrer">{walletLabel(l.owner)} · {truncateAddress(l.owner)}</a></td><td className="mono">{proposal.intents[index].offered.map(id => `#${id}`).join(', ') || '—'}</td><td className="mono">{l.receives.map(id => `#${id}`).join(', ') || '—'}</td><td className="mono">{l.netPayment > 0n ? '−' : l.netPayment < 0n ? '+' : ''}{formatUSDC(l.netPayment < 0n ? -l.netPayment : l.netPayment)}</td></tr>)}</tbody><tfoot><tr><td colSpan={3}>Σ</td><td className="mono">{formatUSDC(proposal.legs.reduce((n, l) => n - l.netPayment, 0n))}</td></tr></tfoot></table></div>}
                   <button className="primary full" disabled={disabled || solving || !readyMatch} onClick={() => void settle()}>Propose and settle <span>↗</span></button><p className="quiet">When a match is ready, click Propose and settle and confirm the transaction in your wallet. The proposer pays gas in USDC. Participants do not sign their intents again. Your swap is complete only after the receipt confirms success.</p>
                   <JudgeControls freshness={freshness} busy={disabled} label={walletLabel} onBudget={applyJudgeBudget} onRevoke={revokeJudgeIntent} />
@@ -1116,6 +1141,7 @@ export default function Market() {
                 ← Back to Workspace
               </button>
               <div className="receipt-view-nav">
+                <button type="button" className="secondary" aria-haspopup="dialog" onClick={() => { setGraphIntent(undefined); setGraphOpen(true); }}>The Graph ↗</button>
                 <button
                   type="button"
                   className="secondary"
@@ -1178,6 +1204,7 @@ export default function Market() {
         )
       )}
     </main>
+    {graphOpen && <GraphDetails market={market} evidence={evidence} initialIntent={graphIntent} onClose={() => setGraphOpen(false)} />}
     <ActivityNotification busy={busy} notice={notice} hash={txHash} confirmation={confirmedWrite} open={activityOpen} onOpen={() => setActivityOpen(true)} onClose={() => setActivityOpen(false)} />
   </div>;
 }

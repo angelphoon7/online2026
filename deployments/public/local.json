@@ -4,6 +4,7 @@
   "chainId": 31337,
   "rpc": "http://127.0.0.1:8545",
   "subgraphUrl": "",
+  "subgraphDeployment": "",
   "usdc": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
   "contracts": {
     "TicketNFT": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",

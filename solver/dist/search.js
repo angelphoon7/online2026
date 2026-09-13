@@ -8,40 +8,107 @@ export const DEFAULT_CONFIG = {
 export function search(intents, state, config = DEFAULT_CONFIG) {
     const candidates = [];
     const excluded = [];
+    // Bound diagnostics for subsets discarded before allocation. Every reason is counted;
+    // the first 2,000 subset exclusions and every fully constructed candidate rejection
+    // remain inspectable with their intent hashes and failing condition.
+    const exclusionCounts = new Map();
+    let exclusionsTotal = 0;
+    let sampledSubsets = 0;
+    let subsetsChecked = 0;
+    const exclude = (intentHashes, reason, candidate = false) => {
+        exclusionsTotal++;
+        exclusionCounts.set(reason, (exclusionCounts.get(reason) ?? 0) + 1);
+        if (candidate || sampledSubsets < 2000) {
+            excluded.push({ intentHashes, reason });
+            if (!candidate)
+                sampledSubsets++;
+        }
+    };
+    const finish = (termination) => ({
+        candidates, excluded, termination,
+        diagnostics: { subsetsChecked, exclusionsTotal, exclusionsOmitted: exclusionsTotal - excluded.length,
+            exclusionsByReason: [...exclusionCounts].map(([reason, count]) => ({ reason, count })) },
+    });
     const startTime = Date.now();
-    const maxSize = Math.min(intents.length, config.maxParticipants);
+    // Hash each commitment once, rather than repeating EIP-712 work for every subset.
+    const intentHashes = new Map(intents.map(intent => [intent, hashIntent(intent)]));
+    const hashesFor = (subset) => subset.map(intent => intentHashes.get(intent));
+    const allTickets = [...new Set(intents.flatMap(intent => intent.offered))];
+    const eligibleTickets = new Map(intents.map(intent => [intent, new Set(allTickets.filter(id => {
+            const meta = state.ticketMeta.get(id);
+            return !!meta && meta.eventId === intent.eventId
+                && (intent.sessionMask & (1n << BigInt(meta.sessionId))) !== 0n
+                && (intent.sectionMask & (1n << BigInt(meta.sectionId))) !== 0n;
+        }))]));
+    // A request that cannot be satisfied by the entire remaining supply cannot take part
+    // in any subset. Remove only these provably impossible requests, then propagate the
+    // loss of their offered supply. This preserves buyers, sellers and multi-way chains.
+    let searchable = intents;
+    for (;;) {
+        const remaining = searchable.filter(intent => {
+            let reason;
+            if (intent.offered.some(id => state.depositor.get(id)?.toLowerCase() !== intent.owner.toLowerCase()))
+                reason = 'V2: Offered ticket is no longer escrowed by its owner';
+            else if (intent.offered.some(id => state.ticketMeta.get(id)?.eventId !== intent.eventId))
+                reason = 'V2: Offered ticket belongs to a different event or has no metadata';
+            else if (intent.offered.some(id => state.ticketMeta.get(id)?.status === 1))
+                reason = 'V3: Offered ticket has been redeemed';
+            else if (eligibleTickets.get(intent).size < intent.exactCount)
+                reason = 'V5: Not enough acceptable tickets in the remaining searchable pool';
+            if (reason)
+                exclude([intentHashes.get(intent)], reason);
+            return !reason;
+        });
+        if (remaining.length === searchable.length)
+            break;
+        searchable = remaining;
+        const supply = new Set(searchable.flatMap(intent => intent.offered));
+        for (const intent of searchable)
+            for (const id of eligibleTickets.get(intent)) {
+                if (!supply.has(id))
+                    eligibleTickets.get(intent).delete(id);
+            }
+    }
+    const maxSize = Math.min(searchable.length, config.maxParticipants);
     // With mustInclude set, enumerate only subsets that contain that intent: hold it fixed and
     // combine the rest. Filtering after enumeration would still walk every subset of the pool,
     // which is what exhausts the time bound before the relevant ones are reached.
     const required = config.mustInclude
-        ? intents.find((i) => hashIntent(i).toLowerCase() === config.mustInclude.toLowerCase())
+        ? searchable.find((i) => intentHashes.get(i).toLowerCase() === config.mustInclude.toLowerCase())
         : undefined;
     if (config.mustInclude && !required) {
-        return { candidates, excluded, termination: 'complete' };
+        return finish('complete');
     }
-    const others = required ? intents.filter((i) => i !== required) : intents;
-    const subsetsOfSize = (size) => required ? mapCombinations(others, size - 1, (rest) => [required, ...rest]) : combinations(intents, size);
+    const others = required ? searchable.filter((i) => i !== required) : searchable;
+    const subsetsOfSize = (size) => required ? mapCombinations(others, size - 1, (rest) => [required, ...rest]) : combinations(searchable, size);
     for (let size = 2; size <= maxSize; size++) {
         for (const subset of subsetsOfSize(size)) {
             if (Date.now() - startTime > config.timeoutMs)
-                return { candidates, excluded, termination: 'timeout' };
+                return finish('timeout');
             if (candidates.length >= config.maxCandidates)
-                return { candidates, excluded, termination: 'candidate-limit' };
+                return finish('candidate-limit');
+            subsetsChecked++;
             if (config.requireOwnershipChange && new Set(subset.map(intent => intent.owner.toLowerCase())).size < 2) {
-                excluded.push({ intentHashes: subset.map(hashIntent), reason: 'Search policy: tickets would remain with the same owner' });
+                exclude(hashesFor(subset), 'Search policy: tickets would remain with the same owner');
                 continue;
             }
             const poolSize = subset.reduce((s, i) => s + i.offered.length, 0);
             const neededSize = subset.reduce((s, i) => s + i.exactCount, 0);
             if (poolSize !== neededSize) {
-                excluded.push({ intentHashes: subset.map(hashIntent), reason: 'V4: Offered and received ticket counts differ' });
+                exclude(hashesFor(subset), 'V4: Offered and received ticket counts differ');
                 continue;
             }
             const pool = subset.flatMap((i) => i.offered);
-            const hashes = subset.map((i) => hashIntent(i));
+            const hashes = hashesFor(subset);
+            // Overlapping commitments cannot contribute the same NFT twice. Reject them before
+            // assigning tickets; doing so only removes subsets V4 would reject unconditionally.
+            if (new Set(pool).size !== pool.length) {
+                exclude(hashes, 'V4: Duplicate offered ticket');
+                continue;
+            }
             const paymentResult = computeMinGrossPayment(subset);
             if (!paymentResult) {
-                excluded.push({ intentHashes: hashes, reason: 'No feasible payment distribution' });
+                exclude(hashes, 'No feasible payment distribution');
                 continue;
             }
             const offeredBy = new Map(subset.flatMap(intent => intent.offered.map(id => [id, intent.owner.toLowerCase()])));
@@ -50,17 +117,16 @@ export function search(intents, state, config = DEFAULT_CONFIG) {
                 const from = offeredBy.get(id), to = subset[index].owner.toLowerCase();
                 return from !== to && (!requiredOwner || from === requiredOwner || to === requiredOwner);
             }));
-            const assignments = findAssignments(subset, pool, state, 100, startTime + config.timeoutMs, config.requireOwnershipChange ? changesOwnership : undefined);
+            const assignments = findAssignments(subset, pool, state, 100, startTime + config.timeoutMs, config.requireOwnershipChange ? changesOwnership : undefined, eligibleTickets);
             if (assignments.length === 0) {
                 if (Date.now() > startTime + config.timeoutMs)
-                    return { candidates, excluded, termination: 'timeout' };
-                excluded.push({
-                    intentHashes: hashes,
-                    reason: config.requireOwnershipChange ? 'No valid ticket assignment satisfying all predicates and changing ticket ownership for the requested swap' : 'No valid ticket assignment satisfying all predicates',
-                });
+                    return finish('timeout');
+                exclude(hashes, config.requireOwnershipChange ? 'No valid ticket assignment satisfying all predicates and changing ticket ownership for the requested swap' : 'No valid ticket assignment satisfying all predicates');
                 continue;
             }
             for (const assignment of assignments) {
+                if (Date.now() > startTime + config.timeoutMs)
+                    return finish('timeout');
                 if (candidates.length >= config.maxCandidates)
                     break;
                 const { payments, gross } = paymentResult;
@@ -71,10 +137,7 @@ export function search(intents, state, config = DEFAULT_CONFIG) {
                 }));
                 const validationError = validateSettlement(subset, legs, state);
                 if (validationError) {
-                    excluded.push({
-                        intentHashes: hashes,
-                        reason: `${validationError.check}: ${validationError.error}`,
-                    });
+                    exclude(hashes, `${validationError.check}: ${validationError.error}`, true);
                     continue;
                 }
                 candidates.push({
@@ -87,7 +150,7 @@ export function search(intents, state, config = DEFAULT_CONFIG) {
             }
         }
     }
-    return { candidates, excluded, termination: Date.now() > startTime + config.timeoutMs ? 'timeout' : candidates.length >= config.maxCandidates ? 'candidate-limit' : 'complete' };
+    return finish(Date.now() > startTime + config.timeoutMs ? 'timeout' : candidates.length >= config.maxCandidates ? 'candidate-limit' : 'complete');
 }
 export function computeMinGrossPayment(intents) {
     const n = intents.length;
@@ -117,40 +180,46 @@ export function computeMinGrossPayment(intents) {
     const gross = payments.reduce((a, p) => a + (p > 0n ? p : 0n), 0n);
     return { payments, gross };
 }
-export function findAssignments(subset, pool, state, limit, deadline = Number.POSITIVE_INFINITY, accept) {
+export function findAssignments(subset, pool, state, limit, deadline = Number.POSITIVE_INFINITY, accept, eligibleTickets) {
     const results = [];
     const used = new Set();
     const current = Array.from({ length: subset.length }, () => []);
-    function backtrack(idx) {
+    const eligible = subset.map(intent => pool.filter(id => {
+        if (eligibleTickets)
+            return eligibleTickets.get(intent)?.has(id) ?? false;
+        const meta = state.ticketMeta.get(id);
+        return !!meta && meta.eventId === intent.eventId
+            && (intent.sessionMask & (1n << BigInt(meta.sessionId))) !== 0n
+            && (intent.sectionMask & (1n << BigInt(meta.sectionId))) !== 0n;
+    }));
+    // Check every recipient before exploring any assignment. An impossible last recipient
+    // must not cause enumeration of all combinations for earlier, flexible recipients.
+    if (subset.some((intent, idx) => eligible[idx].length < intent.exactCount))
+        return results;
+    const choices = (idx) => {
+        let count = 1;
+        for (let k = 1; k <= subset[idx].exactCount; k++)
+            count = count * (eligible[idx].length - k + 1) / k;
+        return count;
+    };
+    const order = subset.map((_, idx) => idx).sort((a, b) => choices(a) - choices(b) || a - b);
+    function backtrack(depth) {
         if (results.length >= limit || Date.now() > deadline)
             return;
-        if (idx === subset.length) {
+        if (depth === subset.length) {
             if (used.size === pool.length && (!accept || accept(current))) {
                 results.push(current.map((a) => [...a]));
             }
             return;
         }
+        const idx = order[depth];
         const intent = subset[idx];
         if (intent.exactCount === 0) {
             current[idx] = [];
-            backtrack(idx + 1);
+            backtrack(depth + 1);
             return;
         }
-        const eligible = pool.filter((id) => {
-            if (used.has(id))
-                return false;
-            const meta = state.ticketMeta.get(id);
-            if (!meta)
-                return false;
-            if (meta.eventId !== intent.eventId)
-                return false;
-            if ((intent.sessionMask & (1n << BigInt(meta.sessionId))) === 0n)
-                return false;
-            if ((intent.sectionMask & (1n << BigInt(meta.sectionId))) === 0n)
-                return false;
-            return true;
-        });
-        for (const combo of combinations(eligible, intent.exactCount)) {
+        for (const combo of combinations(eligible[idx].filter(id => !used.has(id)), intent.exactCount)) {
             if (results.length >= limit || Date.now() > deadline)
                 return;
             if (intent.mustShareSession) {
@@ -170,7 +239,7 @@ export function findAssignments(subset, pool, state, limit, deadline = Number.PO
             current[idx] = combo;
             for (const id of combo)
                 used.add(id);
-            backtrack(idx + 1);
+            backtrack(depth + 1);
             for (const id of combo)
                 used.delete(id);
         }

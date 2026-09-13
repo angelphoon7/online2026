@@ -86,6 +86,9 @@ test('full solve revalidates each unique ticket and owner once at one block, the
   const result = await solveOnChain(entries.map(([hash]) => hash), new Map(entries), { kind: 'subgraph', snapshotBlock: '250', liveIntents: 3, excluded: [] }, target);
   assert.equal(result.searchConfig.mustInclude, target);
   assert.equal(result.searchConfig.requireOwnershipChange, true);
+  assert.equal(result.searchConfig.timeoutMs, 8000);
+  assert.equal(result.bounds.timeoutMs, 8000);
+  assert.ok(result.search.subsetsChecked > 0);
   assert.ok(result.chosen?.intentHashes.includes(target));
   assert.equal(result.intentsConsidered, 3);
   for (const [name, count] of [['state', 3], ['meta', 4], ['depositor', 4], ['balanceOf', 2], ['allowance', 2]] as const) assert.equal(calls.filter(c => c.name === name).length, count, name);

@@ -3,9 +3,16 @@
 Measured results for `reshuffle` on Arc Testnet. Every figure here came from a script in this
 repo, run against the live deployment. Re-run after any redeploy or reseed.
 
+> **Endpoint moved on 13 September.** The figures below were measured against
+> `reshuffle` v0.1.1 and keep that URL, because that is where they were taken. The live
+> endpoint is now **v0.1.2** — same manifest, same deployment hash, so the same indexed data.
+> The move was forced by the Studio development URL's 3,000-queries-per-day allowance being
+> spent; see the feedback section of [the submission draft](THE_GRAPH_SUBMISSION.md).
+> Re-running any command here reads v0.1.2, recorded in `deployments/arc-testnet.json`.
+
 | | |
 |---|---|
-| Subgraph | `reshuffle` v0.1.1 |
+| Subgraph | `reshuffle` v0.1.1 (measurements) · v0.1.2 (live) |
 | Query URL | `https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1` |
 | Deployment | `QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL` |
 | Network | arc-testnet (chainId 5042002) |

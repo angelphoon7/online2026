@@ -77,10 +77,16 @@ export interface SearchResult {
   candidates: Candidate[];
   excluded: ExcludedCandidate[];
   termination: 'complete' | 'timeout' | 'candidate-limit';
+  diagnostics: {
+    subsetsChecked: number;
+    exclusionsTotal: number;
+    exclusionsOmitted: number;
+    exclusionsByReason: { reason: string; count: number }[];
+  };
 }
 
 export interface Evidence {
-  search?: { termination: SearchResult['termination'] };
+  search?: { termination: SearchResult['termination'] } & SearchResult['diagnostics'];
   timestamp: string;
   intentsConsidered: number;
   candidatesFound: number;

@@ -23,6 +23,9 @@ export function matchingStatus(request: WireIntent, selected: Hex[], solving: bo
     return { title: 'Match found - awaiting settlement', detail: 'Your request is included in a candidate that passed simulation. A proposer still needs to submit it with Propose and settle. Your tickets have not swapped yet.' };
   }
   if (error) return { title: 'Matching temporarily unavailable', detail: 'The solver could not complete this search. Your request remains committed; retry when the service is available.' };
+  if (!proposal && evidence?.search && evidence.search.termination !== 'complete') return {
+    title: 'Search paused', detail: 'Some combinations remain unchecked. Your intent is still live; use the matching button to run another search.',
+  };
   return { title: 'Waiting for a match', detail: selected.length < 2
     ? 'There are not enough selected live requests yet. You may need to wait for another participant.'
     : 'No executable match for your request was found in this search. Check again for new requests or try another combination. This does not mean no match exists.' };

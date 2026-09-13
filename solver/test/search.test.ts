@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { search, computeMinGrossPayment, combinations } from '../src/search.js';
+import { search, findAssignments, computeMinGrossPayment, combinations } from '../src/search.js';
+import { validateSettlement } from '../src/validate.js';
 import { rankCandidates } from '../src/rank.js';
 import { hashIntent } from '../src/hash.js';
 import type { Intent, ChainState, Address, SearchConfig } from '../src/types.js';
@@ -307,6 +308,79 @@ describe('personal swaps and ownership changes', () => {
     const pool = [makePureSeller(alice, [1n], -20n, 1n), makePureBuyer(bob, 1, 20n, 2n)];
     const state = buildState(pool); addTicket(state, 1n);
     for (const requested of pool) expect(search(pool, state, { ...swapConfig, mustInclude: hashIntent(requested) }).candidates).toHaveLength(1);
+  });
+});
+
+describe('large pool pruning', () => {
+  it('reaches a four-way swap after 128 incompatible requests without dropping its participants', () => {
+    const ring = [alice, bob, charlie, '0x000000000000000000000000000000000000d00d' as Address].map((owner, n) => ({
+      ...makeIntent(owner, [BigInt(n + 1)], 1, 0n, 1n), sectionMask: 1n << BigInt((n + 1) % 4),
+    }));
+    const noise = Array.from({ length: 128 }, (_, n) => ({ ...makeIntent(bob, [BigInt(n + 10)], 1, 0n, BigInt(n + 10)), sectionMask: 1n << 31n }));
+    const pool = [ring[0], ...noise, ...ring.slice(1)], state = buildState(pool);
+    ring.forEach((intent, n) => addTicket(state, intent.offered[0], { sectionId: n }));
+    noise.forEach(intent => addTicket(state, intent.offered[0], { sectionId: 7 }));
+    const result = search(pool, state, { ...config, maxParticipants: 4, timeoutMs: 8000, mustInclude: hashIntent(ring[0]), requireOwnershipChange: true });
+    expect(result.termination).toBe('complete');
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0].intentHashSet.sort()).toEqual(ring.map(hashIntent).sort());
+    expect(validateSettlement(result.candidates[0].intents, result.candidates[0].legs, state)).toBeNull();
+    expect(result.excluded.filter(entry => entry.reason.startsWith('V5:'))).toHaveLength(noise.length);
+  });
+
+  it('propagates unavailable supply while preserving an ordinary buyer-seller swap', () => {
+    const buyer = { ...makePureBuyer(alice, 1, 20n, 1n), sectionMask: 2n };
+    const blocked = { ...makeIntent(bob, [1n], 1, -20n, 2n), sectionMask: 4n };
+    const state = buildState([buyer, blocked]); addTicket(state, 1n, { sectionId: 1 });
+    const result = search([buyer, blocked], state, { ...config, mustInclude: hashIntent(buyer) });
+    expect(result.termination).toBe('complete');
+    expect(result.candidates).toEqual([]);
+    expect(result.excluded.map(entry => entry.intentHashes[0])).toEqual([hashIntent(blocked), hashIntent(buyer)]);
+    const seller = { ...blocked, exactCount: 0 };
+    const validState = buildState([buyer, seller]); addTicket(validState, 1n, { sectionId: 1 });
+    expect(search([buyer, seller], validState, config).candidates).toHaveLength(1);
+  });
+
+  it('keeps output legs in recipient order when the scarce recipient is assigned first', () => {
+    const flexible = { ...makeIntent(alice, [1n, 2n, 3n], 3, 0n, 1n), mustBeAdjacent: true };
+    const narrow = { ...makeIntent(bob, [4n], 1, 0n, 2n), sectionMask: 2n };
+    const state = buildState([flexible, narrow]);
+    for (const id of [1n, 2n, 3n]) addTicket(state, id, { seat: Number(id) });
+    addTicket(state, 4n, { sectionId: 1 });
+    expect(findAssignments([flexible, narrow], [1n, 2n, 3n, 4n], state, 100)).toEqual([[[1n, 2n, 3n], [4n]]]);
+  });
+
+  it('rejects overlapping commitments before attempting to allocate the same NFT twice', () => {
+    const pool = [makeIntent(alice, [1n], 1, 0n, 1n), makeIntent(alice, [1n], 1, 0n, 2n)];
+    const state = buildState(pool); addTicket(state, 1n);
+    const result = search(pool, state, config);
+    expect(result.candidates).toEqual([]);
+    expect(result.excluded).toEqual([{ intentHashes: pool.map(hashIntent), reason: 'V4: Duplicate offered ticket' }]);
+  });
+
+  it('bounds detailed exclusion storage while reporting every omitted reason and count', () => {
+    const pool = Array.from({ length: 70 }, (_, n) => makeIntent(alice, [BigInt(n + 1)], 1, 0n, BigInt(n)));
+    const state = buildState(pool); pool.forEach(intent => addTicket(state, intent.offered[0]));
+    const result = search(pool, state, { ...config, maxParticipants: 2, requireOwnershipChange: true });
+    expect(result.termination).toBe('complete');
+    expect(result.candidates).toEqual([]);
+    expect(result.excluded).toHaveLength(2000);
+    expect(result.diagnostics.exclusionsTotal).toBe(2415);
+    expect(result.diagnostics.exclusionsOmitted).toBe(415);
+    expect(result.diagnostics.exclusionsByReason).toEqual([{ reason: 'Search policy: tickets would remain with the same owner', count: 2415 }]);
+  });
+
+  it('retains a constructed candidate rejection after the subset diagnostic sample fills', () => {
+    const noise = Array.from({ length: 70 }, (_, n) => makeIntent(alice, [BigInt(n + 1)], 1, 0n, BigInt(n)));
+    const buyer = makePureBuyer(bob, 1, 20n, 1n), seller = makePureSeller(charlie, [71n], -20n, 1n);
+    const pool = [...noise, buyer, seller], state = buildState(pool);
+    for (const intent of pool) for (const id of intent.offered) addTicket(state, id);
+    state.usdcBalance.set(bob, 0n);
+    const result = search(pool, state, { ...config, maxParticipants: 2, requireOwnershipChange: true });
+    expect(result.candidates).toEqual([]);
+    expect(result.diagnostics.exclusionsOmitted).toBeGreaterThan(0);
+    expect(result.excluded).toHaveLength(2001);
+    expect(result.excluded.at(-1)).toEqual({ intentHashes: [hashIntent(buyer), hashIntent(seller)], reason: 'V8: InsufficientPaymentCapacity' });
   });
 });
 

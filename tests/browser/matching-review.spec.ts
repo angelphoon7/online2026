@@ -7,7 +7,7 @@ const rejectionAbi = parseAbi(['error IntentExpired(bytes32 intentHash, uint64 d
 type WalletRequest = { method: string; params?: unknown[] };
 type Transaction = { data: Hex };
 
-async function fixture(page: Page, options: { noMatch?: boolean; solverBlock?: number } = {}) {
+async function fixture(page: Page, options: { noMatch?: boolean; solverBlock?: number; termination?: 'complete' | 'timeout' | 'candidate-limit' } = {}) {
   await page.clock.install();
   const proposal = record.evidence.proposal;
   const owner = proposal.intents[0].owner;
@@ -33,7 +33,8 @@ async function fixture(page: Page, options: { noMatch?: boolean; solverBlock?: n
     candidatesFound: control.noMatch ? 0 : record.evidence.candidatesFound,
     simulationResult: control.noMatch ? undefined : { success: true },
     pool: { liveIntents: 3, searchableIntents: 3, excludedIntents: 0 },
-    search: { termination: 'complete' },
+    bounds: { maxParticipants: 4, maxCandidates: 100, timeoutMs: 8000 },
+    search: { termination: options.termination ?? 'complete', subsetsChecked: 3000, exclusionsOmitted: 1000 },
   });
   await page.exposeFunction('reviewWalletRequest', async ({ method, params = [] }: WalletRequest) => {
     if (method === 'eth_accounts' || method === 'eth_requestAccounts') return [owner];
@@ -80,8 +81,7 @@ async function fixture(page: Page, options: { noMatch?: boolean; solverBlock?: n
     return route.fulfill({ status: 500, json: { error: `Unexpected fixture API: ${path}` } });
   });
   await page.goto('/#workspace');
-  await expect(page.locator('.workspace-section').getByText(/ARC BLOCK 100/)).toBeVisible();
-  await page.getByRole('button', { name: 'Matching', exact: true }).click();
+  await page.getByRole('button', { name: 'Intent Pool (3)', exact: true }).click();
   await expect(page.getByRole('button', { name: /Check all intents/ })).toBeEnabled();
   expect(control.poolCalls).toBe(0);
   await page.getByRole('button', { name: /Check all intents/ }).click();
@@ -194,6 +194,29 @@ test('unmatched requests remain idle until manual matching checks the latest poo
   await page.clock.fastForward(120_000);
   expect(control.marketReads).toBe(reads);
   expect(control.poolCalls).toBe(2);
+});
+
+test('an unfinished search stays distinct from no match and does not retry automatically', async ({ page }) => {
+  const { control } = await fixture(page, { noMatch: true, termination: 'timeout' });
+  await expect(page.locator('.matching-empty h3')).toHaveText('Search paused');
+  await expect(page.locator('.matching-empty')).toContainText('Some combinations remain unchecked');
+  await expect(page.locator('.matching-empty')).not.toContainText('No solution found');
+  await expect(page.getByRole('button', { name: 'Propose and settle' })).toBeDisabled();
+  await page.getByText('Search details and evidence', { exact: true }).click();
+  await expect(page.locator('.search-details').first()).toContainText('8-second search budget');
+  await expect(page.locator('.search-details').first()).toContainText('3000 request combinations checked');
+  await expect(page.locator('.search-details').first()).toContainText('Discarded request combinations are sampled');
+  await page.clock.fastForward(120_000);
+  expect(control.poolCalls).toBe(1);
+  expect(control.transactions).toHaveLength(0);
+});
+
+test('reaching the candidate cap keeps a simulated match available for review', async ({ page }) => {
+  await fixture(page, { termination: 'candidate-limit' });
+  await expect(page.getByRole('button', { name: 'Propose and settle' })).toBeEnabled();
+  await expect(page.locator('.matching-empty')).toHaveCount(0);
+  await page.getByText('Search details and evidence', { exact: true }).click();
+  await expect(page.locator('.search-details').first()).toContainText('A match was found within the search limits');
 });
 
 test('live simulation rejection discards the candidate without submitting a transaction', async ({ page }) => {

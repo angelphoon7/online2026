@@ -1,0 +1,28 @@
+.dialog { margin: auto; width: min(920px, calc(100% - 32px)); max-height: calc(100dvh - 40px); padding: 0; background: #100e14; color: var(--ink); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.dialog::backdrop { background: rgba(0,0,0,.8); backdrop-filter: blur(5px); }
+.header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 24px 28px; border-bottom: 1px solid var(--line); }
+.header h2 { font-size: 26px; font-weight: 500; letter-spacing: -.04em; margin-top: 4px; }
+.body { padding: 24px 28px; max-height: calc(100dvh - 165px); overflow-y: auto; overscroll-behavior: contain; }
+.body a { text-decoration: underline; text-underline-offset: 3px; }
+.source { font-size: 12px; margin: 0 0 16px; color: var(--muted); }
+.links { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; font-size: 12px; margin: 16px 0; }
+.deployment, .hash, .hashButton, .commit { font-family: var(--font-mono); overflow-wrap: anywhere; }
+.deployment { font-size: 11px; color: var(--muted); }
+.hint { font-size: 12px; color: var(--muted); margin: 16px 0; }
+.tabs { display: flex; gap: 8px; margin: 24px 0 16px; }
+.tabs button { border: 1px solid var(--line); padding: 9px 14px; font-size: 12px; }
+.tabs button[aria-pressed=true] { background: var(--ink); color: var(--paper); }
+.filter { width: 100%; padding: 12px; border: 1px solid var(--line); background: #08080a; color: var(--ink); font-size: 13px; }
+.list { list-style: none; margin: 12px 0 0; padding: 0; }
+.list li { padding: 18px 0; border-bottom: 1px solid var(--line); }
+.rowMeta { display: flex; justify-content: space-between; gap: 16px; font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+.hashButton { display: block; max-width: 100%; text-align: left; font-size: 12px; color: #c4b5fd; text-decoration: underline; text-underline-offset: 4px; }
+.commit { display: block; font-size: 10px; color: var(--muted); margin-top: 10px; }
+.detail { margin: 22px 0; padding: 20px; border: 1px solid rgba(196,181,253,.3); background: #08080a; }
+.detailHeading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.detailHeading h3 { font-size: 17px; font-weight: 500; }
+.hash { font-size: 12px; }
+.detail pre { font-family: var(--font-mono); font-size: 11px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 340px; overflow: auto; line-height: 1.7; }
+.detail [role=alert] { font-size: 12px; color: #fbbf24; }
+.detail [role=alert] button { margin-top: 12px; }
+@media(max-width:600px) { .header { padding: 18px; } .body { padding: 18px; } .detail { padding: 14px; } .hashButton { font-size: 11px; } }

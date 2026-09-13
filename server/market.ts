@@ -7,6 +7,8 @@ import { chainConfig } from './chain';
 import type { MarketSnapshot } from '@/lib/market-types';
 import demo from '@/deployments/demo-ready.json';
 import { marketSnapshotFromGraph } from './market-graph';
+import { subgraphEndpoint } from '@/shared/graph/client';
+import { createGraphMarketCache } from './graph-market-cache';
 import { createRpcMarketReader, type RpcCheckpoint } from './market-rpc';
 import { solverReadClient } from './solve-rpc';
 import { DEPLOYMENT } from '@/lib/deployment';
@@ -14,9 +16,15 @@ import { DEPLOYMENT } from '@/lib/deployment';
 // Discovery is explicitly configured; Graph failures never silently change provenance.
 export const readSource = () => process.env.READ_SOURCE?.trim() || (process.env.SUBGRAPH_URL?.trim() || DEPLOYMENT.subgraphUrl ? 'graph' : 'rpc');
 let rpcReader: { key: string; read: ReturnType<typeof createRpcMarketReader> } | undefined;
+let graphReader: { key: string; read: ReturnType<typeof createGraphMarketCache> } | undefined;
 
 export async function marketSnapshot(fresh = false, minBlock = 0n, signal?: AbortSignal): Promise<MarketSnapshot> {
-  if (readSource() === 'graph') return marketSnapshotFromGraph(minBlock, { signal });
+  if (readSource() === 'graph') {
+    const url = subgraphEndpoint();
+    const key = JSON.stringify([url, process.env.SUBGRAPH_API_KEY ?? '']);
+    if (graphReader?.key !== key) graphReader = { key, read: createGraphMarketCache((floor, signal) => marketSnapshotFromGraph(floor, { url, signal })) };
+    return graphReader.read(fresh, minBlock, signal);
+  }
   const { addresses, startBlock, chainId, rpcUrl } = chainConfig();
   const key = JSON.stringify([chainId, rpcUrl, addresses, startBlock.toString()]);
   if (rpcReader?.key !== key) {

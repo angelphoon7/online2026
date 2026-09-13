@@ -43,6 +43,8 @@ async function fixture(page: Page, options: { disconnected?: boolean; outsider?:
     noLongerOwner: false, holdOwner: false, releaseOwner: null as (() => void) | null,
     unrelated: false, noMatch: false, unchangedMatch: false, holdSearch: false, releaseSearch: null as (() => void) | null,
     searches: [] as { mustInclude?: string; minBlock?: string }[],
+    graphQueries: [] as { query: string; variables: { id?: string; hash?: string; at: { number_gte: number } } }[],
+    graphLimited: false,
   };
   await page.exposeFunction('claimWalletRequest', async (request: WalletRequest) => {
     control.calls.push(request);
@@ -75,6 +77,16 @@ async function fixture(page: Page, options: { disconnected?: boolean; outsider?:
     const json = (body: unknown) => route.fulfill({ json: body });
     if (path === '/api/market') return json(market);
     if (path === '/api/market/receipt') return json(receipt);
+    if (path === '/api/graph') {
+      const query = route.request().postDataJSON(); control.graphQueries.push(query);
+      if (control.graphLimited) return route.fulfill({ status: 429, headers: { 'Retry-After': '60' }, json: { errors: [{ message: 'Graph quota is temporarily exhausted.' }] } });
+      const _meta = { deployment: deployment.subgraphDeployment, hasIndexingErrors: false, block: { number: 101, hash: `0x${'ab'.repeat(32)}`, timestamp: 1789160000 } };
+      if (query.query.includes('IntentDetails')) {
+        const intent = market.intents.find(row => row.hash === query.variables.id);
+        return json({ data: { _meta, intent: intent ? { ...intent, id: intent.hash, state: 'LIVE', committedTx: intent.commitTx } : null } });
+      }
+      return json({ data: { _meta, settlements: [{ id: `${receipt.hash}00000000`, txHash: receipt.hash, participantCount: '3', intents: market.intents.map(row => ({ id: row.hash })) }] } });
+    }
     if (path === '/api/demo/reset' || path === '/api/demo/session') return json({ enabled: false, authenticated: false });
     if (path === '/api/solve/pool') {
       control.searches.push(route.request().postDataJSON());
@@ -310,4 +322,70 @@ test('a receipt without payment proof shows unavailable instead of inventing a z
   await fixture(page, { missingPaymentProof: true });
   await expect(page.locator('.receipt-count')).toContainText('USDC amount unavailable');
   await expect(page.locator('.receipt-table tfoot')).toHaveText('Total transferredUnavailable');
+});
+
+test('Graph details list all hashes without querying and open a verified intent on demand', async ({ page }) => {
+  const { control, market } = await fixture(page, { searchOnly: true });
+  await page.getByRole('button', { name: 'The Graph', exact: false }).click();
+  const dialog = page.getByRole('dialog', { name: 'The Graph', exact: true });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText('Market source: Arc RPC fallback');
+  await expect(dialog.getByRole('list', { name: 'Intent hashes' }).locator('li')).toHaveCount(market.intents.length);
+  expect(control.graphQueries).toHaveLength(0);
+  await expect(dialog.getByRole('link', { name: 'Open Subgraph Studio' })).toHaveAttribute('href', 'https://thegraph.com/studio/subgraph/reshuffle/');
+  await expect(dialog.getByRole('link', { name: 'Project query endpoint' })).toHaveAttribute('href', deployment.subgraphUrl);
+  await expect(dialog.getByRole('link', { name: `${deployment.subgraphDeployment} ↗`, exact: true })).toHaveAttribute('href', `https://ipfs.io/ipfs/${deployment.subgraphDeployment}`);
+  await dialog.getByRole('textbox', { name: 'Find hash or wallet' }).fill(market.intents[0].hash);
+  await expect(dialog.getByRole('list', { name: 'Intent hashes' }).locator('li')).toHaveCount(1);
+  await dialog.getByRole('button', { name: market.intents[0].hash, exact: true }).click();
+  const detail = dialog.getByRole('region', { name: 'Selected Graph record' });
+  await expect(detail.getByLabel('Graph record JSON')).toContainText(market.intents[0].hash);
+  await expect(detail).toContainText('Source: The Graph');
+  await expect(detail.getByRole('link', { name: 'Commit transaction' })).toHaveAttribute('href', `https://testnet.arcscan.app/tx/${market.intents[0].commitTx}`);
+  expect(control.graphQueries).toHaveLength(1);
+  expect(control.graphQueries[0].variables).toEqual({ id: market.intents[0].hash, at: { number_gte: 101 } });
+  await dialog.screenshot({ path: '.data/browser-tests/graph-details-desktop.png' });
+  await page.keyboard.press('Escape'); await expect(dialog).toHaveCount(0);
+});
+
+test('the swap confirmation exposes settlement hashes with Graph details and Arc transaction links', async ({ page }) => {
+  const { control, receipt } = await fixture(page);
+  await page.getByRole('button', { name: 'The Graph', exact: false }).click();
+  const dialog = page.getByRole('dialog', { name: 'The Graph', exact: true });
+  await dialog.getByRole('button', { name: 'Settlements (1)' }).click();
+  await dialog.getByRole('button', { name: receipt.hash, exact: true }).click();
+  const detail = dialog.getByRole('region', { name: 'Selected Graph record' });
+  await expect(detail.getByLabel('Graph record JSON')).toContainText(receipt.hash);
+  await expect(detail.getByRole('link', { name: 'Settlement transaction' })).toHaveAttribute('href', `https://testnet.arcscan.app/tx/${receipt.hash}`);
+  expect(control.graphQueries[0].variables.hash).toBe(receipt.hash);
+  expect(control.calls.some(call => call.method === 'eth_sendTransaction')).toBe(false);
+});
+
+test('Graph quota failures remain explicit and repeated clicks respect the cooldown', async ({ page }) => {
+  const { control, market } = await fixture(page, { searchOnly: true }); control.graphLimited = true;
+  await page.getByRole('button', { name: 'The Graph', exact: false }).click();
+  const dialog = page.getByRole('dialog', { name: 'The Graph', exact: true });
+  await dialog.getByRole('button', { name: market.intents[0].hash, exact: true }).click();
+  await expect(dialog.getByRole('alert')).toContainText('rate-limited by The Graph');
+  await expect(dialog.getByLabel('Graph record JSON')).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Retry Graph details' }).click();
+  await expect(dialog.getByRole('alert')).toContainText('rate-limited by The Graph');
+  expect(control.graphQueries).toHaveLength(1);
+  await dialog.getByRole('button', { name: 'Close Graph details' }).click();
+  await expect(page.locator('#workspace')).toBeVisible();
+});
+
+test('an intent hash opens Graph details from the pool and fits on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const { market } = await fixture(page, { searchOnly: true });
+  await page.getByRole('button', { name: 'Intent Pool', exact: false }).click();
+  const pool = page.getByRole('dialog', { name: 'Intent pool', exact: true });
+  await pool.locator('.wallet-summary').first().click();
+  await pool.getByRole('button', { name: market.intents[0].hash, exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'The Graph', exact: true });
+  await expect(dialog.getByLabel('Graph record JSON')).toContainText(market.intents[0].hash);
+  expect(await dialog.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+  await dialog.screenshot({ path: '.data/browser-tests/graph-details-mobile.png' });
+  await dialog.getByRole('button', { name: 'Close Graph details' }).click();
+  await expect(page.locator('#workspace')).toBeVisible();
 });

@@ -24,6 +24,7 @@ type DeploymentRecord = {
   chainId: number;
   rpc: string;
   subgraphUrl: string;
+  subgraphDeployment: string;
   usdc: string;
   contracts: Record<ContractName, string>;
   startBlock: string;
@@ -54,6 +55,7 @@ export const DEPLOYMENT = {
   chainId: record.chainId,
   rpc: record.rpc,
   subgraphUrl: record.subgraphUrl,
+  subgraphDeployment: record.subgraphDeployment,
   startBlock: DEPLOYMENT_BLOCK,
   ticketNFT: address('TicketNFT'),
   escrow: address('Escrow'),

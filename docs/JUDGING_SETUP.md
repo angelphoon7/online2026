@@ -15,18 +15,45 @@ Saved receipt-block floors remain enforced in RPC mode without first waiting for
 
 - [ ] Restore a working Graph query endpoint and sufficient query allowance. Do not
   rely on the Studio development endpoint's daily quota for the submitted demo.
-- [ ] Reduce duplicate queries and share short-lived public snapshots while preserving
-  receipt-block freshness and live validation before settlement.
+- [x] Share concurrent public market reads and cache complete Graph snapshots for 30
+  seconds within each server process. A newer receipt block or `fresh=1` bypasses the
+  completed cache. Solver discovery and chain validation still run for each new search.
 - [ ] Change local `READ_SOURCE` back to `graph`, restart the dev server and reload the
   page. Verify the hosted environment also uses `READ_SOURCE=graph`.
 - [ ] Verify event loading, automatic matching, agent diagnosis and judging controls
   against live Graph data before submitting. Confirm the displayed source and block.
+
+The Studio development query URL has a [3,000-query daily limit](https://thegraph.com/docs/en/subgraphs/developing/deploying-publishing/using-subgraph-studio/).
+It is separate from the [published Graph Network query endpoint](https://thegraph.com/docs/en/subgraphs/querying/from-an-application/).
+Resetting an API key's allowance does not establish that the configured Studio URL is
+available: check that URL's actual response before removing the RPC fallback. On
+13 September 2026, the configured Studio endpoint still returned HTTP 429 with a
+`Retry-After` of 36,413 seconds during the recovery check. Keep the fallback until a
+successful response is verified, or configure the published endpoint for this subgraph.
+The cache reduces duplicate reads within one process; it does not remove the provider
+quota or coordinate separate server instances.
 
 The app can serve live matching and saved evidence without the developer's laptop once its
 Next.js backend and storage are hosted. Persistent Upstash Redis is now connected to the
 existing Vercel project's production environment and its real connection/admission checks
 pass. Operator credentials, business-state migration, deployment and complete public
 acceptance remain pending; see [current configuration](checks/hosting-configuration.json).
+
+## Inspect The Graph and transaction hashes
+
+Open an event or a swap confirmation and click **The Graph**. The panel lists every
+intent and settlement hash in the loaded market, including settled and revoked intents.
+Search by hash or wallet, then select a hash to request its indexed record through the
+app's Graph proxy. An intent's full signed fields are rehashed before showing the record.
+The response includes its actual subgraph deployment and indexed block; commit and
+settlement transaction links open Arc explorer. An intent hash is a Graph entity ID,
+not a transaction hash.
+
+Project links open Subgraph Studio, the recorded query endpoint, and the deployment's
+IPFS manifest. The active market source remains visible: RPC snapshots are labeled as
+RPC, and clicking a record does not silently present RPC data as a Graph response.
+Opening the list sends no Graph query. Each record is read only when selected, and
+provider cooldowns still apply while the Studio quota is exhausted.
 
 ## What a judge needs
 
@@ -98,7 +125,7 @@ NEXT_PUBLIC_DEPLOYMENT=arc-testnet
 ARC_CHAIN_ID=5042002
 ARC_RPC=https://rpc.testnet.arc.io
 READ_SOURCE=graph
-SUBGRAPH_URL=https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1
+SUBGRAPH_URL=https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.2
 STORAGE_BACKEND=redis
 STORAGE_NAMESPACE=reshuffle-arc-testnet
 AGENT_RATE_LIMIT_STORE=redis
@@ -323,7 +350,7 @@ under Project Settings → Environment Variables, then redeploy:
 ```dotenv
 READ_SOURCE=graph
 ARC_RPC=https://rpc.testnet.arc.io
-SUBGRAPH_URL=https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1
+SUBGRAPH_URL=https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.2
 ```
 
 Keep API keys in server-only variables. Deploy the updated repository to receive the

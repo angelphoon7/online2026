@@ -15,7 +15,8 @@ export interface SolveEvidence {
   receipt?: { status: string; blockNumber: string; confirmed: boolean };
   requestedIntentHashes?: Hex[];
   pool?: { liveIntents: number; searchableIntents: number; excludedIntents: number };
-  search?: { termination: 'complete' | 'timeout' | 'candidate-limit' };
+  bounds?: { maxParticipants: number; maxCandidates: number; timeoutMs: number };
+  search?: { termination: 'complete' | 'timeout' | 'candidate-limit'; subsetsChecked?: number; exclusionsTotal?: number; exclusionsOmitted?: number; exclusionsByReason?: { reason: string; count: number }[] };
 }
 export interface SettlementProposal {
   evidenceId: string;

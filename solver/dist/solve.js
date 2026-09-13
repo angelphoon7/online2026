@@ -13,11 +13,11 @@ export function solve(allIntents, state, config = DEFAULT_CONFIG) {
             return false;
         return true;
     });
-    const { candidates, excluded, termination } = search(liveIntents, state, config);
+    const { candidates, excluded, termination, diagnostics } = search(liveIntents, state, config);
     const ranked = rankCandidates(candidates);
     const chosen = ranked.length > 0 ? ranked[0] : null;
     const evidence = buildEvidence(liveIntents.length, candidates, excluded, chosen);
-    evidence.search = { termination };
+    evidence.search = { termination, ...diagnostics };
     return {
         candidates: ranked,
         chosen: chosen

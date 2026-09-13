@@ -5,5 +5,5 @@ export declare function computeMinGrossPayment(intents: Intent[]): {
     payments: bigint[];
     gross: bigint;
 } | null;
-export declare function findAssignments(subset: Intent[], pool: bigint[], state: ChainState, limit: number, deadline?: number, accept?: (assignment: bigint[][]) => boolean): bigint[][][];
+export declare function findAssignments(subset: Intent[], pool: bigint[], state: ChainState, limit: number, deadline?: number, accept?: (assignment: bigint[][]) => boolean, eligibleTickets?: ReadonlyMap<Intent, ReadonlySet<bigint>>): bigint[][][];
 export declare function combinations<T>(arr: T[], k: number): Generator<T[]>;

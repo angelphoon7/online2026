@@ -27,6 +27,7 @@ export function publicRecord(deployment) {
     rpc: deployment.rpc,
     // Left empty in the record until `graph deploy`; SUBGRAPH_URL overrides at runtime.
     subgraphUrl: deployment.raw.subgraphUrl ?? '',
+    subgraphDeployment: deployment.raw.subgraphDeployment ?? '',
     usdc: deployment.usdc,
     contracts: Object.fromEntries(
       CONTRACT_NAMES.map((name) => [name, deployment.contracts[name].address])
