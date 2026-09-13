@@ -4,6 +4,7 @@ import { solve, hashIntent } from '../solver/dist/index.js';
 import type { Intent, ChainState } from '../solver/src/types';
 import { chainConfig, abi } from './chain';
 import { saveEvidence } from './evidence-store';
+import { readSolverState, solverReadClient } from './solve-rpc';
 
 export const SEARCH_CONFIG = { maxParticipants: 4, maxCandidates: 100, timeoutMs: 2000 };
 export function parseSolveRequest(body: unknown): Hex[] {
@@ -56,7 +57,8 @@ export async function solveOnChain(hashes: Hex[], committed?: ReadonlyMap<Hex, I
     error.name = 'GraphIntentUnavailable';
     throw error;
   }
-  const { client, addresses, usdc, startBlock, chainId } = chainConfig();
+  const { rpcUrl, addresses, usdc, startBlock, chainId } = chainConfig();
+  const client = solverReadClient(rpcUrl, chainId);
   if (await client.getChainId() !== chainId) throw new Error('RPC returned the wrong chain');
   const block = await client.getBlock();
   const event = parseAbiItem('event IntentCommitted(bytes32 indexed intentHash,address indexed owner,uint32 indexed eventId,uint256[] offered,uint256 sessionMask,uint256 sectionMask,uint8 exactCount,bool mustShareSession,bool mustShareSection,bool mustBeAdjacent,int256 maxNetPay,uint64 deadline,uint256 nonce)');
@@ -80,29 +82,28 @@ export async function solveOnChain(hashes: Hex[], committed?: ReadonlyMap<Hex, I
   if (intents.some(i => i.offered.length > 4 || i.exactCount > 4)) throw new Error('Demo search supports at most four offered/received tickets per intent');
   const state: ChainState = { ticketMeta: new Map(), depositor: new Map(), intentState: new Map(), usdcBalance: new Map(), usdcAllowance: new Map(), blockTimestamp: block.timestamp };
   const read = <T>(name: keyof typeof addresses, functionName: string, args: unknown[]) => client.readContract({ address: addresses[name], abi: abi(name), functionName, args, blockNumber: block.number }) as Promise<T>;
+  const jobs: (() => Promise<void>)[] = [];
+  const owners = new Set<Address>(), tickets = new Set<bigint>();
   for (const intent of intents) {
     const hash = hashIntent(intent);
-    state.intentState.set(hash, await read<number>('IntentRegistry', 'state', [hash]));
+    jobs.push(async () => { state.intentState.set(hash, await read<number>('IntentRegistry', 'state', [hash])); });
     const owner = intent.owner.toLowerCase() as Address;
-    if (!state.usdcBalance.has(owner)) {
-      const [balance, allowance] = await Promise.all([
-        client.readContract({ address: usdc, abi: erc20Abi, functionName: 'balanceOf', args: [owner], blockNumber: block.number }),
-        client.readContract({ address: usdc, abi: erc20Abi, functionName: 'allowance', args: [owner, addresses.Settlement], blockNumber: block.number }),
-      ]);
-      state.usdcBalance.set(owner, balance);
-      state.usdcAllowance.set(owner, allowance);
+    if (!owners.has(owner)) {
+      owners.add(owner);
+      jobs.push(async () => { state.usdcBalance.set(owner, await client.readContract({ address: usdc, abi: erc20Abi, functionName: 'balanceOf', args: [owner], blockNumber: block.number })); });
+      jobs.push(async () => { state.usdcAllowance.set(owner, await client.readContract({ address: usdc, abi: erc20Abi, functionName: 'allowance', args: [owner, addresses.Settlement], blockNumber: block.number })); });
     }
     for (const tokenId of intent.offered) {
-      if (state.ticketMeta.has(tokenId)) continue;
-      const [meta, depositor] = await Promise.all([
-        read<[number, number, number, number, number, number]>('TicketNFT', 'meta', [tokenId]),
-        read<Address>('Escrow', 'depositor', [tokenId]),
-      ]);
-      const [eventId, sessionId, sectionId, row, seat, status] = meta;
-      state.ticketMeta.set(tokenId, { eventId, sessionId, sectionId, row, seat, status });
-      state.depositor.set(tokenId, depositor);
+      if (tickets.has(tokenId)) continue;
+      tickets.add(tokenId);
+      jobs.push(async () => {
+        const [eventId, sessionId, sectionId, row, seat, status] = await read<[number, number, number, number, number, number]>('TicketNFT', 'meta', [tokenId]);
+        state.ticketMeta.set(tokenId, { eventId, sessionId, sectionId, row, seat, status });
+      });
+      jobs.push(async () => { state.depositor.set(tokenId, await read<Address>('Escrow', 'depositor', [tokenId])); });
     }
   }
+  await readSolverState(jobs);
   const started = performance.now();
   const result = solve(intents, state, SEARCH_CONFIG);
   const runtimeMs = performance.now() - started;

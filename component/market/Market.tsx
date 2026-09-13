@@ -562,7 +562,12 @@ export default function Market() {
                   <h2>Keep the ticket.<br />Change the outcome.</h2>
                 </div>
                 <div>
-                  <p className="mono" role="status" aria-live="polite">{indexingBlock !== null ? indexingMessage(indexingBlock) : market ? `ARC BLOCK ${market.blockNumber} / ${market.source === 'graph' ? 'VIA THE GRAPH' : 'VIA DIRECT RPC READS'}` : 'READING ARC'}</p>
+                  <p className="mono workspace-chain-status" role="status" aria-live="polite">{indexingBlock !== null ? indexingMessage(indexingBlock) : <>
+                    <a className="workspace-block-link" href={`${EXPLORER}/block/${market.blockNumber}`} target="_blank" rel="noopener noreferrer" aria-label={`View Arc Testnet block ${market.blockNumber} (opens in a new tab)`}>
+                      ARC BLOCK {market.blockNumber} <span aria-hidden="true">↗</span>
+                    </a>
+                    <span className="workspace-block-source">/ {market.source === 'graph' ? 'VIA THE GRAPH' : 'VIA DIRECT RPC READS'}</span>
+                  </>}</p>
                   <button className="text-button" onClick={() => void refresh(true)}>Refresh public state ↻</button>
                 </div>
               </div>
