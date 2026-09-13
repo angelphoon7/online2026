@@ -45,13 +45,6 @@
   margin: 0;
 }
 
-.error {
-  color: var(--fail);
-  font-size: 12px;
-  overflow-wrap: anywhere;
-  margin-top: 16px;
-}
-
 .actions {
   display: flex;
   flex-wrap: wrap;

@@ -21,7 +21,7 @@ import { solverErrorMessage } from '@/lib/solve-errors';
 import { formatUSDC, truncateAddress } from '@/lib/format';
 import { restoreIntent, type ChainReceipt, type ChainTicket } from '@/lib/market-types';
 import { HERO_TITLE_LINES, EMPTY_RESULT, POOL_NOTE, condition, EXPLORER, POOL_LABEL, RANKING_RULE, SOLVER_NOTE } from '@/lib/ui-copy';
-import { dishonestProposal, namedRejection, simulate, type Attack, type NamedRejection } from '@/lib/proposal-controls';
+import { dishonestProposal, namedRejection, isSimulationRejection, simulate, type Attack, type NamedRejection } from '@/lib/proposal-controls';
 import AnimatedTicketIcon from './AnimatedTicketIcon';
 import IntentBuilder from './IntentBuilder';
 import Validation from './Validation';
@@ -32,6 +32,7 @@ import AgentDrawer from './AgentDrawer';
 import ActivityNotification from './ActivityNotification';
 import EventLoadingDialog from './EventLoadingDialog';
 import { automaticSelection, latestRequest } from '@/lib/matching-status';
+import { matchUnavailable } from '@/lib/match-review';
 import { waitForIndexed } from '@/shared/graph';
 import { MarketFreshness } from '@/lib/market-freshness';
 import { indexingMessage, INDEXING_PENDING } from '@/lib/ui-copy';
@@ -128,10 +129,12 @@ export default function Market() {
   const [agentOpen, setAgentOpen] = useState(false);
   const [agentHash, setAgentHash] = useState<Hex | null>(null);
   const [chainBlock, setChainBlock] = useState<string | null>(null);
+  const unavailableMatch = matchUnavailable(proposal, evidence, market);
+  const readyMatch = !!proposal && !!evidence?.simulationResult?.success && !unavailableMatch;
 
   const runSolver = useCallback(async (hashes: Hex[], wholePool = false) => {
     const snapshot = freshness.getSnapshot();
-    if (snapshot.indexingBlock !== null) return;
+    if (snapshot.indexingBlock !== null || activeAction.current) return;
     const version = ++searchVersion.current;
     searchInFlight.current = true;
     setSolving(true); setSolverError('');
@@ -140,7 +143,9 @@ export default function Market() {
       // The floor carries into the search: after one of our writes the pool must not be
       // searched at a block that predates it, or the solver reasons about a market in which
       // the user's own commit or revocation has not happened.
-      const result = wholePool ? await findPoolSettlement(snapshot.floor) : await findSettlement(hashes.map(hash => ({ hash })), snapshot.floor);
+      const block = BigInt(snapshot.market?.blockNumber ?? 0);
+      const floor = block > snapshot.floor ? block : snapshot.floor;
+      const result = wholePool ? await findPoolSettlement(floor) : await findSettlement(hashes.map(hash => ({ hash })), floor);
       if (version !== searchVersion.current || !freshness.current(snapshot.revision)) return;
       setProposal(result.proposal); setEvidence(result.evidence);
     } catch (e) { if (version === searchVersion.current) { setProposal(null); setEvidence(null); setSolverError(solverErrorMessage(e)); } }
@@ -156,16 +161,27 @@ export default function Market() {
   }, [freshness]);
   useEffect(() => { void Promise.resolve().then(() => refresh()); const timer = setInterval(() => void refresh(), 30000); return () => clearInterval(timer); }, [refresh]);
   useEffect(() => {
+    if (!unavailableMatch || busy) return;
+    const timer = setTimeout(() => {
+      searchVersion.current++; searchInFlight.current = false;
+      setSolving(false); setProposal(null); setEvidence(null); setSolverError('');
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [unavailableMatch, busy]);
+  useEffect(() => {
     if (!automatic || !market || busy || indexingBlock !== null) return;
     const timer = setTimeout(() => {
       if (searchInFlight.current) return;
       const hashes = automaticSelection(market);
       setSelected(hashes);
+      // Keep the reviewed candidate and its evidence together. Public reads continue,
+      // but only search again when it is unavailable or the user requests a new search.
+      if (readyMatch) return;
       if (hashes.length >= 2) void runSolver(hashes, true);
       else { searchVersion.current++; setSolving(false); setProposal(null); setEvidence(null); setSolverError(''); }
     }, 0);
     return () => clearTimeout(timer);
-  }, [automatic, market, account, busy, indexingBlock, runSolver]);
+  }, [automatic, market, account, busy, indexingBlock, readyMatch, runSolver]);
   useEffect(() => {
     void jsonFetch<{ enabled: boolean; operator?: string }>('/api/demo/reset').then(d => { setResetEnabled(d.enabled); setOperator(d.operator ?? ''); }).catch(() => {});
   }, []);
@@ -187,6 +203,7 @@ export default function Market() {
   const action = async (label: string, fn: (address: Address) => Promise<void>) => {
     if (activeAction.current || freshness.getSnapshot().indexingBlock !== null) return;
     activeAction.current = true; setBusy(label); setNotice(''); setTxHash(undefined); setConfirmedWrite(null); setStatus('idle'); setRejection(null);
+    searchVersion.current++; searchInFlight.current = false; setSolving(false);
     try { await runWithWallet(fn); }
     catch (e) { setNotice(walletActionMessage(e)); }
     finally { setBusy(''); activeAction.current = false; }
@@ -212,6 +229,7 @@ export default function Market() {
   const operate = async <T,>(label: string, fn: () => Promise<T>): Promise<T> => {
     if (activeAction.current || freshness.getSnapshot().indexingBlock !== null) throw new Error('Wait for the current action and its indexed state.');
     activeAction.current = true; setBusy(label); setNotice(''); setTxHash(undefined); setConfirmedWrite(null);
+    searchVersion.current++; searchInFlight.current = false; setSolving(false);
     try { return await fn(); }
     catch (error) {
       const confirmed = (error as { confirmed?: { blockNumber: string; hashes: Hex[] } })?.confirmed;
@@ -372,22 +390,21 @@ export default function Market() {
     setStatus('preparing'); setRejection(null); setReceipt(null); setSwapImport(null);
     let broadcast = false;
     try {
-      let hashes = proposal?.legs.map(leg => leg.intentHash) ?? selected;
-      if (malicious === 'adjacency') hashes = rejectionDemo.control.proposal.legs.map(l => l.intentHash as Hex);
-      const fresh = await findSettlement(hashes.map(hash => ({ hash })), freshness.getSnapshot().floor);
-      if (!fresh.proposal || !fresh.evidence.simulationResult?.success) {
-        setProposal(fresh.proposal); setEvidence(fresh.evidence);
-        throw new Error(fresh.evidence.simulationResult?.error ?? EMPTY_RESULT);
-      }
-      let payload = fresh.proposal;
+      let payload = proposal;
       if (malicious) {
+        const hashes = malicious === 'adjacency' ? rejectionDemo.control.proposal.legs.map(l => l.intentHash as Hex) : proposal?.legs.map(leg => leg.intentHash) ?? selected;
+        const fresh = await findSettlement(hashes.map(hash => ({ hash })), freshness.getSnapshot().floor);
+        if (!fresh.proposal || !fresh.evidence.simulationResult?.success) throw new Error(fresh.evidence.simulationResult?.error ?? EMPTY_RESULT);
+        payload = fresh.proposal;
         payload = dishonestProposal(payload, malicious, market?.tickets ?? []);
         let actual: NamedRejection | null = null;
         try { await simulate(payload, address); } catch (e) { actual = namedRejection(e); }
         const expected = { siphon: 'PaymentImbalance', count: 'CountMismatch', adjacency: 'SeatsNotAdjacent' }[malicious];
         if (actual?.name !== expected) throw new Error(`This state does not isolate ${expected}. ${actual?.name ?? 'Refresh the pool and try again.'}`);
       } else {
-        // One UI action, two RPC calls. Simulation does not reserve chain state.
+        if (!payload || !readyMatch || matchUnavailable(payload, evidence, freshness.getSnapshot().market)) throw new Error('This match is no longer available. Searching for another match.');
+        // Validate exactly what was reviewed, without re-running a search that could
+        // change its tickets or payments. Simulation does not reserve chain state.
         await simulate(payload, address);
       }
       setStatus('wallet approval');
@@ -402,7 +419,10 @@ export default function Market() {
       if (r.status === 'success' && verified.status === 'success') await importReplacementTickets(verified, address);
       await refreshRequest;
     } catch (e) {
-      if (!broadcast) { const named = namedRejection(e); setRejection(named); setStatus(named ? 'simulation rejected' : 'idle'); }
+      if (!broadcast) {
+        const named = namedRejection(e); setRejection(named); setStatus(named ? 'simulation rejected' : 'idle');
+        if (!malicious && isSimulationRejection(e)) { setProposal(null); setEvidence(null); void refresh(); }
+      }
       throw e;
     }
   });
@@ -540,7 +560,7 @@ export default function Market() {
             </button>
             {[{ name: 'INTERLUDE', photo: sarahPoster, alt: 'Sarah Kang in Seoul concert poster' }, { name: 'ENCORE', photo: taylorPoster, alt: 'Taylor Swift The Eras Tour concert poster' }].map(({ name, photo, alt }, n) => <div key={name} className="poster poster-inert" aria-disabled="true"><span className="poster-top mono">UPCOMING PROGRAMME / 0{n + 2}</span><span className="poster-photo"><Image src={photo} alt={alt} fill sizes="(max-width: 720px) 84vw, 28vw" /></span><span className="poster-title">{name}</span><span className="poster-sub">Event details to be announced</span><span className="poster-dates mono">VENUE & DATES UNANNOUNCED</span><span className="poster-status">No live intents</span></div>)}
           </div>
-          <p id="event-preload-status" className="quiet" role="status" aria-live="polite">{market ? `Ticket positions and intent commitments loaded for all deployed events / Arc block ${market.blockNumber}.` : readError ? 'Event data could not be loaded. Open the event or retry the public reads below.' : 'Loading public ticket positions and intent commitments. You can open the event while its data loads.'}</p>
+          <p id="event-preload-status" className="quiet" role="status" aria-live="polite">{market ? `Ticket positions and intent commitments loaded for all deployed events / Arc block ${market.blockNumber}.` : readError ? 'Loading event data. We’ll keep trying automatically. You can open the event while you wait.' : 'Loading public ticket positions and intent commitments. You can open the event while its data loads.'}</p>
           <p className="quiet">Event names are demo presentation labels. Session IDs and ticket metadata come from the deployed contracts; no venue dates or prices are recorded on-chain.</p>
           {readError && <p role="alert" className="read-error">{readError} <button onClick={() => void refresh(true)}>Retry public reads</button></p>}
         </section>
@@ -585,14 +605,14 @@ export default function Market() {
               {nftClaim && equal(nftClaim.owner, account) && <section className="wallet-nft-import"><h3>Your free tickets</h3><p role="status">{nftClaim.message}</p><p className="quiet">{WALLET_IMPORT_NOTE}</p><span className="mono hash">NFT contract: {CONTRACTS.ticketNFT}</span><ul>{nftClaim.tokenIds.map((id, n) => <li key={id} className="mono">Token ID: {id} / <a href={`${EXPLORER}/tx/${nftClaim.hashes[n]}`} target="_blank" rel="noreferrer">Mint receipt</a></li>)}</ul><button className="secondary" disabled={disabled} onClick={() => void retryNFTImport()}>Add to wallet</button></section>}
               <div hidden={indexingBlock !== null}>
               <div className="workspace-stack">
-                {request && <MatchingStatus request={request} selected={selected} solving={solving} error={readError || solverError} proposal={proposal} evidence={evidence} automatic={automatic} resume={() => setAutomatic(true)} busy={disabled} />}
+                {request && <MatchingStatus request={request} selected={selected} solving={solving} error={readError || solverError} proposal={unavailableMatch ? null : proposal} evidence={evidence} automatic={automatic} resume={() => setAutomatic(true)} busy={disabled} />}
                 <IntentBuilder onConnect={async () => { await wallet.connect(); await refresh(true); }} connectionError={wallet.error} market={market} account={account} approved={approved} busy={disabled} onCustody={custody} onDepositSelected={depositSelected} onSign={sign} onDemo={claimDemo} onApprove={() => action('Approve tickets', async address => { await track(await approveNFTsForEscrow(address)); setApproved(true); })} />
-                <section className="workspace-panel matching-panel"><div className="panel-heading"><h2>Matching</h2><span className="eyebrow">{automatic ? 'Automatic search' : 'Manual search'}</span></div>
+                <section className="workspace-panel matching-panel"><div className="panel-heading"><h2>Matching</h2><span className="eyebrow">{readyMatch && !solving ? 'Ready to settle' : automatic ? 'Automatic search' : 'Manual search'}</span></div>
                   <div className="solver-actions"><button className="secondary" disabled={solving || disabled || (automatic ? live.length < 2 : selected.length < 2 || selected.length > 4)} onClick={() => void runSolver(selected, automatic)}>{solving ? 'Reading and searching…' : automatic ? 'Check all intents' : 'Run solver'} <span className="mono">({automatic ? `${live.length} in pool` : `${selected.length}/4`})</span></button><button className="text-button" onClick={() => { setAgentHash(current => current ?? request?.hash ?? live[0]?.hash ?? null); setAgentOpen(true); }}>Ask the agent</button>{resetEnabled && equal(account, operator) && <button className="text-button" disabled={disabled} onClick={() => void reset()}>Reset demo</button>}</div>
-                  <p className="quiet">{automatic ? 'Automatic matching searches all live event intents. You do not need to choose participants. Each candidate contains two to four participants; public-state refreshes retry the search while this page is open.' : 'Manual search is on. Choose 2–4 requests, then Run solver.'}</p>{!automatic && !request && <button className="text-button" disabled={disabled} onClick={() => setAutomatic(true)}>Resume automatic matching</button>}
+                  <p className="quiet">{readyMatch && !solving ? 'Your match stays here while you review. Availability updates in the background.' : automatic ? 'Searching live requests automatically. Each candidate includes two to four participants.' : 'Manual search is on. Choose 2–4 requests, then Run solver.'}</p>{!automatic && !request && <button className="text-button" disabled={disabled} onClick={() => setAutomatic(true)}>Resume automatic matching</button>}
                   {solving && <p className="quiet" role="status">Checking current intents and ticket availability...</p>}{evidence?.pool && <details className="search-details" open={searchDetailsOpen} onToggle={event => setSearchDetailsOpen(event.currentTarget.open)}><summary>Search details and evidence</summary><p className="quiet mono">{evidence.pool.liveIntents} live requests / {evidence.pool.searchableIntents} within ticket-count limits / {evidence.pool.excludedIntents} excluded with reasons. Maximum 4 participants per candidate, 100 candidates, 2-second search budget. <a href={`/api/evidence/${evidence.id}`} target="_blank" rel="noreferrer">View search evidence and exclusion reasons</a></p></details>}{evidence?.search && !solving && <p className="quiet">{evidence.search.termination === 'complete' ? 'Search completed within the configured bounds.' : 'Search budget reached. Further combinations may remain unchecked.'}</p>}{solverError && <p role="alert">{solverError}</p>}{evidence && !proposal && !solving && <div className="matching-empty" role="status"><h3>Waiting for a match</h3><p>{EMPTY_RESULT}. New requests may make a swap possible; you can wait or try another selection.</p>{evidence.candidatesExcluded.some(i => /capacity|allowance/i.test(i.reason)) && <p>Insufficient USDC balance or allowance for a candidate. Update spending capacity before settling.</p>}</div>}
-                  {proposal && <div className="candidate"><p className="eyebrow">{solving ? 'Rechecking previous match' : evidence?.simulationResult?.success ? 'Candidate found - awaiting settlement' : 'Candidate needs rechecking'}</p><p className="quiet">{solving ? 'The previous result stays visible while current conditions are checked. Settlement is unavailable until this search finishes.' : evidence?.simulationResult?.success ? 'A candidate is not a completed swap. Propose and settle submits it for on-chain validation.' : 'This candidate has not passed simulation and cannot be submitted yet.'}</p><div className="panel-heading"><strong>{settlementShape(proposal)}</strong><span className="mono">{proposal.candidatesFound} candidates</span></div><details className="search-details" open={matchDetailsOpen} onToggle={event => setMatchDetailsOpen(event.currentTarget.open)}><summary>Why this match?</summary><p className="quiet">{RANKING_RULE}. Ties: fewer participants, then ordered intent hashes. Source block <span className="mono">{evidence?.source.blockNumber}</span>.</p></details><table className="net-table"><thead><tr><th>Participant</th><th>USDC net</th></tr></thead><tbody>{proposal.legs.map(l => <tr key={l.intentHash}><td><a href={`${EXPLORER}/address/${l.owner}`} title={l.owner} target="_blank" rel="noreferrer">{walletLabel(l.owner)}</a></td><td className="mono">{l.netPayment > 0n ? '−' : l.netPayment < 0n ? '+' : ''}{formatUSDC(l.netPayment < 0n ? -l.netPayment : l.netPayment)}</td></tr>)}</tbody><tfoot><tr><td>Σ</td><td className="mono">{formatUSDC(proposal.legs.reduce((n, l) => n - l.netPayment, 0n))}</td></tr></tfoot></table></div>}
-                  <button className="primary full" disabled={disabled || solving || !proposal || !evidence?.simulationResult?.success} onClick={() => void settle()}>Propose and settle <span>↗</span></button><p className="quiet">When a match is ready, click Propose and settle and confirm the transaction in your wallet. The proposer pays gas in USDC. Participants do not sign their intents again. Your swap is complete only after the receipt confirms success.</p>
+                  {proposal && <div className="candidate"><p className="eyebrow">{solving ? 'Rechecking previous match' : readyMatch ? 'Candidate found - awaiting settlement' : 'Candidate needs rechecking'}</p><p className="quiet">{solving ? 'The previous result stays visible while current conditions are checked. Settlement is unavailable until this search finishes.' : evidence?.simulationResult?.success ? 'A candidate is not a completed swap. Propose and settle submits it for on-chain validation.' : 'This candidate has not passed simulation and cannot be submitted yet.'}</p><div className="panel-heading"><strong>{settlementShape(proposal)}</strong><span className="mono">{proposal.candidatesFound} candidates</span></div><details className="search-details" open={matchDetailsOpen} onToggle={event => setMatchDetailsOpen(event.currentTarget.open)}><summary>Why this match?</summary><p className="quiet">{RANKING_RULE}. Ties: fewer participants, then ordered intent hashes. Source block <span className="mono">{evidence?.source.blockNumber}</span>.</p></details><table className="net-table"><thead><tr><th>Participant</th><th>USDC net</th></tr></thead><tbody>{proposal.legs.map(l => <tr key={l.intentHash}><td><a href={`${EXPLORER}/address/${l.owner}`} title={l.owner} target="_blank" rel="noreferrer">{walletLabel(l.owner)}</a></td><td className="mono">{l.netPayment > 0n ? '−' : l.netPayment < 0n ? '+' : ''}{formatUSDC(l.netPayment < 0n ? -l.netPayment : l.netPayment)}</td></tr>)}</tbody><tfoot><tr><td>Σ</td><td className="mono">{formatUSDC(proposal.legs.reduce((n, l) => n - l.netPayment, 0n))}</td></tr></tfoot></table></div>}
+                  <button className="primary full" disabled={disabled || solving || !readyMatch} onClick={() => void settle()}>Propose and settle <span>↗</span></button><p className="quiet">When a match is ready, click Propose and settle and confirm the transaction in your wallet. The proposer pays gas in USDC. Participants do not sign their intents again. Your swap is complete only after the receipt confirms success.</p>
                   <JudgeControls freshness={freshness} busy={disabled} label={walletLabel} onBudget={applyJudgeBudget} onRevoke={revokeJudgeIntent} />
                   <details className="dishonest"><summary>Submit dishonest proposal ▾</summary><p>Intentionally submit a failing transaction. The proposer pays its gas in USDC. The adjacency case uses the separate live rejection-demo intents.</p><select value={attack} onChange={e => setAttack(e.target.value as Attack)}><option value="siphon">Siphon 20 USDC</option><option value="adjacency">Non-adjacent seats</option><option value="count">Wrong count</option></select><button className="secondary" disabled={disabled || solving || !proposal} onClick={() => void settle(attack)}>Submit dishonest proposal</button></details>
                 </section>

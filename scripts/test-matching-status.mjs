@@ -19,6 +19,7 @@ assert.equal(result({ state: 3 }), 'Swap confirmed');
 assert.equal(result({ state: 2 }), 'Request revoked');
 assert.equal(result({ expired: true }), 'Request expired');
 assert.equal(matchingStatus(request, selected, false, 'RPC failed', null, null).title, 'Matching temporarily unavailable');
+assert.equal(matchingStatus(request, selected, false, 'RPC failed', { legs: [{ intentHash: request.hash }] }, successful).title, 'Match found - awaiting settlement');
 assert.equal(matchingStatus(request, [hash(0)], false, '', null, null).title, 'Your request is outside this search');
 for (const patch of [{ state: 2 }, { state: 3 }, { expired: true }]) {
   assert.deepEqual(automaticSelection({ ...market, intents: [...intents.slice(0, 5), { ...request, ...patch }] }), intents.slice(0, 5).map(i => i.hash));
