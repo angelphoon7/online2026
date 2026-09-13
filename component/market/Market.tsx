@@ -501,7 +501,7 @@ export default function Market() {
           className={`two-line-nav-item ${currentView !== 'home' ? 'active' : ''}`}
           onClick={() => navigateTo('events')}
         >
-          Market
+          Events
         </button>
       </nav>
       <div className="header-actions">
@@ -568,7 +568,6 @@ export default function Market() {
             <button
               type="button"
               className="poster poster-live"
-              aria-describedby="event-preload-status"
               onClick={() => navigateTo('workspace')}
             >
               <span className="poster-top mono">RESHUFFLE PRESENTS / EVENT 1</span>
@@ -580,8 +579,6 @@ export default function Market() {
             </button>
             {[{ name: 'INTERLUDE', photo: sarahPoster, alt: 'Sarah Kang in Seoul concert poster' }, { name: 'ENCORE', photo: taylorPoster, alt: 'Taylor Swift The Eras Tour concert poster' }].map(({ name, photo, alt }, n) => <div key={name} className="poster poster-inert" aria-disabled="true"><span className="poster-top mono">UPCOMING PROGRAMME / 0{n + 2}</span><span className="poster-photo"><Image src={photo} alt={alt} fill sizes="(max-width: 720px) 84vw, 28vw" /></span><span className="poster-title">{name}</span><span className="poster-sub">Event details to be announced</span><span className="poster-dates mono">VENUE & DATES UNANNOUNCED</span><span className="poster-status">No live intents</span></div>)}
           </div>
-          <p id="event-preload-status" className="quiet" role="status" aria-live="polite">{market ? `Ticket positions and intent commitments loaded for all deployed events / Arc block ${market.blockNumber}.` : readError ? 'Event data could not be loaded. Retry public reads when you are ready.' : 'Loading public ticket positions and intent commitments. You can open the event while its data loads.'}</p>
-          <p className="quiet">Event names are demo presentation labels. Session IDs and ticket metadata come from the deployed contracts; no venue dates or prices are recorded on-chain.</p>
           {readError && <p role="alert" className="read-error">{readError} <button onClick={() => void refresh(true)}>Retry public reads</button></p>}
         </section>
       )}
@@ -597,11 +594,6 @@ export default function Market() {
                 >
                   ← Back to Events
                 </button>
-                <p className="mono workspace-chain-status" role="status" aria-live="polite">{indexingBlock !== null ? indexingMessage(indexingBlock) : <>
-                  <a className="workspace-block-link" href={`${EXPLORER}/block/${market.blockNumber}`} target="_blank" rel="noopener noreferrer" aria-label={`View Arc Testnet block ${market.blockNumber} (opens in a new tab)`}>
-                    ARC BLOCK {market.blockNumber} <span aria-hidden="true">↗</span>
-                  </a>
-                </>}</p>
                 <nav className="workspace-nav" aria-label="Workspace navigation">
                   <button type="button" aria-haspopup="dialog" aria-expanded={poolOpen} onClick={() => setPoolOpen(true)}>{indexingBlock !== null ? 'Intent pool: indexing' : `Intent Pool (${live.length})`}</button>
                   <button type="button" aria-haspopup="dialog" aria-expanded={seatMapOpen} onClick={() => setSeatMapOpen(true)}>Seat Map</button>
@@ -741,7 +733,7 @@ export default function Market() {
                       </div>
 
                       {!live.length && <p className="quiet">No live requests yet. Submit an intent to join the pool.</p>}
-                      {!!market.hashMismatched.length && (
+                      {!!market.hashMismatched?.length && (
                         <p className="quiet" role="status">
                           {market.hashMismatched.length} indexed {market.hashMismatched.length === 1 ? 'request is' : 'requests are'} excluded from this pool: the indexed fields do not re-hash to the id they were committed under, so they are not shown.{' '}
                           <span className="mono">{market.hashMismatched.map(h => `${h.slice(0, 10)}…`).join(' ')}</span>

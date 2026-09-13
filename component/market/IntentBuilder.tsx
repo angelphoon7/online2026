@@ -14,7 +14,7 @@ import { CLOSED_SESSION_NOTE, MISSING_SCHEDULE_NOTE } from '@/lib/ui-copy';
 import { FREE_TICKETS_LABEL, DEMO_PRICE_NOTE } from '@/lib/ui-copy';
 import { formatUSDC, truncateAddress } from '@/lib/format';
 import { DEMO_TICKET_NOTE } from '@/lib/ui-copy';
-import { ADJACENCY_ACCEPTED, ADJACENCY_ERROR, ADJACENCY_NOTE, ALLOWANCE_NOTE, CONNECT_POSITIONS_NOTE, EMPTY_POSITIONS_NOTE, ESCROW_NOTE, OWN_POSITIONS_NOTE, PICK_OFFERED_NOTE, STEPS, WITHDRAWAL_DETAIL, intentReview, maskClasses } from '@/lib/ui-copy';
+import { ADJACENCY_ACCEPTED, ADJACENCY_ERROR, ADJACENCY_NOTE, ALLOWANCE_NOTE, EMPTY_POSITIONS_NOTE, ESCROW_NOTE, PICK_OFFERED_NOTE, STEPS, WITHDRAWAL_DETAIL, intentReview, maskClasses } from '@/lib/ui-copy';
 import { Minus, Plus, ArrowRight } from 'lucide-react';
 
 const same = (a: string, b: string | null) => a.toLowerCase() === b?.toLowerCase();
@@ -204,12 +204,6 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
         })}
       </div>
 
-      {step > 1 && !completed && (
-        <button type="button" className="back-nav-btn" onClick={() => go(step - 1)}>
-          ← Back to Preferences
-        </button>
-      )}
-
       {STEPS.map((title, index) => {
         const number = index + 1;
         const expanded = step === number && !completed;
@@ -257,21 +251,6 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
               <div className="step-content" aria-labelledby={`step-title-${number}`}>
                 {number === 2 && (
                   <>
-                    <div className="inventory-header-panel">
-                      <div className="inventory-status-row">
-                        <div className="inventory-status-pill">
-                          <span className={`inventory-status-dot ${account ? 'connected' : 'disconnected'}`} aria-hidden="true" />
-                          <span className="mono">{account ? truncateAddress(account) : 'Disconnected'}</span>
-                        </div>
-                        {account && (
-                          <span className="inventory-ticket-count mono">
-                            {positions.length} ticket{positions.length === 1 ? '' : 's'} available
-                          </span>
-                        )}
-                      </div>
-                      <p className="quiet inventory-context-note">{account ? OWN_POSITIONS_NOTE : CONNECT_POSITIONS_NOTE}</p>
-                    </div>
-
                     {!account && (
                       <div className="wallet-connect-card">
                         <div className="wallet-connect-info">
@@ -296,14 +275,22 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
                     {connectionError && <p role="alert" className="connection-error-box">{connectionError}</p>}
 
                     <div className="demo-faucet-card">
-                      <div className="demo-faucet-body">
-                        <div className="demo-faucet-badge-row">
-                          <span className="demo-badge">ARC TESTNET DEMO</span>
-                          <span className="demo-sub-tag">Free Mint Voucher</span>
+                      <div className="demo-faucet-left">
+                        <div className="demo-faucet-icon-wrap" aria-hidden="true">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+                            <path d="M13 5v2" />
+                            <path d="M13 17v2" />
+                            <path d="M13 11v2" />
+                          </svg>
                         </div>
-                        <div className="demo-faucet-text">
+                        <div className="demo-faucet-body">
+                          <div className="demo-faucet-badge-row">
+                            <span className="demo-badge">ARC TESTNET DEMO</span>
+                            <span className="demo-sub-tag">Free Mint Voucher</span>
+                          </div>
                           <h4 className="demo-faucet-title">Need tickets to test reshuffling?</h4>
-                          <p className="quiet demo-faucet-desc">{DEMO_TICKET_NOTE}</p>
+                          <p className="demo-faucet-desc">{DEMO_TICKET_NOTE}</p>
                         </div>
                       </div>
                       <button
@@ -338,8 +325,17 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
 
                     {account && !positions.length && (
                       <div className="empty-positions-card">
-                        <h4 className="empty-positions-title">No tickets held in this wallet</h4>
-                        <p role="status" className="empty-positions-text">{EMPTY_POSITIONS_NOTE}</p>
+                        <div className="empty-positions-icon-wrap" aria-hidden="true">
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                            <rect width="18" height="18" x="3" y="3" rx="2" />
+                            <path d="M3 9h18" />
+                            <path d="M9 21V9" />
+                          </svg>
+                        </div>
+                        <div className="empty-positions-content">
+                          <h4 className="empty-positions-title">No tickets held in this wallet</h4>
+                          <p role="status" className="empty-positions-text">{EMPTY_POSITIONS_NOTE}</p>
+                        </div>
                       </div>
                     )}
 
@@ -441,7 +437,20 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
                       )}
                       {!intent.offered.length && (
                         <div className="review-pending-placeholder">
-                          <p className="quiet">Select the tickets you want to offer above to review your request.</p>
+                          <div className="review-pending-icon-wrap" aria-hidden="true">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="10" />
+                              <path d="m4.93 4.93 4.24 4.24" />
+                              <path d="m14.83 9.17 4.24-4.24" />
+                              <path d="m14.83 14.83 4.24 4.24" />
+                              <path d="m9.17 14.83-4.24 4.24" />
+                              <circle cx="12" cy="12" r="4" />
+                            </svg>
+                          </div>
+                          <div className="review-pending-text-group">
+                            <p className="review-pending-main-text">Select the tickets you want to offer above to review your request.</p>
+                            <span className="review-pending-sub-text">Once selected, your signed EIP-712 outcome commitment and swap breakdown will appear here.</span>
+                          </div>
                         </div>
                       )}
                       {toDeposit.length > 0 && (
@@ -702,7 +711,7 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
                         disabled={choiceInvalid || timingUnavailable}
                         onClick={() => go(2)}
                       >
-                        <span>Continue to Tickets</span>
+                        <span>Continue </span>
                         <ArrowRight className="w-4 h-4 btn-icon" />
                       </button>
                     </div>
