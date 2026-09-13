@@ -1,5 +1,20 @@
 # Judging setup
 
+## Before submission: restore The Graph
+
+Local development temporarily uses `READ_SOURCE=rpc` in ignored `.env.local` while
+The Graph's query quota is exhausted. This fallback is for local work; it does not
+complete the Graph integration required for submission.
+
+- [ ] Restore a working Graph query endpoint and sufficient query allowance. Do not
+  rely on the Studio development endpoint's daily quota for the submitted demo.
+- [ ] Reduce duplicate queries and share short-lived public snapshots while preserving
+  receipt-block freshness and live validation before settlement.
+- [ ] Change local `READ_SOURCE` back to `graph`, restart the dev server and reload the
+  page. Verify the hosted environment also uses `READ_SOURCE=graph`.
+- [ ] Verify event loading, automatic matching, agent diagnosis and judging controls
+  against live Graph data before submitting. Confirm the displayed source and block.
+
 The app can serve live matching and saved evidence without the developer's laptop once its
 Next.js backend and storage are hosted. Persistent Upstash Redis is now connected to the
 existing Vercel project's production environment and its real connection/admission checks
