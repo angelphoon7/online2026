@@ -94,7 +94,7 @@
 .activity-toast-icon{display:grid;place-items:center;flex:0 0 32px;height:32px;border:1px solid var(--line);border-radius:50%;color:var(--muted)}
 .activity-toast-icon.is-confirmed{color:var(--pass);background:rgba(52,211,153,.08);border-color:rgba(52,211,153,.25)}
 .activity-toast-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
-.activity-toast-copy strong{font-size:13px;line-height:1.4;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.activity-toast-copy strong{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;font-size:13px;line-height:1.4;font-weight:500;overflow:hidden;overflow-wrap:anywhere}
 .activity-toast-copy>span{font-size:11px;color:var(--muted)}
 .activity-toast-dismiss{position:absolute;top:8px;right:8px;display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:6px;font-size:20px;line-height:1;color:var(--muted);background:transparent}
 .activity-toast-dismiss:hover{color:var(--ink);background:rgba(255,255,255,.06)}
@@ -103,7 +103,6 @@
 .activity-details-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
 .activity-details-heading h2{font-size:20px;font-weight:500;letter-spacing:-.03em;margin:0}
 .activity-details-close{display:grid;place-items:center;width:32px;height:32px;border:1px solid var(--line);border-radius:8px;font-size:22px;color:var(--muted);background:transparent}
-.activity-details-dialog .activity-details-status{font-size:14px;font-weight:600;margin-bottom:10px}
 .activity-details-transactions{display:grid;gap:12px;margin-top:24px;padding-top:18px;border-top:1px solid var(--line)}
 .activity-details-transactions h3{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
 .activity-details-transactions a{display:block;overflow-wrap:anywhere}

@@ -74,6 +74,50 @@ test('HTML provider throttling becomes an actionable 429 on the market and Graph
   assert.ok(Number(proxied.headers.get('Retry-After')) > 0);
   assert.equal(fetch.mock.callCount(), 1, 'Repeated consumers must respect the upstream refusal');
 });
+
+test('Arc throttling preserves its retryable code and cooldown across read methods, then resumes fresh reads', async t => {
+  env(t, { ARC_RPC: 'https://arc-throttle.invalid' });
+  let now = 1_000_000; t.mock.method(Date, 'now', () => now);
+  const fetch = t.mock.method(globalThis, 'fetch', async () => now === 1_000_000
+    ? new Response('private-provider-diagnostic', { status: 429, headers: { 'Retry-After': '5' } })
+    : Response.json({ jsonrpc: '2.0', id: 7, result: '0x65' }));
+  const first = await rpc(rpcRequest());
+  assert.equal(first.status, 429); assert.equal(first.headers.get('Retry-After'), '5');
+  assert.deepEqual(await first.json(), { jsonrpc: '2.0', id: 7, error: { code: -32005, message: 'Arc RPC is rate-limited. Wait 5 seconds, then retry.' } });
+  now += 2000;
+  const waiting = await rpc(rpcRequest('eth_blockNumber'));
+  assert.equal(waiting.status, 429); assert.equal(waiting.headers.get('Retry-After'), '3');
+  assert.equal(fetch.mock.callCount(), 1, 'Other consumers cannot send upstream reads during the provider cooldown');
+  assert.equal((await rpc(rpcRequest('eth_sendTransaction'))).status, 400, 'Cooldown must not hide a forbidden write');
+  now += 3000;
+  const recovered = await rpc(rpcRequest('eth_blockNumber'));
+  assert.equal(recovered.status, 200); assert.equal((await recovered.json()).result, '0x65');
+  assert.equal(fetch.mock.callCount(), 2, 'Recovery reads fresh chain state');
+});
+
+test('Arc JSON-RPC throttles with HTTP 200 remain retryable and get a default cooldown', async t => {
+  env(t, { ARC_RPC: 'https://arc-json-throttle.invalid' });
+  t.mock.method(globalThis, 'fetch', async () => Response.json({ jsonrpc: '2.0', id: 7, error: { code: -32005, message: 'provider-private-details' } }));
+  const response = await rpc(rpcRequest());
+  assert.equal(response.status, 429); assert.equal(response.headers.get('Retry-After'), '1');
+  const body = await response.json();
+  assert.equal(body.error.code, -32005); assert.match(body.error.message, /rate-limited/);
+  assert.ok(!JSON.stringify(body).includes('provider-private-details'));
+});
+
+test('Arc transport failures are retryable while contract reverts keep their named-error data', async t => {
+  env(t);
+  const fetch = t.mock.method(globalThis, 'fetch', async () => new Response('provider-private-details', { status: 503 }));
+  const unavailable = await rpc(rpcRequest());
+  assert.equal(unavailable.status, 502); assert.equal((await unavailable.json()).error.code, -32603);
+  fetch.mock.mockImplementation(async () => { throw new TypeError('fetch failed with private endpoint'); });
+  const disconnected = await rpc(rpcRequest());
+  assert.equal(disconnected.status, 502); assert.equal((await disconnected.json()).error.code, -32603);
+  fetch.mock.mockImplementation(async () => Response.json({ jsonrpc: '2.0', id: 7, error: { code: 3, message: 'execution reverted', data: '0x12345678' } }));
+  const revert = await rpc(rpcRequest());
+  assert.equal(revert.status, 200);
+  assert.deepEqual((await revert.json()).error, { code: 3, message: 'Arc rejected the read request', data: '0x12345678' });
+});
 test('provider cooldown expires and a new floored query goes upstream rather than returning an earlier snapshot', async t => {
   env(t); let now = 1_000_000;
   t.mock.method(Date, 'now', () => now);

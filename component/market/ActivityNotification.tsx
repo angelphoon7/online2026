@@ -28,7 +28,7 @@ function Toast({ title, confirmed, paused, onOpen }: { title: string; confirmed:
     onMouseEnter={() => { setHovered(true); setPhase('visible'); }} onMouseLeave={() => setHovered(false)}
     onFocusCapture={() => { setFocused(true); setPhase('visible'); }}
     onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
-    <button type="button" className="activity-toast-open" onClick={onOpen} aria-haspopup="dialog" aria-label={`${title}. View activity details`}>
+    <button type="button" className="activity-toast-open" onClick={onOpen} aria-haspopup="dialog" aria-label={`${title} View details`}>
       <span className={`activity-toast-icon${confirmed ? ' is-confirmed' : ''}`} aria-hidden="true">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           {confirmed ? <path d="m5 12 4 4L19 6" /> : <><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" /></>}
@@ -56,7 +56,7 @@ export default function ActivityNotification({ busy, notice, hash, confirmation,
   const active = !!(busy || notice || hash || confirmation);
   // An earlier approval receipt must not label the next, still-pending transaction confirmed.
   const currentConfirmed = !!confirmation && (!hash || confirmation.hashes.includes(hash));
-  const title = currentConfirmed ? 'Transaction confirmed' : busy || 'Activity update';
+  const title = notice || busy || (currentConfirmed ? 'Transaction confirmed' : 'Transaction submitted');
   const hashes = [...new Set([...(confirmation?.hashes ?? []), ...(hash ? [hash] : [])])];
   // Only a new action update restarts the toast. Market polling cannot bring it back.
   const notificationKey = JSON.stringify([busy, notice, hash, confirmation?.block, confirmation?.hashes]);
@@ -69,10 +69,10 @@ export default function ActivityNotification({ busy, notice, hash, confirmation,
       const bounds = event.currentTarget.getBoundingClientRect();
       if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) event.currentTarget.close();
     }}>
-      <header className="activity-details-heading"><h2 id="activity-details-title">Activity details</h2><button type="button" className="activity-details-close" aria-label="Close activity details" onClick={() => dialog.current?.close()}>×</button></header>
-      <p className="activity-details-status">{title}</p>
+      <header className="activity-details-heading"><h2 id="activity-details-title">Details</h2><button type="button" className="activity-details-close" aria-label="Close details" onClick={() => dialog.current?.close()}>×</button></header>
       {notice && <p>{notice}</p>}
-      {busy && <p className="quiet">{busy}. This action is still in progress.</p>}
+      {!notice && busy && <p>{busy}. This action is still in progress.</p>}
+      {!notice && !busy && hash && !confirmation && <p>Transaction submitted. Waiting for confirmation.</p>}
       {confirmation && <p className="quiet">Transaction confirmed at block <span className="mono">#{confirmation.block}</span>.</p>}
       {hashes.length > 0 && <div className="activity-details-transactions"><h3>Transactions</h3>{hashes.map(tx => <a key={tx} className="hash" href={`${EXPLORER}/tx/${tx}`} target="_blank" rel="noreferrer">{tx} <span aria-hidden="true">↗</span></a>)}</div>}
       {!active && <p>No activity yet.</p>}

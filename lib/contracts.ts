@@ -32,7 +32,7 @@ function getProvider() {
 export function getPublicClient() {
   return createPublicClient({
     chain: NETWORK,
-    transport: http('/api/rpc', { timeout: 20000, retryCount: 2 }),
+    transport: http('/api/rpc', { timeout: 20000, retryCount: 2, retryDelay: 1000 }),
   });
 }
 

@@ -1,5 +1,6 @@
 // Same-origin, read-only Arc transport. Wallet signing/broadcast stays in MetaMask.
 import { chainConfig } from '@/server/chain';
+import { retryAfterSeconds } from '@/shared/retry-after';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -10,6 +11,21 @@ const methods = new Set([
   'eth_getLogs', 'eth_getCode', 'eth_getTransactionCount',
 ]);
 const headers = { 'Cache-Control': 'no-store' };
+// A provider cooldown, not cached chain state. Other reads must also respect its refusal.
+const cooldowns = new Map<string, number>();
+function rateLimited(id: string | number | null, seconds: number) {
+  return Response.json({ jsonrpc: '2.0', id, error: {
+    code: -32005, message: `Arc RPC is rate-limited. Wait ${seconds} second${seconds === 1 ? '' : 's'}, then retry.`,
+  } }, { status: 429, headers: { ...headers, 'Retry-After': String(seconds) } });
+}
+function throttle(id: string | number | null, rpcUrl: string, upstream: Response) {
+  const seconds = retryAfterSeconds(upstream.headers.get('Retry-After') ?? '1');
+  const now = Date.now();
+  const until = Math.max(cooldowns.get(rpcUrl) ?? 0, now + seconds * 1000);
+  if (cooldowns.size >= 16) cooldowns.delete(cooldowns.keys().next().value!);
+  cooldowns.set(rpcUrl, until);
+  return rateLimited(id, Math.ceil((until - now) / 1000));
+}
 
 export async function POST(request: Request) {
   let id: string | number | null = null;
@@ -33,13 +49,27 @@ export async function POST(request: Request) {
         if (span < 0n || span >= 10000n) throw new Error('Log range exceeds 10000 blocks');
       }
     }
+    const now = Date.now();
+    for (const [url, until] of cooldowns) if (until <= now) cooldowns.delete(url);
+    const until = cooldowns.get(rpcUrl);
+    if (until && until > now) return rateLimited(id, Math.ceil((until - now) / 1000));
     const upstream = await fetch(rpcUrl, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id, method: body.method, params: body.params ?? [] }),
       signal: AbortSignal.timeout(15000), cache: 'no-store',
     });
-    if (!upstream.ok) return Response.json({ jsonrpc: '2.0', id, error: { code: -32000, message: 'Arc RPC is temporarily unavailable. Retry shortly.' } }, { status: 502, headers });
+    if (upstream.status === 429) {
+      void upstream.body?.cancel().catch(() => {});
+      return throttle(id, rpcUrl, upstream);
+    }
+    // viem retries -32603 and -32005. Mapping a transient failure to -32000 would
+    // classify it as invalid input and stop before the configured read retries run.
+    if (!upstream.ok) return Response.json({ jsonrpc: '2.0', id, error: {
+      code: upstream.status >= 500 || upstream.status === 408 ? -32603 : -32000,
+      message: 'Arc RPC is temporarily unavailable. Retry shortly.',
+    } }, { status: 502, headers });
     const result = await upstream.json();
+    if (result.error?.code === -32005 || result.error?.code === 429) return throttle(id, rpcUrl, upstream);
     if (result.error) return Response.json({ jsonrpc: '2.0', id, error: {
       code: typeof result.error.code === 'number' ? result.error.code : -32000,
       message: 'Arc rejected the read request',
@@ -49,6 +79,6 @@ export async function POST(request: Request) {
     return Response.json({ jsonrpc: '2.0', id, result: result.result }, { headers });
   } catch (error) {
     const transport = error instanceof TypeError || (error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name));
-    return Response.json({ jsonrpc: '2.0', id, error: { code: transport ? -32000 : -32602, message: transport ? 'Arc RPC could not be reached. Retry shortly.' : 'Invalid read request or Arc configuration' } }, { status: transport ? 502 : 400, headers });
+    return Response.json({ jsonrpc: '2.0', id, error: { code: transport ? -32603 : -32602, message: transport ? 'Arc RPC could not be reached. Retry shortly.' : 'Invalid read request or Arc configuration' } }, { status: transport ? 502 : 400, headers });
   }
 }

@@ -58,6 +58,19 @@ it is not a substitute for the real public acceptance result.
 
 ### Actual hosting failure and next configuration step
 
+The [13 September follow-up record](checks/hosting-followup.json) verifies the current
+local build, 292 server/Graph checks, 29 solver checks, 24 hosting fixtures and 20 browser
+checks. Redis provider-variable compatibility, a real Redis dependency gate before Vercel
+builds and the GitHub regression workflow are implemented. Generated solver dependencies
+are no longer tracked; the installed files and lockfile are preserved. These local fixes
+do not certify the public app: the latest actual hosted check still returns health 503,
+and the isolated real Redis acceptance retry still fails its connectivity preflight.
+
+Completing the official Vercel account login is required to inspect and correct the
+existing project's production variables, connect a persistent database, migrate state and
+deploy. No authenticated hosting session or successful deployment was obtained in this
+follow-up. Studio panel verification and team declarations remain separate external items.
+
 The public health response has `ready: false`, `storage: null`, `snapshotBlock: null` and
 false checks. `/api/demo/scenarios` also returned HTTP 503. In the checked source, a failed
 `storageMode()` exits the main health checks before Graph, signers or issuer checks run;

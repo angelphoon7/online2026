@@ -11,8 +11,8 @@ const word = (value: bigint) => `0x${value.toString(16).padStart(64, '0')}`;
 type Transaction = { to: string; data: Hex; value?: Hex };
 type WalletRequest = { method: string; params?: unknown[] };
 
-async function fixture(page: Page, options: { offeredSection?: number; allowance?: bigint; deposited?: boolean; cancelApproval?: boolean } = {}) {
-  const control = { transactions: [] as Transaction[], calls: [] as string[], signed: null as { message: { maxNetPay: string; offered: string[] } } | null };
+async function fixture(page: Page, options: { offeredSection?: number; allowance?: bigint; deposited?: boolean; cancelApproval?: boolean; throttle?: 'once' | 'always' } = {}) {
+  const control = { transactions: [] as Transaction[], calls: [] as string[], throttledReads: 0, signed: null as { message: { maxNetPay: string; offered: string[] } } | null };
   const tickets = [1, 2].map(id => ({ tokenId: String(id), eventId: 1, sessionId: 0, sectionId: options.offeredSection ?? 0, row: 1, seat: id, status: 0,
     owner: options.deposited === false ? owner : deployment.contracts.Escrow, depositor: options.deposited === false ? zero : owner }));
   await page.exposeFunction('paymentWalletRequest', async ({ method, params = [] }: WalletRequest) => {
@@ -45,6 +45,10 @@ async function fixture(page: Page, options: { offeredSection?: number; allowance
     if (path === '/api/solve/pool') return json({ id: 'fixture', proposal: null, source: { kind: 'subgraph', blockNumber: '100', snapshotBlock: '100' }, candidatesFound: 0, candidatesExcluded: [], intentsConsidered: 0, chosen: null });
     if (path === '/api/rpc') {
       const body = route.request().postDataJSON();
+      if (body.method === 'eth_getBlockByNumber' && options.throttle && (options.throttle === 'always' || control.throttledReads === 0)) {
+        control.throttledReads++;
+        return route.fulfill({ status: 429, headers: { 'Retry-After': '1' }, json: { jsonrpc: '2.0', id: body.id, error: { code: -32005, message: 'Arc RPC is rate-limited. Wait 1 second, then retry.' } } });
+      }
       let result: unknown;
       if (body.method === 'eth_chainId') result = '0x4cef52';
       else if (body.method === 'eth_blockNumber') result = '0x64';
@@ -156,4 +160,26 @@ test('cancelled USDC approval never signs or submits the intent', async ({ page 
   await expect.poll(() => control.transactions.length).toBe(1);
   expect(control.signed).toBeNull();
   expect(control.calls).not.toContain('eth_signTypedData_v4');
+});
+
+test('a short Arc throttle retries the pre-sign read and completes approval and intent creation', async ({ page }) => {
+  const control = await fixture(page, { throttle: 'once' });
+  await selectTickets(page, 2);
+  await page.locator('.sign-intent').click();
+  await expect.poll(() => control.transactions.length, { timeout: 15000 }).toBe(2);
+  expect(control.throttledReads).toBe(1);
+  expect(BigInt(control.signed!.message.maxNetPay)).toBe(2000000n);
+  expect(control.transactions[0].to.toLowerCase()).toBe(deployment.usdc.toLowerCase());
+  expect(control.transactions[1].to.toLowerCase()).toBe(deployment.contracts.IntentRegistry.toLowerCase());
+});
+
+test('persistent Arc throttling stops after two retries without approving or signing', async ({ page }) => {
+  const control = await fixture(page, { throttle: 'always' });
+  await selectTickets(page, 2);
+  await page.locator('.sign-intent').click();
+  await expect(page.locator('.activity-toast-copy strong')).toHaveText('Arc RPC is rate-limited. Wait 1 second, then retry.', { timeout: 10000 });
+  await expect(page.locator('.sign-intent')).toBeEnabled();
+  expect(control.throttledReads).toBe(3);
+  expect(control.transactions).toHaveLength(0);
+  expect(control.signed).toBeNull();
 });
