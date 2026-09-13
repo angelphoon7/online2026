@@ -58,6 +58,13 @@ try {
   await call('Page.enable');
   await call('Runtime.enable');
 
+  // 0. Visit home
+  await call('Page.navigate', { url: 'http://localhost:3000/' });
+  await delay(2000);
+  const homeShot = await call('Page.captureScreenshot', { format: 'png' });
+  await writeFile(path.join(folder, 'home_hero_view.png'), Buffer.from(homeShot.data, 'base64'));
+  console.log('Saved home_hero_view.png');
+
   // 1. Visit #tickets
   await call('Page.navigate', { url: 'http://localhost:3000/#tickets' });
   await delay(1500);
