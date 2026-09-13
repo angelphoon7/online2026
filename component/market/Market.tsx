@@ -608,7 +608,6 @@ export default function Market() {
                   <button type="button" aria-haspopup="dialog" aria-expanded={historyOpen} onClick={() => setHistoryOpen(true)}>Past Settlements <span className="mono">({getSettlements(market).length})</span></button>
                 </nav>
               </header>
-              <div className="network-note">USDC pays for both settlement and native gas on Arc. You don’t need a second token.</div>
               <PoolDialog open={poolOpen} onClose={() => setPoolOpen(false)}>
                 {indexingBlock !== null ? <p role="status">{indexingMessage(indexingBlock)} {INDEXING_PENDING}</p> : <>
                 <p className="mono">{live.length} {POOL_LABEL}</p><p className="quiet">{POOL_NOTE}</p><div className="pool-list">{live.map((i, index) => <article key={i.hash} className="pool-row"><label><input type="checkbox" checked={selected.includes(i.hash)} disabled={disabled} onChange={() => selectIntent(i.hash)} /><span>{walletLabel(i.owner)} <span className="mono">/ Request {index + 1}</span></span></label><p>{condition(restoreIntent(i))}</p><details className="wallet-details"><summary>Wallet and transaction details</summary><a className="hash" href={`${EXPLORER}/address/${i.owner}`} target="_blank" rel="noreferrer">{i.owner}</a><a className="mono" href={`${EXPLORER}/tx/${i.commitTx}`} target="_blank" rel="noreferrer">Commit {i.commitTx.slice(0, 10)}… ↗</a></details><button className="text-button" onClick={() => { setAgentHash(i.hash); setAgentOpen(true); setPoolOpen(false); }}>Why no match?</button>{equal(i.owner, account) && <button disabled={disabled} onClick={() => void action('Revoke intent', async address => { await track(await revokeIntent(address, i.hash)); await refreshWritten(); setProposal(null); setEvidence(null); })}>Revoke my intent</button>}</article>)}</div>{!live.length && <p>No live requests yet. Submit an intent to join the pool.</p>}{!!market.hashMismatched.length && <p className="quiet" role="status">{market.hashMismatched.length} indexed {market.hashMismatched.length === 1 ? 'request is' : 'requests are'} excluded from this pool: the indexed fields do not re-hash to the id they were committed under, so they are not shown. <span className="mono">{market.hashMismatched.map(h => `${h.slice(0, 10)}…`).join(' ')}</span></p>}
@@ -668,7 +667,7 @@ export default function Market() {
           <AgentDrawer open={agentOpen} onClose={() => setAgentOpen(false)} intentHash={agentHash} chainBlock={chainBlock} freshness={freshness} label={walletLabel} />
         </>
       )}
-    </main><footer className="site-footer"><span className="wordmark">RESHUFFLE ↔</span><p>Swap tickets without selling first.<br />Every condition you sign is checked on-chain.</p><span className="mono">ARC TESTNET / USDC</span></footer>
+    </main>
     <ActivityNotification busy={busy} notice={notice} hash={txHash} confirmation={confirmedWrite} open={activityOpen} onOpen={() => setActivityOpen(true)} onClose={() => setActivityOpen(false)} />
   </div>;
 }
