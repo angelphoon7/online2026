@@ -15,7 +15,7 @@ import { FREE_TICKETS_LABEL, DEMO_PRICE_NOTE } from '@/lib/ui-copy';
 import { formatUSDC, truncateAddress } from '@/lib/format';
 import { DEMO_TICKET_NOTE } from '@/lib/ui-copy';
 import { ADJACENCY_ACCEPTED, ADJACENCY_ERROR, ADJACENCY_NOTE, ALLOWANCE_NOTE, CONNECT_POSITIONS_NOTE, EMPTY_POSITIONS_NOTE, ESCROW_NOTE, OWN_POSITIONS_NOTE, PICK_OFFERED_NOTE, STEPS, WITHDRAWAL_DETAIL, intentReview, maskClasses } from '@/lib/ui-copy';
-import { Minus, Plus, Clock, Check, ArrowRight } from 'lucide-react';
+import { Minus, Plus, ArrowRight } from 'lucide-react';
 
 const same = (a: string, b: string | null) => a.toLowerCase() === b?.toLowerCase();
 const hasClass = (mask: bigint, n: number) => (mask & (1n << BigInt(n))) !== 0n;
@@ -40,12 +40,24 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
   const [raw, setRaw] = useState(false);
   const stepTitles = useRef<(HTMLHeadingElement | null)[]>([]);
   const seatMapRef = useRef<HTMLDialogElement>(null);
+  const [seatMapSession, setSeatMapSession] = useState<number | null>(null);
+  const [seatMapSection, setSeatMapSection] = useState<number | null>(null);
+  const [hoveredSeat, setHoveredSeat] = useState<{
+    row: number;
+    displayRow: number | string;
+    seat: number;
+    section: number;
+    session: number;
+    ticket?: ChainTicket;
+    status: 'available' | 'yours' | 'other' | 'unissued' | 'used';
+  } | null>(null);
   useEffect(() => {
     const dialog = seatMapRef.current;
     if (!seatMapOpen || !dialog) return;
     const previousOverflow = document.body.style.overflow;
     dialog.showModal();
     document.body.style.overflow = 'hidden';
+    setHoveredSeat(null);
     return () => {
       if (dialog.open) dialog.close();
       document.body.style.overflow = previousOverflow;
@@ -96,8 +108,11 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
   const timingUnavailable = cutoff === null || cutoff <= BigInt(market.timestamp);
   const choiceInvalid = selectedClass(intent.sessionMask) === null || selectedClass(intent.sectionMask) === null;
   const summary = (n: number) => n === 2
-    ? `${offered.map(t => `R${t.row} S${t.seat}`).join(', ')} · ${[...new Set(offered.map(t => t.sessionId))].map(sessionLabel).join(', ')}`
-    : n === 1 ? `${intent.exactCount} ticket${intent.exactCount === 1 ? '' : 's'} · ${maskClasses(intent.sessionMask).map(sessionLabel).join(', ')} · ${maskClasses(intent.sectionMask).map(n => `CAT ${n}`).join(', ')}`
+    ? (offered.length
+        ? `${offered.map(t => `R${t.row} S${t.seat}`).join(', ')} · ${[...new Set(offered.map(t => t.sessionId))].map(sessionLabel).join(', ')}`
+        : 'No tickets offered')
+    : n === 1
+      ? `${intent.exactCount} ticket${intent.exactCount === 1 ? '' : 's'} · ${maskClasses(intent.sessionMask).map(sessionLabel).join(', ')} · ${maskClasses(intent.sectionMask).map(n => `CAT ${n}`).join(', ')}`
       : `event ${intent.eventId} · nonce ${intent.nonce}`;
   const position = (t: ChainTicket) => {
     const escrowed = t.depositor !== '0x0000000000000000000000000000000000000000';
@@ -120,28 +135,36 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
                 })
               }
             />
-            <span className="mono ticket-token-chip">#{t.tokenId}</span>
-            <span className="ticket-session-chip">{sessionLabel(t.sessionId)}</span>
+            <div className="position-chips-group">
+              <span className="mono ticket-token-chip">#{t.tokenId}</span>
+              <span className="ticket-session-chip">{sessionLabel(t.sessionId)}</span>
+              <span className="ticket-cat-chip">CAT {t.sectionId}</span>
+            </div>
           </label>
           <div className="position-details">
             <p className="mono seat-coords">
               ROW <strong>{t.row}</strong> / SEAT <strong>{t.seat}</strong> / CAT <strong>{t.sectionId}</strong>
             </p>
-            <p className="quiet mono holder-addr">{truncateAddress(ticketHolder(t))}</p>
-            <p className="mono demo-price-ref">
-              {DEMO_SECTION_PRICES[t.sectionId] === undefined
-                ? 'Demo reference price unavailable'
-                : `Demo reference: ${formatUSDC(DEMO_SECTION_PRICES[t.sectionId])} USDC / ticket`}
-            </p>
+            <div className="position-meta-row">
+              <span className="quiet mono holder-addr">{truncateAddress(ticketHolder(t))}</span>
+              <span className="position-bullet" aria-hidden="true">•</span>
+              <span className="mono demo-price-ref">
+                {DEMO_SECTION_PRICES[t.sectionId] === undefined
+                  ? 'Demo reference price unavailable'
+                  : `Demo reference: ${formatUSDC(DEMO_SECTION_PRICES[t.sectionId])} USDC / ticket`}
+              </span>
+            </div>
           </div>
         </div>
         <div className="position-actions">
           <span className={`badge badge-${t.status === 1 ? 'used' : committed ? 'committed' : escrowed ? 'escrowed' : 'wallet'}`}>
+            <span className="badge-dot" aria-hidden="true" />
             {t.status === 1 ? 'USED' : committed ? 'committed' : escrowed ? 'escrowed' : 'wallet'}
           </span>
           {t.status !== 1 && (
             <button
               type="button"
+              className="position-custody-btn"
               disabled={busy}
               onClick={() => void onCustody(t, escrowed ? 'withdraw' : 'deposit')}
             >
@@ -205,46 +228,106 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
                   {!expanded && (number < reached || completed) && <span className="step-check" aria-label="Completed">✓</span>}
                   {title}
                 </h2>
-                <p className="step-heading-sub">
-                  {number === 1
-                    ? 'Specify the exact outcome you will accept. All signed conditions are enforced on-chain before settlement.'
-                    : 'Select tickets you currently hold to offer into the reshuffle pool.'}
-                </p>
+                {expanded && (
+                  <p className="step-heading-sub">
+                    {number === 1
+                      ? 'Specify the exact outcome you will accept. All signed conditions are enforced on-chain before settlement.'
+                      : 'Select tickets you currently hold to offer into the reshuffle pool.'}
+                  </p>
+                )}
               </div>
               {expanded ? (
                 <span className="mono step-marker">step {number} of {STEPS.length}</span>
-              ) : (
-                visited && (
-                  <>
-                    <span className="mono step-summary">{summary(number)}</span>
-                    <button className="text-button" disabled={busy} onClick={() => go(number)} aria-label={`Change ${title}`}>
-                      Change
-                    </button>
-                  </>
-                )
-              )}
+              ) : visited ? (
+                <div className="step-collapsed-summary">
+                  <span className="mono step-summary">{summary(number)}</span>
+                  <button
+                    className="text-button step-change-btn"
+                    disabled={busy}
+                    onClick={() => go(number)}
+                    aria-label={`Change ${title === 'Ticket Preferences' ? 'What would you like instead?' : title}`}
+                  >
+                    Change
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             {expanded && (
               <div className="step-content" aria-labelledby={`step-title-${number}`}>
                 {number === 2 && (
                   <>
-                    <p className="quiet">{account ? OWN_POSITIONS_NOTE : CONNECT_POSITIONS_NOTE}</p>
+                    <div className="inventory-header-panel">
+                      <div className="inventory-status-row">
+                        <div className="inventory-status-pill">
+                          <span className={`inventory-status-dot ${account ? 'connected' : 'disconnected'}`} aria-hidden="true" />
+                          <span className="mono">{account ? truncateAddress(account) : 'Disconnected'}</span>
+                        </div>
+                        {account && (
+                          <span className="inventory-ticket-count mono">
+                            {positions.length} ticket{positions.length === 1 ? '' : 's'} available
+                          </span>
+                        )}
+                      </div>
+                      <p className="quiet inventory-context-note">{account ? OWN_POSITIONS_NOTE : CONNECT_POSITIONS_NOTE}</p>
+                    </div>
+
                     {!account && (
-                      <button className="secondary connect-positions" disabled={busy} onClick={() => void onConnect()}>
-                        Connect wallet to see my tickets
-                      </button>
+                      <div className="wallet-connect-card">
+                        <div className="wallet-connect-info">
+                          <div className="wallet-connect-icon" aria-hidden="true">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                              <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                              <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h4 className="wallet-connect-title">Connect Wallet</h4>
+                            <p className="quiet wallet-connect-desc">Connect your Web3 wallet to load your held and escrowed tickets for this event.</p>
+                          </div>
+                        </div>
+                        <button className="secondary connect-positions" disabled={busy} onClick={() => void onConnect()}>
+                          Connect wallet to see my tickets
+                        </button>
+                      </div>
                     )}
-                    {connectionError && <p role="alert">{connectionError}</p>}
-                    <button className="secondary" disabled={busy} onClick={() => void onDemo()} aria-label={FREE_TICKETS_LABEL}>
-                      {FREE_TICKETS_LABEL}
-                    </button>
-                    <p className="quiet">{DEMO_TICKET_NOTE}</p>
+
+                    {connectionError && <p role="alert" className="connection-error-box">{connectionError}</p>}
+
+                    <div className="demo-faucet-card">
+                      <div className="demo-faucet-body">
+                        <div className="demo-faucet-badge-row">
+                          <span className="demo-badge">ARC TESTNET DEMO</span>
+                          <span className="demo-sub-tag">Free Mint Voucher</span>
+                        </div>
+                        <div className="demo-faucet-text">
+                          <h4 className="demo-faucet-title">Need tickets to test reshuffling?</h4>
+                          <p className="quiet demo-faucet-desc">{DEMO_TICKET_NOTE}</p>
+                        </div>
+                      </div>
+                      <button
+                        className="secondary demo-faucet-btn"
+                        disabled={busy}
+                        onClick={() => void onDemo()}
+                        aria-label={FREE_TICKETS_LABEL}
+                      >
+                        {FREE_TICKETS_LABEL}
+                      </button>
+                    </div>
+
                     {account && !approved && positions.some(t => t.status !== 1 && same(t.owner, account) && t.depositor === '0x0000000000000000000000000000000000000000') && (
-                      <button className="secondary" disabled={busy} onClick={() => void onApprove()}>
-                        Approve tickets
-                      </button>
+                      <div className="approval-notice-card">
+                        <div className="approval-notice-text">
+                          <h4>NFT Transfer Approval Required</h4>
+                          <p className="quiet">Grant permission for the Escrow contract to deposit your event tickets.</p>
+                        </div>
+                        <button className="secondary" disabled={busy} onClick={() => void onApprove()}>
+                          Approve tickets
+                        </button>
+                      </div>
                     )}
+
                     <div className="position-list">{positions.slice(0, 8).map(position)}</div>
                     {positions.length > 8 && (
                       <details className="more-tickets">
@@ -252,12 +335,27 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
                         <div>{positions.slice(8).map(position)}</div>
                       </details>
                     )}
-                    {account && !positions.length && <p role="status">{EMPTY_POSITIONS_NOTE}</p>}
+
+                    {account && !positions.length && (
+                      <div className="empty-positions-card">
+                        <h4 className="empty-positions-title">No tickets held in this wallet</h4>
+                        <p role="status" className="empty-positions-text">{EMPTY_POSITIONS_NOTE}</p>
+                      </div>
+                    )}
+
                     {positions.length > 0 && (
                       <>
                         <div className="batch-deposit">
+                          <div className="batch-deposit-header">
+                            <div className="batch-deposit-text">
+                              <h4 className="batch-deposit-title">Escrow Deposit Required</h4>
+                              <p className="quiet">
+                                Select your tickets above, then deposit them together in one transaction. If approval is needed, confirm it first; the deposit follows automatically. Tickets already deposited are skipped.
+                              </p>
+                            </div>
+                          </div>
                           <button
-                            className="secondary"
+                            className="secondary batch-deposit-btn"
                             disabled={busy || !toDeposit.length}
                             onClick={() => void onDepositSelected(selectedPositions.map(t => BigInt(t.tokenId)))}
                           >
@@ -267,14 +365,14 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
                               ? `Deposit ${toDeposit.length} selected ticket${toDeposit.length === 1 ? '' : 's'}`
                               : 'Deposit selected tickets'}
                           </button>
-                          <p className="quiet">
-                            Select your tickets above, then deposit them together in one transaction. If approval is needed, confirm it first; the deposit follows automatically. Tickets already deposited are skipped.
-                          </p>
                         </div>
-                        <p className="quiet">{ESCROW_NOTE} {WITHDRAWAL_DETAIL} {PICK_OFFERED_NOTE}</p>
+                        <p className="quiet escrow-guarantee-note">{ESCROW_NOTE} {WITHDRAWAL_DETAIL} {PICK_OFFERED_NOTE}</p>
                         <div className="price-comparison">
-                          <h3>Your swap payment</h3>
-                          <p className="quiet">{DEMO_PRICE_NOTE}</p>
+                          <div className="price-comparison-header">
+                            <span className="price-calc-badge">FINANCIAL SETTLEMENT</span>
+                            <h3>Your swap payment</h3>
+                            <p className="quiet price-calc-sub">{DEMO_PRICE_NOTE}</p>
+                          </div>
                           {quote ? (
                             <dl className="quote-lines mono" aria-live="polite">
                               <div>
@@ -291,53 +389,75 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
                               </div>
                             </dl>
                           ) : (
-                            <p className="quiet" role="status">
-                              {intent.offered.length
-                                ? 'A payment amount is unavailable for these tickets. Choose tickets and a wanted section with demo reference prices to continue.'
-                                : 'Select your offered tickets to calculate the payment amount.'}
-                            </p>
+                            <div className="quote-empty-box">
+                              <p className="quiet" role="status">
+                                {intent.offered.length
+                                  ? 'A payment amount is unavailable for these tickets. Choose tickets and a wanted section with demo reference prices to continue.'
+                                  : 'Select your offered tickets to calculate the payment amount.'}
+                              </p>
+                            </div>
                           )}
                           {quote && (
-                            <p className="quiet">
-                              {quote.paymentAmount > 0n
-                                ? 'Approve this amount and sign your intent. USDC is charged only when the whole swap succeeds; the final charge may be lower. Gas is separate.'
-                                : quote.paymentAmount < 0n
-                                ? 'No USDC payment approval is needed. Your intent requires at least this credit when the whole swap succeeds. Gas is separate.'
-                                : 'No USDC payment approval is needed. Your intent allows no net charge for the swap. Gas is separate.'}
-                            </p>
+                            <div className="quote-footnote-box">
+                              <p className="quiet">
+                                {quote.paymentAmount > 0n
+                                  ? 'Approve this amount and sign your intent. USDC is charged only when the whole swap succeeds; the final charge may be lower. Gas is separate.'
+                                  : quote.paymentAmount < 0n
+                                  ? 'No USDC payment approval is needed. Your intent requires at least this credit when the whole swap succeeds. Gas is separate.'
+                                  : 'No USDC payment approval is needed. Your intent allows no net charge for the swap. Gas is separate.'}
+                              </p>
+                            </div>
                           )}
                         </div>
                       </>
                     )}
+
                     <div className="inline-intent-review">
-                      <h3>{quote && quote.paymentAmount > 0n ? 'Approve payment and create intent' : 'Review and create intent'}</h3>
-                      {timingUnavailable && <p role="alert">{cutoff === null ? MISSING_SCHEDULE_NOTE : CLOSED_SESSION_NOTE}</p>}
+                      <div className="review-section-header">
+                        <span className="review-badge">EIP-712 INTENT REVIEW</span>
+                        <h3>{quote && quote.paymentAmount > 0n ? 'Approve payment and create intent' : 'Review and create intent'}</h3>
+                      </div>
+                      {timingUnavailable && <p role="alert" className="timing-alert-box">{cutoff === null ? MISSING_SCHEDULE_NOTE : CLOSED_SESSION_NOTE}</p>}
                       {intent.offered.length > 0 && (
-                        <>
+                        <div className="review-active-card">
                           <div className="signed-sentence">
-                            <p>{review.sentence}</p>
-                            <p className="quiet mono">{review.metadata}</p>
+                            <div className="signed-sentence-tag">
+                              <span>Signed Outcome Commitment</span>
+                            </div>
+                            <p className="signed-sentence-text">{review.sentence}</p>
+                            <p className="quiet mono signed-metadata">{review.metadata}</p>
                           </div>
-                          <button className="text-button" onClick={() => setRaw(!raw)} aria-expanded={raw}>
-                            View signed struct {raw ? '−' : '+'}
-                          </button>
-                          {raw && (
-                            <pre className="raw-struct">
-                              {jsonNumbers(account ? preview : { ...preview, message: { ...preview.message, owner: 'Wallet selected at signing', nonce: 'Read after connection' } })}
-                            </pre>
-                          )}
-                        </>
+                          <div className="raw-struct-container">
+                            <button type="button" className="text-button raw-struct-toggle" onClick={() => setRaw(!raw)} aria-expanded={raw}>
+                              View signed struct {raw ? '−' : '+'}
+                            </button>
+                            {raw && (
+                              <pre className="raw-struct">
+                                {jsonNumbers(account ? preview : { ...preview, message: { ...preview.message, owner: 'Wallet selected at signing', nonce: 'Read after connection' } })}
+                              </pre>
+                            )}
+                          </div>
+                        </div>
                       )}
-                      {!intent.offered.length && <p className="quiet">Select the tickets you want to offer above to review your request.</p>}
-                      {toDeposit.length > 0 && <p className="quiet">Deposit your selected tickets above before signing.</p>}
+                      {!intent.offered.length && (
+                        <div className="review-pending-placeholder">
+                          <p className="quiet">Select the tickets you want to offer above to review your request.</p>
+                        </div>
+                      )}
+                      {toDeposit.length > 0 && (
+                        <div className="deposit-required-banner">
+                          <p className="quiet">Deposit your selected tickets above before signing.</p>
+                        </div>
+                      )}
                       <button
                         className="primary full sign-intent"
                         disabled={busy || !account || !quote || !intent.offered.length || toDeposit.length > 0 || choiceInvalid || timingUnavailable}
                         onClick={() => void onSign(intent, setPrepared, confirmed => { complete(confirmed); onComplete(); })}
                       >
-                        {quote && quote.paymentAmount > 0n ? `Approve ${formatUSDC(quote.paymentAmount)} USDC & create intent` : 'Create intent'} <span>↗</span>
+                        <span>{quote && quote.paymentAmount > 0n ? `Approve ${formatUSDC(quote.paymentAmount)} USDC & create intent` : 'Create intent'}</span>
+                        <span className="btn-arrow" aria-hidden="true">↗</span>
                       </button>
-                      {quote && quote.paymentAmount > 0n && <p className="quiet">{ALLOWANCE_NOTE}</p>}
+                      {quote && quote.paymentAmount > 0n && <p className="quiet allowance-footnote">{ALLOWANCE_NOTE}</p>}
                     </div>
                   </>
                 )}
@@ -494,7 +614,7 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
                           </div>
 
                           {intent.mustBeAdjacent && (
-                            <div className="adjacency-showcase" role="img" aria-label={`${ADJACENCY_ACCEPTED}: 3, 4. ${ADJACENCY_ERROR}: 3, 5.`}>
+                            <div className="adjacency-showcase adjacency-illustration" role="img" aria-label={`${ADJACENCY_ACCEPTED}: 3, 4. ${ADJACENCY_ERROR}: 3, 5.`}>
                               <div className="showcase-header">
                                 <span className="showcase-title">ON-CHAIN ADJACENCY VERIFICATION</span>
                                 <span className="showcase-note">Same session, section, row, and consecutive seat numbers</span>
@@ -508,7 +628,7 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
                                     {[1, 2, 3, 4, 5, 6].map(seatNum => {
                                       const isTarget = seatNum === 3 || seatNum === 4;
                                       return (
-                                        <div key={seatNum} className={`mini-seat ${isTarget ? 'seat-accepted' : ''}`}>
+                                        <div key={seatNum} className={`mini-seat illustration-seat ${isTarget ? 'seat-accepted' : ''}`}>
                                           <span className="mini-seat-back" />
                                           <span className="mini-seat-cushion">{seatNum}</span>
                                         </div>
@@ -528,7 +648,7 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
                                     {[1, 2, 3, 4, 5, 6].map(seatNum => {
                                       const isTarget = seatNum === 3 || seatNum === 5;
                                       return (
-                                        <div key={seatNum} className={`mini-seat ${isTarget ? 'seat-rejected' : ''}`}>
+                                        <div key={seatNum} className={`mini-seat illustration-seat ${isTarget ? 'seat-rejected' : ''}`}>
                                           <span className="mini-seat-back" />
                                           <span className="mini-seat-cushion">{seatNum}</span>
                                         </div>
@@ -553,28 +673,23 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
                         <span className="condition-desc">Automatic expiry protection for your signed commitment.</span>
                       </div>
                       <div className="condition-control">
-                        <div className="validity-banner">
-                          <div className="validity-icon-wrap">
-                            <Clock className="w-5 h-5 text-amber-400" />
-                          </div>
-                          <div className="validity-content">
-                            <p id="valid-until" className="validity-headline" aria-labelledby="valid-until-label">
-                              8 hours before the event starts.
-                            </p>
-                            {cutoff !== null && eventStart !== null ? (
-                              <>
-                                <p className="validity-sub">
-                                  Event starts: <time className="mono" dateTime={new Date(Number(eventStart) * 1000).toISOString()}>{formatEventTime(eventStart)}</time>
-                                </p>
-                                {timingUnavailable && <p className="validity-alert" role="alert">{CLOSED_SESSION_NOTE}</p>}
-                              </>
-                            ) : (
-                              <p className="validity-alert" role="alert">{MISSING_SCHEDULE_NOTE}</p>
-                            )}
-                            <p className="validity-footnote">
-                              If unmatched at cutoff, intent expires automatically on-chain.
-                            </p>
-                          </div>
+                        <div className="validity-card">
+                          <p id="valid-until" className="validity-headline" aria-labelledby="valid-until-label">
+                            8 hours before the event starts.
+                          </p>
+                          {cutoff !== null && eventStart !== null ? (
+                            <>
+                              <p className="validity-time mono">
+                                Event starts: <time dateTime={new Date(Number(eventStart) * 1000).toISOString()}>{formatEventTime(eventStart)}</time>
+                              </p>
+                              {timingUnavailable && <p className="validity-alert mono" role="alert">{CLOSED_SESSION_NOTE}</p>}
+                            </>
+                          ) : (
+                            <p className="validity-alert mono" role="alert">{MISSING_SCHEDULE_NOTE}</p>
+                          )}
+                          <p className="validity-note mono">
+                            If unmatched at cutoff, intent expires automatically on-chain.
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -598,28 +713,326 @@ export default function IntentBuilder({ market, account, approved, busy, seatMap
           </section>
         );
       })}
-    <dialog ref={seatMapRef} className="intent-pool-dialog seat-map-dialog" aria-labelledby="seat-map-title" onClose={onSeatMapClose} onClick={event => {
-      if (event.target !== event.currentTarget) return;
-      const bounds = event.currentTarget.getBoundingClientRect();
-      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) event.currentTarget.close();
-    }}>
-      <div className="panel-heading"><h2 id="seat-map-title">Seat Map</h2><button className="secondary" onClick={() => seatMapRef.current?.close()} aria-label="Close seat map">Close ×</button></div>
-      <div className="seat-map-content">
-      {maskClasses(intent.sessionMask).flatMap(session => maskClasses(intent.sectionMask).map(section => {
-        const visible = getSeatCustody(session, section, market, intent.eventId);
-        const rows = [...new Set(visible.map(t => t.row))].sort((a, b) => a - b);
-        return <section key={`${session}:${section}`}><h3 className="mono">{sessionLabel(session)} / CAT {section}</h3><div className="stage mono">STAGE</div><div className="seat-grid">
-          {rows.map(row => {
-            const windows = [...new Set(visible.filter(t => t.row === row).map(t => Math.floor(Math.max(0, t.seat - 1) / 12) * 12))].sort((a, b) => a - b);
-            return windows.map(start => <div className="seat-row" key={`${row}:${start}`}><span className="mono row-label">R{row}</span><div className="seat-cells">{Array.from({ length: 12 }, (_, n) => start + n + 1).map(seat => {
-              const at = visible.filter(t => t.row === row && t.seat === seat);
-              return <div key={seat} className="seat-cell">{at.length ? at.map(t => <span key={t.tokenId} className={`seat ${same(ticketHolder(t), account) ? 'yours' : t.depositor !== '0x0000000000000000000000000000000000000000' ? 'available' : 'other'}`} title={`Ticket #${t.tokenId} · ${ticketHolder(t)}${t.status === 1 ? ' · USED' : ''}`}>{seat}{t.status === 1 ? '×' : ''}</span>) : <span className="seat unissued" title="No issued ticket at this position">·</span>}</div>;
-            })}</div></div>);
-          })}
-        </div></section>;
-      }))}
-      <div className="seat-legend"><span>□ Escrowed</span><span>▣ Held by you</span><span>▧ Other wallet</span><span>· Unissued</span><span>× USED</span></div>
-      <p className="quiet">{ADJACENCY_NOTE}</p>
+    <dialog
+      ref={seatMapRef}
+      className="intent-pool-dialog seat-map-dialog seat-map"
+      aria-labelledby="seat-map-title"
+      aria-describedby="seat-map-description"
+      onClose={onSeatMapClose}
+      onClick={event => {
+        if (event.target !== event.currentTarget) return;
+        const bounds = event.currentTarget.getBoundingClientRect();
+        if (
+          event.clientX < bounds.left ||
+          event.clientX > bounds.right ||
+          event.clientY < bounds.top ||
+          event.clientY > bounds.bottom
+        ) {
+          event.currentTarget.close();
+        }
+      }}
+    >
+      <summary className="sr-only" aria-hidden="true" onClick={() => seatMapRef.current?.showModal?.()}>
+        Seat Map
+      </summary>
+      <div className="pool-dialog-inner seat-map-inner">
+        <header className="pool-dialog-header seat-map-header">
+          <div className="pool-header-top">
+            <div className="pool-header-title-group">
+              <h2 id="seat-map-title">Stadium Seat Map</h2>
+              <span className="pool-count-badge mono">
+                Grandstand Custody Grid
+              </span>
+            </div>
+            <button
+              type="button"
+              className="secondary pool-close-btn"
+              onClick={() => seatMapRef.current?.close()}
+              aria-label="Close seat map"
+            >
+              Close ×
+            </button>
+          </div>
+          <p id="seat-map-description" className="pool-dialog-desc quiet">
+            Live on-chain stadium grandstand custody and escrow status per night and category tier. Seats in escrow are available for immediate atomic reshuffling.
+          </p>
+
+          <div className="stadium-filter-bar">
+            <div className="stadium-filter-group">
+              <span className="stadium-filter-label">Session:</span>
+              <div className="stadium-filter-pills" role="tablist" aria-label="Stadium Session Filter">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={seatMapSession === null}
+                  className={`stadium-filter-pill ${seatMapSession === null ? 'is-active' : ''}`}
+                  onClick={() => setSeatMapSession(null)}
+                >
+                  Wishlist ({maskClasses(intent.sessionMask).map(sessionLabel).join(', ')})
+                </button>
+                {sessions.map(s => (
+                  <button
+                    key={s}
+                    type="button"
+                    role="tab"
+                    aria-selected={seatMapSession === s}
+                    className={`stadium-filter-pill ${seatMapSession === s ? 'is-active' : ''}`}
+                    onClick={() => setSeatMapSession(s)}
+                  >
+                    {sessionLabel(s)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="stadium-filter-group">
+              <span className="stadium-filter-label">Grandstand Tier:</span>
+              <div className="stadium-filter-pills" role="tablist" aria-label="Grandstand Tier Filter">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={seatMapSection === null}
+                  className={`stadium-filter-pill ${seatMapSection === null ? 'is-active' : ''}`}
+                  onClick={() => setSeatMapSection(null)}
+                >
+                  Wishlist ({maskClasses(intent.sectionMask).map(n => `CAT ${n}`).join(', ')})
+                </button>
+                {sections.map(sec => (
+                  <button
+                    key={sec}
+                    type="button"
+                    role="tab"
+                    aria-selected={seatMapSection === sec}
+                    className={`stadium-filter-pill ${seatMapSection === sec ? 'is-active' : ''}`}
+                    onClick={() => setSeatMapSection(sec)}
+                  >
+                    CAT {sec}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="seat-map-content">
+          {(seatMapSession !== null ? [seatMapSession] : maskClasses(intent.sessionMask)).flatMap(session =>
+            (seatMapSection !== null ? [seatMapSection] : maskClasses(intent.sectionMask)).map(section => {
+              const visible = getSeatCustody(session, section, market, intent.eventId);
+              const rows = [...new Set(visible.map(t => t.row))].sort((a, b) => a - b);
+              const totalTickets = visible.length;
+              const inEscrow = visible.filter(t => t.depositor !== '0x0000000000000000000000000000000000000000' && t.status !== 1).length;
+
+              return (
+                <section key={`${session}:${section}`} className="seat-section-block">
+                  <div className="seat-section-header">
+                    <h3 className="mono seat-section-heading">
+                      {sessionLabel(session)} / CAT {section}
+                    </h3>
+                    <div className="seat-section-meta mono">
+                      <span className="meta-badge escrow-meta">{inEscrow} in escrow</span>
+                      <span className="meta-sep">·</span>
+                      <span className="meta-badge">{totalTickets} minted</span>
+                      {DEMO_SECTION_PRICES[section] !== undefined && (
+                        <>
+                          <span className="meta-sep">·</span>
+                          <span className="meta-badge price-meta">{formatUSDC(DEMO_SECTION_PRICES[section])} USDC</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="stage-wrapper stadium-pitch-wrapper" aria-hidden="true">
+                    <div className="stage-glow" />
+                    <div className="stage stadium-pitch mono">
+                      <div className="pitch-center-circle" />
+                      <div className="stage-platform">
+                        <span className="stage-label">MAIN STAGE / PITCH</span>
+                        <span className="stage-sub">▲ FACING FIELD &amp; PERFORMANCE AREA ▲</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="seat-grid-container">
+                    <div className="seat-grid">
+                      {rows.length === 0 ? (
+                        <div className="empty-section-grid">
+                          <div className="empty-section-badge mono">No tickets minted in CAT {section} yet · Showing Grandstand Riser Layout</div>
+                          {[1, 2, 3].map(fakeRow => (
+                            <div className="seat-row empty-row" key={fakeRow}>
+                              <span className="mono row-label">R{fakeRow}</span>
+                              <div className="seat-cells">
+                                {Array.from({ length: 12 }, (_, n) => n + 1).map(seat => (
+                                  <div key={seat} className="seat-cell">
+                                    <span
+                                      className="seat unissued"
+                                      onMouseEnter={() => setHoveredSeat({ row: fakeRow, displayRow: fakeRow, seat, section, session, status: 'unissued' })}
+                                      onMouseLeave={() => setHoveredSeat(null)}
+                                      title={`Row ${fakeRow}, Seat ${seat} · Unissued coordinate`}
+                                    >
+                                      <span className="seat-back" />
+                                      <span className="seat-cushion">{seat}</span>
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                              <span className="mono row-label row-label-end" aria-hidden="true">R{fakeRow}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        rows.map(row => {
+                          const displayRow = row > 1000 ? (row % 100) : row;
+                          const windows = [
+                            ...new Set(
+                              visible
+                                .filter(t => t.row === row)
+                                .map(t => Math.floor(Math.max(0, t.seat - 1) / 12) * 12)
+                            ),
+                          ].sort((a, b) => a - b);
+
+                          return windows.map(start => (
+                            <div className="seat-row" key={`${row}:${start}`}>
+                              <span className="mono row-label" title={`Contract Row ${row}`}>R{displayRow}</span>
+                              <div className="seat-cells">
+                                {Array.from({ length: 12 }, (_, n) => start + n + 1).map(seat => {
+                                  const at = visible.filter(t => t.row === row && t.seat === seat);
+                                  return (
+                                    <div key={seat} className="seat-cell">
+                                      {at.length ? (
+                                        at.map(t => {
+                                          const isYours = same(ticketHolder(t), account);
+                                          const isEscrowed = t.depositor !== '0x0000000000000000000000000000000000000000';
+                                          const isUsed = t.status === 1;
+                                          const statusClass = isYours ? 'yours' : isEscrowed ? 'available' : 'other';
+                                          return (
+                                            <span
+                                              key={t.tokenId}
+                                              className={`seat ${statusClass} ${isUsed ? 'used' : ''}`}
+                                              onMouseEnter={() => setHoveredSeat({ row, displayRow, seat, section, session, ticket: t, status: statusClass })}
+                                              onMouseLeave={() => setHoveredSeat(null)}
+                                              title={`Ticket #${t.tokenId} · Row ${displayRow} (Contract Row ${row}), Seat ${seat} · ${ticketHolder(t)}${isUsed ? ' · USED' : ''}`}
+                                            >
+                                              <span className="seat-back" />
+                                              <span className="seat-cushion">{seat}{isUsed ? '×' : ''}</span>
+                                            </span>
+                                          );
+                                        })
+                                      ) : (
+                                        <span
+                                          className="seat unissued"
+                                          onMouseEnter={() => setHoveredSeat({ row, displayRow, seat, section, session, status: 'unissued' })}
+                                          onMouseLeave={() => setHoveredSeat(null)}
+                                          title={`Row ${displayRow}, Seat ${seat} · Unissued coordinate`}
+                                        >
+                                          <span className="seat-back" />
+                                          <span className="seat-cushion">·</span>
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <span className="mono row-label row-label-end" aria-hidden="true">R{displayRow}</span>
+                            </div>
+                          ));
+                        })
+                      )}
+                    </div>
+                  </div>
+                </section>
+              );
+            })
+          )}
+
+          {/* Live Stadium Seat Inspector */}
+          <div className="stadium-inspector-card" aria-live="polite">
+            {hoveredSeat ? (
+              <div className="inspector-active">
+                <div className="inspector-seat-badge">
+                  <span className="inspector-row-col mono">ROW {hoveredSeat.displayRow} · SEAT {hoveredSeat.seat}</span>
+                  <span className={`inspector-status-badge is-${hoveredSeat.status}`}>
+                    {hoveredSeat.status === 'available' && '● In Escrow (Available for Swap)'}
+                    {hoveredSeat.status === 'yours' && '● In Your Connected Wallet'}
+                    {hoveredSeat.status === 'other' && '● Held in Private Wallet'}
+                    {hoveredSeat.status === 'unissued' && '○ Unissued Slot'}
+                    {hoveredSeat.status === 'used' && '✕ Redeemed / USED'}
+                  </span>
+                </div>
+                <div className="inspector-details-row">
+                  <span className="inspector-detail"><strong>Tier:</strong> CAT {hoveredSeat.section}</span>
+                  <span className="inspector-sep">·</span>
+                  <span className="inspector-detail"><strong>Night:</strong> {sessionLabel(hoveredSeat.session)}</span>
+                  {hoveredSeat.ticket ? (
+                    <>
+                      <span className="inspector-sep">·</span>
+                      <span className="inspector-detail"><strong>Token ID:</strong> #{hoveredSeat.ticket.tokenId.toString()}</span>
+                      <span className="inspector-sep">·</span>
+                      <span className="inspector-detail"><strong>Holder:</strong> {truncateAddress(ticketHolder(hoveredSeat.ticket))}</span>
+                      <span className="inspector-sep">·</span>
+                      <span className="inspector-detail"><strong>Custody:</strong> {hoveredSeat.ticket.depositor !== '0x0000000000000000000000000000000000000000' ? 'In Escrow Contract' : 'In Private Wallet'}</span>
+                      {DEMO_SECTION_PRICES[hoveredSeat.section] !== undefined && (
+                        <>
+                          <span className="inspector-sep">·</span>
+                          <span className="inspector-detail"><strong>Price:</strong> {formatUSDC(DEMO_SECTION_PRICES[hoveredSeat.section])} USDC</span>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <span className="inspector-sep">·</span>
+                      <span className="inspector-detail muted">Position in grandstand template; no on-chain NFT issued yet.</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="inspector-placeholder">
+                <span className="inspector-hint-icon">ⓘ</span>
+                <span>Hover over any stadium seat in the grandstand to inspect on-chain token ID, holder address, and escrow custody status.</span>
+              </div>
+            )}
+          </div>
+
+          <div className="seat-legend">
+            <div className="legend-item">
+              <span className="legend-swatch swatch-available">
+                <span className="swatch-back" />
+                <span className="swatch-cushion" />
+              </span>
+              <span className="legend-text">Escrowed (Available)</span>
+            </div>
+            <div className="legend-item">
+              <span className="legend-swatch swatch-yours">
+                <span className="swatch-back" />
+                <span className="swatch-cushion" />
+              </span>
+              <span className="legend-text">Held by you</span>
+            </div>
+            <div className="legend-item">
+              <span className="legend-swatch swatch-other">
+                <span className="swatch-back" />
+                <span className="swatch-cushion" />
+              </span>
+              <span className="legend-text">Other wallet</span>
+            </div>
+            <div className="legend-item">
+              <span className="legend-swatch swatch-unissued">
+                <span className="swatch-back" />
+                <span className="swatch-cushion" />
+              </span>
+              <span className="legend-text">Unissued</span>
+            </div>
+            <div className="legend-item">
+              <span className="legend-swatch swatch-used">
+                <span className="swatch-back" />
+                <span className="swatch-cushion">×</span>
+              </span>
+              <span className="legend-text">USED</span>
+            </div>
+          </div>
+
+          <p className="seat-map-note quiet">{ADJACENCY_NOTE}</p>
+        </div>
       </div>
     </dialog>
   </div>

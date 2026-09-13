@@ -8,7 +8,7 @@ import taylorPoster from '@/lib/taylor_concert_poster.png';
 import logoImg from '@/public/logo.png';
 import { type Address, type Hex } from 'viem';
 import { useWallet } from '@/lib/hooks/useWallet';
-import { validateNewIntentTiming, selectedClass } from '@/lib/event-schedule';
+import { validateNewIntentTiming, selectedClass, sessionLabel } from '@/lib/event-schedule';
 import { getChainTimestamp, getTicketHolder, getChainBlockNumber } from '@/lib/chain-reads';
 import { requestTicketImports } from '@/lib/wallet-nfts';
 import { FREE_TICKETS_LABEL, WALLET_IMPORT_NOTE } from '@/lib/ui-copy';
@@ -20,7 +20,7 @@ import { findSettlement, findPoolSettlement, type SettlementProposal, type Solve
 import { solverErrorMessage } from '@/lib/solve-errors';
 import { formatUSDC, truncateAddress } from '@/lib/format';
 import { restoreIntent, type ChainReceipt, type ChainTicket } from '@/lib/market-types';
-import { HERO_TITLE_LINES, EMPTY_RESULT, POOL_NOTE, condition, EXPLORER, POOL_LABEL, RANKING_RULE, SOLVER_NOTE } from '@/lib/ui-copy';
+import { HERO_TITLE_LINES, EMPTY_RESULT, POOL_NOTE, condition, EXPLORER, POOL_LABEL, RANKING_RULE, SOLVER_NOTE, maskClasses } from '@/lib/ui-copy';
 import { dishonestProposal, namedRejection, isSimulationRejection, simulate, type Attack, type NamedRejection } from '@/lib/proposal-controls';
 import AnimatedTicketIcon from './AnimatedTicketIcon';
 import IntentBuilder from './IntentBuilder';
@@ -608,11 +608,169 @@ export default function Market() {
                   <button type="button" aria-haspopup="dialog" aria-expanded={historyOpen} onClick={() => setHistoryOpen(true)}>Past Settlements <span className="mono">({getSettlements(market).length})</span></button>
                 </nav>
               </header>
-              <PoolDialog open={poolOpen} onClose={() => setPoolOpen(false)}>
-                {indexingBlock !== null ? <p role="status">{indexingMessage(indexingBlock)} {INDEXING_PENDING}</p> : <>
-                <p className="mono">{live.length} {POOL_LABEL}</p><p className="quiet">{POOL_NOTE}</p><div className="pool-list">{live.map((i, index) => <article key={i.hash} className="pool-row"><label><input type="checkbox" checked={selected.includes(i.hash)} disabled={disabled} onChange={() => selectIntent(i.hash)} /><span>{walletLabel(i.owner)} <span className="mono">/ Request {index + 1}</span></span></label><p>{condition(restoreIntent(i))}</p><details className="wallet-details"><summary>Wallet and transaction details</summary><a className="hash" href={`${EXPLORER}/address/${i.owner}`} target="_blank" rel="noreferrer">{i.owner}</a><a className="mono" href={`${EXPLORER}/tx/${i.commitTx}`} target="_blank" rel="noreferrer">Commit {i.commitTx.slice(0, 10)}… ↗</a></details><button className="text-button" onClick={() => { setAgentHash(i.hash); setAgentOpen(true); setPoolOpen(false); }}>Why no match?</button>{equal(i.owner, account) && <button disabled={disabled} onClick={() => void action('Revoke intent', async address => { await track(await revokeIntent(address, i.hash)); await refreshWritten(); setProposal(null); setEvidence(null); })}>Revoke my intent</button>}</article>)}</div>{!live.length && <p>No live requests yet. Submit an intent to join the pool.</p>}{!!market.hashMismatched.length && <p className="quiet" role="status">{market.hashMismatched.length} indexed {market.hashMismatched.length === 1 ? 'request is' : 'requests are'} excluded from this pool: the indexed fields do not re-hash to the id they were committed under, so they are not shown. <span className="mono">{market.hashMismatched.map(h => `${h.slice(0, 10)}…`).join(' ')}</span></p>}
-                <div className="pool-dialog-actions"><button className="secondary" disabled={disabled || solving || matchAfterCommit} onClick={() => { setWholePool(true); setWorkflowView('matching'); setPoolOpen(false); void runSolver([], true); }}>Check all intents</button>{!wholePool && <button className="primary" disabled={disabled || solving || matchAfterCommit || selected.length < 2 || selected.length > 4} onClick={() => { setWorkflowView('matching'); void runSolver(selected); setPoolOpen(false); }}>Search selected requests ({selected.length}/4)</button>}</div>
-                </>}
+              <PoolDialog open={poolOpen} count={live.length} onClose={() => setPoolOpen(false)}>
+                {indexingBlock !== null ? (
+                  <div className="pool-body">
+                    <p role="status">{indexingMessage(indexingBlock)} {INDEXING_PENDING}</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="pool-toolbar">
+                      <div className="pool-toolbar-status">
+                        {selected.length > 0 ? (
+                          <>
+                            <span className="pool-selection-pill mono">{selected.length} of 4 selected</span>
+                            <button type="button" className="pool-clear-btn" onClick={() => setSelected([])}>Clear selection</button>
+                          </>
+                        ) : (
+                          <span>Select 2 to 4 requests to test a specific counterparty match</span>
+                        )}
+                      </div>
+                      <span className="mono pool-total-note quiet">{live.length} {POOL_LABEL}</span>
+                    </div>
+
+                    <div className="pool-body">
+                      <div className="pool-list">
+                        {live.map((i, index) => {
+                          const isSelected = selected.includes(i.hash);
+                          const isMine = equal(i.owner, account);
+                          const intent = restoreIntent(i);
+                          const wantsSessions = maskClasses(intent.sessionMask).map(sessionLabel);
+                          const wantsSections = maskClasses(intent.sectionMask).map(s => `CAT ${s}`);
+
+                          return (
+                            <article
+                              key={i.hash}
+                              className={`pool-row ${isSelected ? 'is-selected' : ''}`}
+                              data-selected={isSelected}
+                            >
+                              <div className="pool-row-top">
+                                <label className="pool-row-select">
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    disabled={disabled}
+                                    onChange={() => selectIntent(i.hash)}
+                                  />
+                                  <span className="pool-owner-title">
+                                    {walletLabel(i.owner)}
+                                    <span className="pool-req-idx mono">/ Request {index + 1}</span>
+                                  </span>
+                                  {isMine && <span className="pool-your-intent-badge">Your Intent</span>}
+                                </label>
+                                <div className="pool-payment-badge mono">
+                                  {intent.maxNetPay > 0n
+                                    ? `Pay ≤ ${formatUSDC(intent.maxNetPay)} USDC`
+                                    : intent.maxNetPay < 0n
+                                    ? `Receive ≥ ${formatUSDC(-intent.maxNetPay)} USDC`
+                                    : 'Zero Net'}
+                                </div>
+                              </div>
+
+                              <div className="pool-spec-grid">
+                                <div className="pool-spec-col">
+                                  <span className="pool-spec-label">OFFERS</span>
+                                  <span className="pool-spec-val mono">
+                                    {i.offered.length > 0 ? i.offered.map(id => `#${id}`).join(', ') : 'None (Buyer)'}
+                                  </span>
+                                </div>
+                                <div className="pool-spec-arrow" aria-hidden="true">→</div>
+                                <div className="pool-spec-col">
+                                  <span className="pool-spec-label">WANTS</span>
+                                  <span className="pool-spec-val mono">
+                                    {i.exactCount} ticket{i.exactCount === 1 ? '' : 's'} · {wantsSections.join(', ') || 'Any CAT'} · {wantsSessions.join(', ') || 'Any session'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="pool-tags-row">
+                                {i.mustBeAdjacent && <span className="pool-tag tag-adjacent">✓ Contiguous Seats</span>}
+                                {i.mustShareSection && <span className="pool-tag">Same Section</span>}
+                                {i.mustShareSession && <span className="pool-tag">Same Session</span>}
+                              </div>
+
+                              <p className="pool-condition-desc">{condition(intent)}</p>
+
+                              <div className="pool-row-footer">
+                                <details className="wallet-details">
+                                  <summary className="wallet-summary">Wallet and transaction details</summary>
+                                  <div className="wallet-details-expanded">
+                                    <div className="wallet-detail-line">
+                                      <span className="detail-key">Owner:</span>
+                                      <a className="hash" href={`${EXPLORER}/address/${i.owner}`} target="_blank" rel="noreferrer">
+                                        {i.owner}
+                                      </a>
+                                    </div>
+                                    <div className="wallet-detail-line">
+                                      <span className="detail-key">Commit:</span>
+                                      <a className="mono" href={`${EXPLORER}/tx/${i.commitTx}`} target="_blank" rel="noreferrer">
+                                        Commit {i.commitTx.slice(0, 10)}… ↗
+                                      </a>
+                                    </div>
+                                  </div>
+                                </details>
+
+                                <div className="pool-row-actions">
+                                  <button
+                                    type="button"
+                                    className="text-button pool-why-match-btn"
+                                    onClick={() => { setAgentHash(i.hash); setAgentOpen(true); setPoolOpen(false); }}
+                                  >
+                                    Why no match?
+                                  </button>
+                                  {isMine && (
+                                    <button
+                                      type="button"
+                                      className="pool-revoke-btn"
+                                      disabled={disabled}
+                                      onClick={() => void action('Revoke intent', async address => {
+                                        await track(await revokeIntent(address, i.hash));
+                                        await refreshWritten();
+                                        setProposal(null);
+                                        setEvidence(null);
+                                      })}
+                                    >
+                                      Revoke my intent
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </div>
+
+                      {!live.length && <p className="quiet">No live requests yet. Submit an intent to join the pool.</p>}
+                      {!!market.hashMismatched.length && (
+                        <p className="quiet" role="status">
+                          {market.hashMismatched.length} indexed {market.hashMismatched.length === 1 ? 'request is' : 'requests are'} excluded from this pool: the indexed fields do not re-hash to the id they were committed under, so they are not shown.{' '}
+                          <span className="mono">{market.hashMismatched.map(h => `${h.slice(0, 10)}…`).join(' ')}</span>
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="pool-dialog-actions">
+                      <button
+                        type="button"
+                        className="secondary"
+                        disabled={disabled || solving || matchAfterCommit}
+                        onClick={() => { setWholePool(true); setWorkflowView('matching'); setPoolOpen(false); void runSolver([], true); }}
+                      >
+                        Check all intents
+                      </button>
+                      {!wholePool && (
+                        <button
+                          type="button"
+                          className="primary"
+                          disabled={disabled || solving || matchAfterCommit || selected.length < 2 || selected.length > 4}
+                          onClick={() => { setWorkflowView('matching'); void runSolver(selected); setPoolOpen(false); }}
+                        >
+                          Search selected requests ({selected.length}/4)
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
               </PoolDialog>
               {indexingBlock !== null && <section className="activity" aria-live="polite">
                 <strong>{indexingMessage(indexingBlock)}</strong><p>{INDEXING_PENDING}</p>
