@@ -90,6 +90,32 @@ Add `SUBGRAPH_API_KEY` only if the query endpoint requires it. The optional mode
 not required for deterministic diagnosis. Set the same public event dates at build time
 as the local app. [Complete template](../.env.example).
 
+The runtime also recognizes provider-injected **complete pairs**:
+`UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`
+([Upstash REST documentation](https://upstash.com/docs/redis/features/restapi)), or
+`KV_REST_API_URL` + `KV_REST_API_TOKEN`
+([Vercel Marketplace integration](https://vercel.com/marketplace/upstash/upstash-kv)).
+Explicit `REDIS_REST_*` settings take precedence, then Upstash, then KV. Empty template
+placeholders are ignored; a partially configured pair fails instead of combining secrets
+from different databases. Both storage and Agent admission use this same resolution.
+Use a REST write token. Remove stale overrides when changing the provider pair, and retain
+the existing namespace and data. Do not copy `STORAGE_BACKEND=file` from the local template
+into Vercel.
+
+Vercel now runs `npm run hosting:check` **before** `npm run build`. The check uses only
+the environment injected for that deployment, never local env files. It rejects missing
+Redis credentials, temporary-file storage, memory quotas, inconsistent network settings,
+invalid enabled judge/issuer configuration and signing in previews. It then checks actual
+Redis `EVAL`, `TIME` and write/read/delete access using one isolated expiring probe key.
+A failed dependency stops the build. This is a dependency check, not full application
+acceptance: still run the public checks below after deploying. Local `npm run build`
+remains available without Redis.
+
+[Regression workflow](../.github/workflows/regression.yml) runs server/Graph and solver
+tests, hosting fixtures, documentation/configuration checks, a production build and browser
+regressions on pushes and pull requests. It uses no real signing or model credentials.
+GitHub execution starts after this workflow is pushed; local test results are separate.
+
 Use the same persistent namespace across releases. Give separate deployments and preview
 environments separate namespaces **and separate signing wallets**. Never let a preview,
 local script or another service sign concurrently with a hosted writer using the same

@@ -52,6 +52,7 @@
 
 .inline-intent-review{border-top:1px solid var(--line);margin-top:24px;padding-top:24px}.inline-intent-review h3{margin:0 0 16px}.inline-intent-review .sign-intent{margin-top:20px}
 
+.quote-lines .quote-total{font-size:16px;font-weight:600;padding:18px 0}.quote-total dd{font-size:20px;white-space:nowrap}
 .section-supply{font-weight:700}
 
 .judge label{display:block;font-size:11px;margin:14px 0 6px;color:var(--muted)}
@@ -82,3 +83,29 @@
 .agent-parties{display:flex;flex-direction:column;gap:8px}
 .agent-tool-result{border-top:1px solid var(--line);margin-top:20px;padding-top:4px}.agent-evidence{overflow-wrap:anywhere}.agent-tool-result .agent-table th{padding-right:12px;width:55%}.agent-raw{margin-top:20px}.agent-raw summary{cursor:pointer}.agent-raw pre{max-height:320px;overflow:auto;white-space:pre-wrap;font-size:10px;padding:12px;border:1px solid var(--line)}
 @media(max-width:768px){.agent-drawer{width:100vw;border-left:none}}
+
+/* Action updates float above the page; receipts stay behind an explicit details action. */
+.activity-history-button{display:grid;place-items:center;width:36px;height:36px;border:1px solid var(--line);border-radius:50%;color:var(--muted);background:transparent}
+.activity-history-button:hover{color:var(--ink);border-color:rgba(255,255,255,.35)}
+.activity-notifications{position:fixed;top:calc(20px + env(safe-area-inset-top,0px));right:calc(20px + env(safe-area-inset-right,0px));width:min(340px,calc(100vw - 40px));z-index:100;pointer-events:none}
+.activity-toast{position:relative;pointer-events:auto;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:#141416;box-shadow:0 12px 40px rgba(0,0,0,.4);opacity:1;transform:translateY(0);transition:opacity 240ms ease,transform 240ms ease;animation:activity-toast-enter 180ms ease-out}
+.activity-toast.is-leaving{opacity:0;transform:translateY(-8px);pointer-events:none}
+.activity-toast-open{display:flex;align-items:center;gap:12px;width:100%;padding:16px 40px 16px 16px;text-align:left;background:transparent;border:0;border-radius:12px;color:var(--ink)}
+.activity-toast-icon{display:grid;place-items:center;flex:0 0 32px;height:32px;border:1px solid var(--line);border-radius:50%;color:var(--muted)}
+.activity-toast-icon.is-confirmed{color:var(--pass);background:rgba(52,211,153,.08);border-color:rgba(52,211,153,.25)}
+.activity-toast-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+.activity-toast-copy strong{font-size:13px;line-height:1.4;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.activity-toast-copy>span{font-size:11px;color:var(--muted)}
+.activity-toast-dismiss{position:absolute;top:8px;right:8px;display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:6px;font-size:20px;line-height:1;color:var(--muted);background:transparent}
+.activity-toast-dismiss:hover{color:var(--ink);background:rgba(255,255,255,.06)}
+.activity-details-dialog{margin:auto;width:min(480px,calc(100% - 32px));max-height:calc(100dvh - 48px);padding:24px;border:1px solid rgba(255,255,255,.18);border-radius:16px;background:#111113;color:var(--ink);box-shadow:0 24px 80px rgba(0,0,0,.5);overflow:auto;overscroll-behavior:contain;font-size:13px;line-height:1.7}
+.activity-details-dialog::backdrop{background:rgba(0,0,0,.65)}
+.activity-details-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
+.activity-details-heading h2{font-size:20px;font-weight:500;letter-spacing:-.03em;margin:0}
+.activity-details-close{display:grid;place-items:center;width:32px;height:32px;border:1px solid var(--line);border-radius:8px;font-size:22px;color:var(--muted);background:transparent}
+.activity-details-dialog .activity-details-status{font-size:14px;font-weight:600;margin-bottom:10px}
+.activity-details-transactions{display:grid;gap:12px;margin-top:24px;padding-top:18px;border-top:1px solid var(--line)}
+.activity-details-transactions h3{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.activity-details-transactions a{display:block;overflow-wrap:anywhere}
+@keyframes activity-toast-enter{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.activity-toast{animation:none;transition:none}.activity-toast.is-leaving{transform:none}}

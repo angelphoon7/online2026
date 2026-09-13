@@ -14,7 +14,7 @@ import { EVENT_CUTOFF_NOTE, DEMO_SCHEDULE_NOTE, CLOSED_SESSION_NOTE, MISSING_SCH
 import { FREE_TICKETS_LABEL, DEMO_PRICE_NOTE } from '@/lib/ui-copy';
 import { formatUSDC, truncateAddress } from '@/lib/format';
 import { DEMO_TICKET_NOTE } from '@/lib/ui-copy';
-import { ADJACENCY_ACCEPTED, ADJACENCY_ERROR, ADJACENCY_NOTE, ALLOWANCE_NOTE, CONNECT_POSITIONS_NOTE, EMPTY_POSITIONS_NOTE, ENFORCEABLE, ESCROW_NOTE, EXACT_COUNT_NOTE, OWN_POSITIONS_NOTE, PICK_OFFERED_NOTE, STEPS, WITHDRAWAL_DETAIL, intentReview, maskClasses, maskSummary, paymentLabel } from '@/lib/ui-copy';
+import { ADJACENCY_ACCEPTED, ADJACENCY_ERROR, ADJACENCY_NOTE, ALLOWANCE_NOTE, CONNECT_POSITIONS_NOTE, EMPTY_POSITIONS_NOTE, ENFORCEABLE, ESCROW_NOTE, EXACT_COUNT_NOTE, OWN_POSITIONS_NOTE, PICK_OFFERED_NOTE, STEPS, WITHDRAWAL_DETAIL, intentReview, maskClasses, maskSummary } from '@/lib/ui-copy';
 
 const same = (a: string, b: string | null) => a.toLowerCase() === b?.toLowerCase();
 const hasClass = (mask: bigint, n: number) => (mask & (1n << BigInt(n))) !== 0n;
@@ -26,20 +26,20 @@ export default function IntentBuilder({ market, account, approved, busy, onAppro
   onDemo: () => Promise<void>;
   onCustody: (ticket: ChainTicket, mode: 'deposit' | 'withdraw') => Promise<void>;
   onDepositSelected: (tokenIds: bigint[]) => Promise<void>;
-  onSign: (intent: IntentParams, prepared: (intent: IntentParams) => void) => Promise<void>;
+  onSign: (intent: IntentParams, prepared: (intent: IntentParams) => void, committed: (intent: IntentParams) => void) => Promise<void>;
 }) {
   const [draft, setDraft] = useState(() => initialIntent(market, account));
   const [prepared, setPrepared] = useState<IntentParams | null>(null);
+  const [committed, setCommitted] = useState<IntentParams | null>(null);
   const [step, setStep] = useState(1);
   const [reached, setReached] = useState(1);
-  const [manualBudget, setManualBudget] = useState(false);
   const [raw, setRaw] = useState(false);
   const stepTitles = useRef<(HTMLHeadingElement | null)[]>([]);
   const [selectionAccount, setSelectionAccount] = useState(account?.toLowerCase() ?? null);
   if (selectionAccount !== (account?.toLowerCase() ?? null)) {
     setSelectionAccount(account?.toLowerCase() ?? null);
     setDraft(previous => ({ ...previous, offered: [] }));
-    setPrepared(null); setManualBudget(false);
+    setPrepared(null); setCommitted(null);
     setStep(previous => Math.min(previous, 2));
     setReached(previous => Math.min(previous, 2));
   }
@@ -47,25 +47,30 @@ export default function IntentBuilder({ market, account, approved, busy, onAppro
     ...draft, owner: account ?? draft.owner, nonce: nextRecordedNonce(market, account),
   };
   const update = (patch: Partial<IntentParams>) => {
-    setPrepared(null); setDraft(i => ({ ...i, ...patch }));
+    setPrepared(null); setCommitted(null); setDraft(i => ({ ...i, ...patch }));
     if (patch.offered?.length === 0) setReached(n => Math.min(n, 2));
     if (patch.sectionMask === 0n || patch.sessionMask === 0n) setReached(1);
   };
   const go = (next: number) => {
-    setStep(next); setReached(n => Math.max(n, next));
+    setCommitted(null); setStep(next); setReached(n => Math.max(n, next));
     setTimeout(() => stepTitles.current[next - 1]?.focus({ preventScroll: true }), 0);
   };
+  const complete = (confirmed: IntentParams) => {
+    setCommitted(confirmed);
+    setTimeout(() => stepTitles.current[1]?.focus({ preventScroll: true }), 0);
+  };
+  const completed = committed && same(committed.owner, account) ? committed : null;
   const positions = account ? getTicketsFor(account, market, savedIntent.eventId) : [];
   const baseIntent = { ...savedIntent, offered: savedIntent.offered.filter(id => positions.some(t => t.tokenId === String(id) && t.status !== 1)) };
   const allTickets = getTicketsFor(null, market, baseIntent.eventId);
   const quote = demoPriceQuote(baseIntent, allTickets);
-  const intent: IntentParams = { ...baseIntent, maxNetPay: prepared && same(prepared.owner, account) || manualBudget || !quote ? baseIntent.maxNetPay : quote.suggestedLimit };
+  const intent: IntentParams = { ...baseIntent, maxNetPay: quote?.paymentAmount ?? 0n };
   const selectedPositions = positions.filter(t => intent.offered.includes(BigInt(t.tokenId)) && t.status !== 1);
   const toDeposit = selectedPositions.filter(t => t.depositor === '0x0000000000000000000000000000000000000000');
   const live = getIntentPool(market, intent.eventId);
   const sessions = [...new Set(allTickets.map(t => t.sessionId))].sort((a, b) => a - b);
   const sections = [...new Set([...Object.keys(DEMO_SECTION_PRICES).map(Number), ...allTickets.map(t => t.sectionId)])].sort((a, b) => a - b);
-  const offered = allTickets.filter(t => intent.offered.includes(BigInt(t.tokenId)));
+  const offered = allTickets.filter(t => (completed ?? intent).offered.includes(BigInt(t.tokenId)));
   const review = intentReview(intent, !account);
   const preview = intentTypedData(intent);
   const selectedSession = selectedClass(intent.sessionMask);
@@ -74,10 +79,9 @@ export default function IntentBuilder({ market, account, approved, busy, onAppro
   const cutoff = sessionDeadline(intent.sessionMask);
   const timingUnavailable = cutoff === null || cutoff <= BigInt(market.timestamp);
   const choiceInvalid = selectedClass(intent.sessionMask) === null || selectedClass(intent.sectionMask) === null;
-  const budgetValue = Number(intent.maxNetPay) / 1000000;
   const summary = (n: number) => n === 2
     ? `${offered.map(t => `R${t.row} S${t.seat}`).join(', ')} · sessions ${[...new Set(offered.map(t => t.sessionId))].join(', ')}`
-    : n === 1 ? `exactly ${intent.exactCount} · sessions ${maskSummary(intent.sessionMask)} · sections ${maskSummary(intent.sectionMask)} · ${paymentLabel(intent.maxNetPay)}`
+    : n === 1 ? `exactly ${intent.exactCount} · sessions ${maskSummary(intent.sessionMask)} · sections ${maskSummary(intent.sectionMask)}`
       : `event ${intent.eventId} · nonce ${intent.nonce}`;
   const position = (t: ChainTicket) => {
     const escrowed = t.depositor !== '0x0000000000000000000000000000000000000000';
@@ -96,11 +100,11 @@ export default function IntentBuilder({ market, account, approved, busy, onAppro
   return <div className="intent-flow">
     {STEPS.map((title, index) => {
       const number = index + 1;
-      const expanded = step === number;
+      const expanded = step === number && !completed;
       const visited = reached >= number;
       return <section key={title} className={`workspace-panel intent-step ${expanded ? 'is-expanded' : visited ? 'is-complete' : 'is-future'}`} data-step={number} data-expanded={expanded}>
         <div className="step-heading"><h2 ref={element => { stepTitles.current[index] = element; }} tabIndex={-1} id={`step-title-${number}`}>
-          {!expanded && number < reached && <span className="step-check" aria-label="Completed">✓</span>}{title}
+          {!expanded && (number < reached || completed) && <span className="step-check" aria-label="Completed">✓</span>}{title}
         </h2>{expanded ? <span className="mono step-marker">step {number} of {STEPS.length}</span> : visited && <><span className="mono step-summary">{summary(number)}</span><button className="text-button" disabled={busy} onClick={() => go(number)} aria-label={`Change ${title}`}>Change</button></>}</div>
         {expanded && <div className="step-content" aria-labelledby={`step-title-${number}`}>
           {number === 2 && <>
@@ -120,19 +124,17 @@ export default function IntentBuilder({ market, account, approved, busy, onAppro
               <p className="quiet">Select your tickets above, then deposit them together in one transaction. If approval is needed, confirm it first; the deposit follows automatically. Tickets already deposited are skipped.</p>
             </div>
             <p className="quiet">{ESCROW_NOTE} {WITHDRAWAL_DETAIL} {PICK_OFFERED_NOTE}</p>
-            <div className="price-comparison"><h3>Compare your tickets</h3><p className="quiet">{DEMO_PRICE_NOTE}</p>
-              {quote ? <dl className="quote-lines mono"><div><dt>Your selected tickets</dt><dd>{formatUSDC(quote.offeredTotal)} USDC</dd></div><div><dt>Wanted tickets</dt><dd>{formatUSDC(quote.wantedMin)}{quote.wantedMin !== quote.wantedMax ? ` - ${formatUSDC(quote.wantedMax)}` : ''} USDC</dd></div><div><dt>Suggested payment limit</dt><dd>{paymentLabel(quote.suggestedLimit)}</dd></div></dl> : <p className="quiet">Select your offered tickets to calculate the comparison. Tickets in unpriced sections use your manually chosen limit.</p>}
+            <div className="price-comparison"><h3>Your swap payment</h3><p className="quiet">{DEMO_PRICE_NOTE}</p>
+              {quote ? <dl className="quote-lines mono" aria-live="polite">
+                <div><dt>Your selected tickets</dt><dd>{formatUSDC(quote.offeredTotal)} USDC</dd></div>
+                <div><dt>Wanted tickets</dt><dd>{formatUSDC(quote.wantedTotal)} USDC</dd></div>
+                <div className="quote-total"><dt>{quote.paymentAmount > 0n ? 'Upgrade payment' : quote.paymentAmount < 0n ? 'Credit requested' : 'Payment difference'}</dt><dd>{formatUSDC(quote.paymentAmount < 0n ? -quote.paymentAmount : quote.paymentAmount)} USDC</dd></div>
+              </dl> : <p className="quiet" role="status">{intent.offered.length ? 'A payment amount is unavailable for these tickets. Choose tickets and a wanted section with demo reference prices to continue.' : 'Select your offered tickets to calculate the payment amount.'}</p>}
+              {quote && <p className="quiet">{quote.paymentAmount > 0n ? 'Approve this amount and sign your intent. USDC is charged only when the whole swap succeeds; the final charge may be lower. Gas is separate.' : quote.paymentAmount < 0n ? 'No USDC payment approval is needed. Your intent requires at least this credit when the whole swap succeeds. Gas is separate.' : 'No USDC payment approval is needed. Your intent allows no net charge for the swap. Gas is separate.'}</p>}
             </div>
-            <div className="condition-row"><label htmlFor="net-budget">Your signed payment limit</label><div><div className="budget-label mono" aria-live="polite">{paymentLabel(intent.maxNetPay)}</div>
-              <input id="net-budget" className="budget-slider" disabled={busy} type="range" min="-40" max="40" step="0.5" value={budgetValue} onChange={e => { setManualBudget(true); update({ maxNetPay: BigInt(Math.round(Number(e.target.value) * 1000000)) }); }} />
-              <div className="slider-scale mono"><span>−40 USDC</span><span>even</span><span>+40 USDC</span></div>
-            </div></div>
             </>}
-            <div className="intent-step-actions">
-              {positions.length > 0 && <button className="secondary suggested-limit" disabled={busy || !quote || !manualBudget} onClick={() => { setPrepared(null); setManualBudget(false); }}>{quote && !manualBudget ? 'Suggested limit applied' : 'Use suggested limit'}</button>}
-            </div>
             <div className="inline-intent-review">
-              <h3>Review and sign</h3>
+              <h3>{quote && quote.paymentAmount > 0n ? 'Approve payment and create intent' : 'Review and create intent'}</h3>
             {timingUnavailable && <p role="alert">{cutoff === null ? MISSING_SCHEDULE_NOTE : CLOSED_SESSION_NOTE}</p>}
             {intent.offered.length > 0 && <><div className="signed-sentence"><p>{review.sentence}</p><p className="quiet mono">{review.metadata}</p></div>
             <button className="text-button" onClick={() => setRaw(!raw)} aria-expanded={raw}>View signed struct {raw ? '−' : '+'}</button>
@@ -140,8 +142,8 @@ export default function IntentBuilder({ market, account, approved, busy, onAppro
             </>}
             {!intent.offered.length && <p className="quiet">Select the tickets you want to offer above to review your request.</p>}
             {toDeposit.length > 0 && <p className="quiet">Deposit your selected tickets above before signing.</p>}
-            <button className="primary full sign-intent" disabled={busy || !account || !intent.offered.length || toDeposit.length > 0 || choiceInvalid || timingUnavailable} onClick={() => void onSign(intent, setPrepared)}>Sign and commit <span>↗</span></button>
-            <p className="quiet">{ALLOWANCE_NOTE}</p>
+            <button className="primary full sign-intent" disabled={busy || !account || !quote || !intent.offered.length || toDeposit.length > 0 || choiceInvalid || timingUnavailable} onClick={() => void onSign(intent, setPrepared, complete)}>{quote && quote.paymentAmount > 0n ? `Approve ${formatUSDC(quote.paymentAmount)} USDC & create intent` : 'Create intent'} <span>↗</span></button>
+            {quote && quote.paymentAmount > 0n && <p className="quiet">{ALLOWANCE_NOTE}</p>}
             </div>
           </>}
           {number === 1 && <div className="builder">

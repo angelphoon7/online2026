@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { loadEnvFile } from 'node:process';
 import { dirname } from 'node:path';
 import { RedisRestStore } from '../server/durable-store';
+import { resolveRedisConfiguration } from '../shared/redis-config.mjs';
 
 // --credentials reads a PRIVATE {url,token} test file, not signing credentials.
 const args = process.argv.slice(2);
@@ -19,7 +20,7 @@ let credentials: { url: string; token: string };
 if (options.has('--credentials')) credentials = JSON.parse(fs.readFileSync(options.get('--credentials')!, 'utf8'));
 else {
   for (const file of ['.env.local', '.env']) if (fs.existsSync(file)) loadEnvFile(file);
-  credentials = { url: process.env.REDIS_REST_URL ?? '', token: process.env.REDIS_REST_TOKEN ?? '' };
+  credentials = resolveRedisConfiguration();
 }
 if (!credentials.url || !credentials.token) throw new Error('Configure Redis REST credentials first. This check does not accept in-memory Redis substitutes.');
 const output = options.get('--output') ?? '.data/agent-rate-limit.json';
@@ -29,7 +30,7 @@ const children = new Set<ChildProcess>();
 type Worker = { child: ChildProcess; port: number; pid: number };
 async function worker(source: 'trusted-proxy' | 'vercel'): Promise<Worker> {
   // Signing/model secrets are not needed and are deliberately excluded from child configuration.
-  const base = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/PRIVATE_KEY|API_KEY|REDIS|JUDGE_ACCESS_CODE/.test(k)));
+  const base = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/PRIVATE_KEY|API_KEY|REDIS|KV_REST_API|JUDGE_ACCESS_CODE/.test(k)));
   const child = fork(workerFile, [], { execArgv: ['--import', 'tsx', '--conditions=react-server'], env: { ...base, NODE_ENV: 'production', VERCEL: source === 'vercel' ? '1' : '', AGENT_IP_SOURCE: 'auto', AGENT_TRUST_PROXY: source === 'trusted-proxy' ? 'true' : 'false', AGENT_RATE_LIMIT_STORE: 'redis', AGENT_ASK_TIMEOUT_MS: '60000', AGENT_DIAGNOSE_TIMEOUT_MS: '30000', REDIS_REST_URL: credentials.url, REDIS_REST_TOKEN: credentials.token, STORAGE_NAMESPACE: namespace + '-' + source }, silent: true });
   children.add(child);
   return await new Promise((resolve, reject) => {

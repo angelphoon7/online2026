@@ -10,9 +10,8 @@ export function demoPriceQuote(intent: Pick<IntentParams, 'offered' | 'eventId' 
   if (offered.some(t => !t || DEMO_SECTION_PRICES[t.sectionId] === undefined)) return null;
   const accepted = Array.from({ length: 256 }, (_, id) => id).filter(id => !!(intent.sectionMask & (1n << BigInt(id))));
   if (accepted.some(id => DEMO_SECTION_PRICES[id] === undefined)) return null;
-  const prices = accepted.map(id => DEMO_SECTION_PRICES[id]);
+  if (accepted.length !== 1) return null;
   const offeredTotal = offered.reduce((sum, t) => sum + DEMO_SECTION_PRICES[t!.sectionId], 0n);
-  const min = prices.reduce((a, b) => a < b ? a : b) * BigInt(intent.exactCount);
-  const max = prices.reduce((a, b) => a > b ? a : b) * BigInt(intent.exactCount);
-  return { offeredTotal, wantedMin: min, wantedMax: max, suggestedLimit: max - offeredTotal };
+  const wantedTotal = DEMO_SECTION_PRICES[accepted[0]] * BigInt(intent.exactCount);
+  return { offeredTotal, wantedTotal, paymentAmount: wantedTotal - offeredTotal };
 }

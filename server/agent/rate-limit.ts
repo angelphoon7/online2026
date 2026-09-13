@@ -2,6 +2,7 @@ import 'server-only';
 import { createHash, randomUUID } from 'node:crypto';
 import { isIP } from 'node:net';
 import { redisStore, StorageUnavailable, type RedisRestStore } from '../durable-store';
+import { hasRedisConfiguration } from '../../shared/redis-config.mjs';
 
 export type AgentRoute = 'ask' | 'diagnose';
 export const AGENT_POLICY = { ask: { requests: 12, timeoutMs: 60_000 }, diagnose: { requests: 30, timeoutMs: 30_000 } } as const;
@@ -20,7 +21,7 @@ export function agentIpSource(): IpSource {
 }
 export function agentRateLimitStore(): 'redis' | 'memory' {
   const mode = process.env.AGENT_RATE_LIMIT_STORE ?? 'auto';
-  const selected = mode === 'auto' ? (production() || process.env.REDIS_REST_URL ? 'redis' : 'memory') : mode;
+  const selected = mode === 'auto' ? (production() || hasRedisConfiguration() ? 'redis' : 'memory') : mode;
   if (!['redis', 'memory'].includes(selected) || (production() && selected !== 'redis')) throw new AgentRateLimitUnavailable();
   if (selected === 'redis') redisStore(); // Validate configuration before admitting requests.
   return selected as 'redis' | 'memory';

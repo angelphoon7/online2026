@@ -337,6 +337,7 @@ storage or an explicitly enabled persistent volume. [Hosting and data migration]
 | `JUDGE_ALLOWED_INTENT_HASHES` | Judge authorization | Comma-separated exact editable intent hashes; recorded budget replacements inherit their root's permission |
 | `STORAGE_BACKEND` | Evidence, claims, sessions, signing jobs and demo catalog | `redis` for hosted instances; `file` for development or an explicit persistent-volume backend |
 | `REDIS_REST_URL`, `REDIS_REST_TOKEN` | Server storage and Agent admission | HTTPS Redis REST endpoint and private bearer token; required for production Agent APIs, including persistent-file hosts; never exposed to the browser |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`, or `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Provider-injected alternatives | Complete pairs recognized by storage, Agent and deployment preflight; explicit `REDIS_REST_*` takes precedence. Never mix credentials from different pairs |
 | `STORAGE_NAMESPACE` | Server storage | Stable namespace across releases; default `reshuffle-arc-testnet` |
 | `STORAGE_DIRECTORY`, `ALLOW_PERSISTENT_FILE_STORAGE` | File backend only | Explicit persistent directory and `true` opt-in for a production Node host; file storage is rejected on Vercel |
 | `DEMO_TICKETS_ENABLED` | Testnet issuer route | Enables hosted free-ticket claims; enabled by default in development |

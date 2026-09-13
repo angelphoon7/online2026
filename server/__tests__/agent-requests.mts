@@ -228,8 +228,15 @@ test('an active combinatorial seat search observes the overall deadline', async 
     ticketMeta: new Map(seller.offered.map((id, sectionId) => [id, { eventId: 1, sessionId: 0, sectionId, row: 1, seat: 1, status: 0 }])),
     depositor: new Map(seller.offered.map(id => [id, B])),
   };
-  const budget = new RequestBudget(200);
-  const checkpoint = t.mock.method(budget, 'checkpoint');
+  // Advance the monotonic clock inside the active loop. Wall-clock scheduling
+  // must not decide whether a busy CI worker reaches 256 iterations in 200 ms.
+  let elapsed = 0, checks = 0;
+  const budget = new RequestBudget(5000, undefined, () => elapsed);
+  const original = budget.checkpoint.bind(budget);
+  const checkpoint = t.mock.method(budget, 'checkpoint', () => {
+    if (++checks === 512) elapsed = 5001;
+    original();
+  });
   try {
     await assert.rejects(diagnose(snapshot, targetHash, { block, usdcBalance: new Map(), usdcAllowance: new Map() }, budget), { name: 'AgentRequestTimeout' });
     assert.ok(checkpoint.mock.callCount() > 256, 'The seat-combination loop must have started');

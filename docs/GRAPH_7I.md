@@ -174,7 +174,8 @@ inferred from fixtures, a successful build, or the script merely starting. Scrip
 their outcomes and exit nonzero on failure; generated reports contain no Redis token.
 
 ```sh
-# Uses REDIS_REST_URL/TOKEN from the shell, .env.local or .env.
+# Uses a complete REDIS_REST_*, UPSTASH_REDIS_REST_* or KV_REST_API_* pair.
+# Reads the shell, .env.local or .env; never combine a URL and token from different pairs.
 npm run agent:check:rate -- --output .data/agent-rate-redis.json
 
 # Alternatively, a PRIVATE ignored JSON file containing {"url":"...","token":"..."}:
@@ -223,3 +224,10 @@ The [actual run report](checks/graph-agent-rate-redis.json) records `passed: fal
 not changed. A public Vercel deployment was not requested and has not been performed.
 Steps 7-I / 11-C therefore have the shared implementation and assertion scripts, but real
 Redis and deployed two-IP acceptance must remain pending until those checks pass.
+
+The 13 September hosting follow-up shares provider-variable resolution between storage,
+Agent admission and this acceptance script. Vercel builds now stop when the actual Redis
+write/Lua probe fails, with setting names rather than secret/provider payloads in errors.
+The combinatorial-search timeout regression uses an injected monotonic clock after the
+search has started; separate stalled-I/O tests still exercise actual deadline timers.
+These changes do not turn the earlier failed Redis acceptance into a PASS.

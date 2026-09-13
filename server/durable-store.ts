@@ -2,6 +2,7 @@ import 'server-only';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, open, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { hasRedisConfiguration, RedisConfigurationError, resolveRedisConfiguration } from '../shared/redis-config.mjs';
 
 export class StorageUnavailable extends Error {
   constructor(message = 'Shared storage is unavailable. Retry after the operator checks storage configuration.') {
@@ -91,7 +92,7 @@ export class FileStore implements DurableStore {
 }
 
 export function storageMode(): 'redis' | 'file' {
-  const mode = process.env.STORAGE_BACKEND ?? (process.env.REDIS_REST_URL ? 'redis' : 'file');
+  const mode = process.env.STORAGE_BACKEND ?? (hasRedisConfiguration() ? 'redis' : 'file');
   if (mode !== 'redis' && mode !== 'file') throw new StorageUnavailable('STORAGE_BACKEND must be redis or file.');
   if (mode === 'file' && (process.env.VERCEL || (process.env.NODE_ENV === 'production' && process.env.ALLOW_PERSISTENT_FILE_STORAGE !== 'true'))) throw new StorageUnavailable('Production requires Redis REST storage or an explicitly configured persistent-volume backend.');
   return mode;
@@ -102,12 +103,18 @@ function storageNamespace() {
   return namespace;
 }
 export function redisStore(): RedisRestStore {
-  return new RedisRestStore(process.env.REDIS_REST_URL ?? '', process.env.REDIS_REST_TOKEN ?? '', storageNamespace());
+  try {
+    const { url, token } = resolveRedisConfiguration();
+    return new RedisRestStore(url, token, storageNamespace());
+  } catch (error) {
+    if (error instanceof RedisConfigurationError) throw new StorageUnavailable(error.message);
+    throw error;
+  }
 }
 export function durableStore(): DurableStore {
   const namespace = storageNamespace();
   return storageMode() === 'redis'
-    ? new RedisRestStore(process.env.REDIS_REST_URL ?? '', process.env.REDIS_REST_TOKEN ?? '', namespace)
+    ? redisStore()
     : new FileStore(resolve(process.env.STORAGE_DIRECTORY ?? join(process.cwd(), '.data', 'shared'), namespace));
 }
 export const encodeRecord = (value: unknown) => JSON.stringify(value, (_, v) => typeof v === 'bigint' ? String(v) : v);

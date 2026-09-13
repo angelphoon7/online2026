@@ -80,8 +80,11 @@ test('receipt floor survives errors, stale responses, agent hash changes and rel
   await expect(drawer.getByRole('button', { name: "Why can't this intent settle?", exact: true })).toBeDisabled();
   await expect(page.locator('.workspace-stack')).toBeHidden();
   await expect(page.getByText(/SubgraphIndexingError:/).first()).toBeVisible();
-  await expect(page.locator(`.activity a[href$="${REVOKE}"]`).first()).toBeVisible();
-  await expect(page.locator(`.activity a[href$="${COMMIT}"]`).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Transaction confirmed. View activity details', exact: true }).click();
+  const activity = page.getByRole('dialog', { name: 'Activity details' });
+  await expect(activity.locator(`a[href$="${REVOKE}"]`)).toBeVisible();
+  await expect(activity.locator(`a[href$="${COMMIT}"]`)).toBeVisible();
+  await activity.getByRole('button', { name: 'Close activity details' }).click();
   await control.oldMarket!.fulfill({ json: market(100) });
   await control.oldAsk!.fulfill({ json: { answer: 'STALE ANSWER', block: '100', evidence: [] } }).catch(() => {});
   await expect(drawer.getByText('STALE ANSWER')).toHaveCount(0);
@@ -109,7 +112,10 @@ test('partial budget failure retains revoke receipt and waits before showing the
   await applyBudget(page);
   await expect(page.locator('.workspace-stack')).toBeHidden();
   await expect(page.locator('.workspace-section').getByText('Indexing block #200…', { exact: true }).first()).toBeVisible();
-  await expect(page.locator(`.activity a[href$="${REVOKE}"]`).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Transaction confirmed. View activity details', exact: true }).click();
+  const activity = page.getByRole('dialog', { name: 'Activity details' });
+  await expect(activity.locator(`a[href$="${REVOKE}"]`)).toBeVisible();
+  await activity.getByRole('button', { name: 'Close activity details' }).click();
   control.graphError = false; control.graphBlock = 200; control.block = 200;
   await page.getByRole('button', { name: 'Retry indexing' }).first().click();
   await expect(page.locator('.workspace-stack')).toBeVisible();

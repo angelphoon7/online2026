@@ -8,11 +8,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "npx --yes tsx --conditions=react-server --test shared/graph/__tests__/*.mts server/__tests__/*.mts",
+    "test": "tsx --conditions=react-server --test shared/graph/__tests__/*.mts server/__tests__/*.mts",
     "lint": "eslint",
     "setup:env": "node scripts/setup-env.mjs",
     "docs:check": "node scripts/check-docs.mjs",
     "submission:check:hosted": "node scripts/check-hosted.mjs",
+    "hosting:check": "node scripts/check-hosting.mjs",
+    "test:hosting": "node --test scripts/test-hosting-check.mjs",
     "test:hosted-check": "node --test scripts/test-hosted-check.mjs",
     "judge:setup": "node scripts/judge-setup.mjs",
     "judge:check": "node scripts/check-judging.mjs",
@@ -63,12 +65,18 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",
+    "@base-ui/react": "^1.8.0",
+    "class-variance-authority": "^0.7.1",
+    "cn": "^0.3.0",
+    "lucide-react": "^1.45.0",
     "motion": "^13.2.0",
     "next": "16.3.4",
     "ogl": "^1.0.11",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "^0.0.1",
+    "shadcn": "^4.21.0",
+    "tw-animate-css": "^1.4.0",
     "viem": "^2.56.3"
   },
   "devDependencies": {
@@ -80,6 +88,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4",
+    "tsx": "4.23.13",
     "typescript": "^5"
   }
 }

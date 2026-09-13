@@ -29,12 +29,14 @@ import PoolDialog from './PoolDialog';
 import JudgeControls, { type BudgetChange, type Revocation } from './JudgeControls';
 import JudgingGuide from './JudgingGuide';
 import AgentDrawer from './AgentDrawer';
+import ActivityNotification from './ActivityNotification';
 import { automaticSelection, latestRequest } from '@/lib/matching-status';
 import { waitForIndexed } from '@/shared/graph';
 import { MarketFreshness } from '@/lib/market-freshness';
 import { indexingMessage, INDEXING_PENDING } from '@/lib/ui-copy';
 import { getMarketSnapshot, getIntentPool, getTicketsFor, getSettlements, getTicketsApproved, getTicketDepositor, getUSDCAllowance, getUnusedNonce, getSettlementReceipt, waitForReceipt, waitForSuccess, ticketHolder as holder } from '@/lib/chain-reads';
 import { nextRecordedNonce } from '@/lib/intent-draft';
+import { demoPriceQuote } from '@/lib/demo-pricing';
 import rejectionDemo from '@/deployments/act-three.json';
 
 import ConnectWalletButton from '@/component/connectWallet/ConnectWalletButton';
@@ -72,6 +74,7 @@ export default function Market() {
   const [notice, setNotice] = useState('');
   const [txHash, setTxHash] = useState<Hex>();
   const [confirmedWrite, setConfirmedWrite] = useState<{ block: string; hashes: Hex[] } | null>(null);
+  const [activityOpen, setActivityOpen] = useState(false);
   const [status, setStatus] = useState('idle');
   const [rejection, setRejection] = useState<NamedRejection | null>(null);
   const [receipt, setReceipt] = useState<ChainReceipt | null>(null);
@@ -182,7 +185,7 @@ export default function Market() {
   }, [account, market?.blockNumber]);
   const action = async (label: string, fn: (address: Address) => Promise<void>) => {
     if (activeAction.current || freshness.getSnapshot().indexingBlock !== null) return;
-    activeAction.current = true; setBusy(label); setNotice(''); setTxHash(undefined); setStatus('idle'); setRejection(null);
+    activeAction.current = true; setBusy(label); setNotice(''); setTxHash(undefined); setConfirmedWrite(null); setStatus('idle'); setRejection(null);
     try { await runWithWallet(fn); }
     catch (e) { setNotice(walletActionMessage(e)); }
     finally { setBusy(''); activeAction.current = false; }
@@ -207,7 +210,7 @@ export default function Market() {
   // judge cannot start one while a wallet action is mid-flight.
   const operate = async <T,>(label: string, fn: () => Promise<T>): Promise<T> => {
     if (activeAction.current || freshness.getSnapshot().indexingBlock !== null) throw new Error('Wait for the current action and its indexed state.');
-    activeAction.current = true; setBusy(label); setNotice(''); setTxHash(undefined);
+    activeAction.current = true; setBusy(label); setNotice(''); setTxHash(undefined); setConfirmedWrite(null);
     try { return await fn(); }
     catch (error) {
       const confirmed = (error as { confirmed?: { blockNumber: string; hashes: Hex[] } })?.confirmed;
@@ -315,9 +318,11 @@ export default function Market() {
     setNotice(`Deposited ${pending.length} ticket${pending.length === 1 ? '' : 's'} together: ${pending.map(id => `#${id}`).join(', ')}.`);
     await refreshWritten();
   });
-  const sign = (draft: IntentParams, prepared: (intent: IntentParams) => void) => action('Sign and commit', async address => {
+  const sign = (draft: IntentParams, prepared: (intent: IntentParams) => void, committed: (intent: IntentParams) => void) => action('Create intent', async address => {
     if (!market) return;
     if (selectedClass(draft.sectionMask) === null) throw new Error('Choose exactly one section.');
+    const quote = demoPriceQuote(draft, market.tickets);
+    if (!quote || draft.maxNetPay !== quote.paymentAmount) throw new Error('Review the payment amount for your selected tickets before creating an intent.');
     validateNewIntentTiming(draft.sessionMask, draft.deadline, await getChainTimestamp());
     for (const id of draft.offered) {
       const depositor = await getTicketDepositor(id);
@@ -326,11 +331,16 @@ export default function Market() {
     const nonce = await getUnusedNonce(address, nextRecordedNonce(market, address));
     if (draft.maxNetPay > 0n) {
       const allowance = await getUSDCAllowance(address);
-      if (allowance < draft.maxNetPay) await track(await approveUSDC(address, draft.maxNetPay));
+      if (allowance < draft.maxNetPay) {
+        setNotice(`Approve ${formatUSDC(draft.maxNetPay)} USDC in your wallet. Payment is collected only when the swap succeeds.`);
+        await track(await approveUSDC(address, draft.maxNetPay));
+      }
     }
     const ready = { ...draft, owner: address, nonce };
     prepared(ready);
+    setNotice('Sign your intent, then confirm the transaction that submits it.');
     await track(await signAndCommitIntent(address, ready));
+    committed(ready);
     searchVersion.current++; searchInFlight.current = false; setSolving(false);
     setReceipt(null); setProposal(null); setEvidence(null); setAutomatic(true);
     setNotice('Intent committed. Matching will start automatically as soon as the refreshed pool includes your request.'); await refreshWritten();
@@ -443,6 +453,9 @@ export default function Market() {
         </button>
       </nav>
       <div className="header-actions">
+        {(busy || notice || txHash || confirmedWrite) && <button type="button" className="activity-history-button" aria-label="Open latest activity" title="Latest activity" aria-haspopup="dialog" onClick={() => setActivityOpen(true)}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2.6 7M3 4v7h7M12 7v5l3 2" /></svg>
+        </button>}
         <ConnectWalletButton />
       </div>
     </header>
@@ -557,8 +570,6 @@ export default function Market() {
                 {readError && <p role="alert">{readError}</p>}
                 <button className="secondary" onClick={() => void refresh(true)}>Retry indexing</button>
               </section>}
-              {confirmedWrite && <div className="activity"><p>Transaction confirmed at block #{confirmedWrite.block}</p>{confirmedWrite.hashes.map(hash => <p key={hash}><a className="hash" href={`${EXPLORER}/tx/${hash}`} target="_blank" rel="noreferrer">{hash} ↗</a></p>)}</div>}
-              {(notice || busy) && <div className="activity" role="status"><strong>{busy || 'Activity'}</strong><p>{notice || 'Complete the request in your wallet. The original action continues automatically.'}</p>{txHash && <a className="hash" href={`${EXPLORER}/tx/${txHash}`} target="_blank" rel="noreferrer">{txHash} ↗</a>}</div>}
               {nftClaim && equal(nftClaim.owner, account) && <section className="wallet-nft-import"><h3>Your free tickets</h3><p role="status">{nftClaim.message}</p><p className="quiet">{WALLET_IMPORT_NOTE}</p><span className="mono hash">NFT contract: {CONTRACTS.ticketNFT}</span><ul>{nftClaim.tokenIds.map((id, n) => <li key={id} className="mono">Token ID: {id} / <a href={`${EXPLORER}/tx/${nftClaim.hashes[n]}`} target="_blank" rel="noreferrer">Mint receipt</a></li>)}</ul><button className="secondary" disabled={disabled} onClick={() => void retryNFTImport()}>Add to wallet</button></section>}
               <div hidden={indexingBlock !== null}>
               <div className="workspace-stack">
@@ -598,5 +609,6 @@ export default function Market() {
         </>
       )}
     </main><footer className="site-footer"><span className="wordmark">RESHUFFLE ↔</span><p>Swap tickets without selling first.<br />Every condition you sign is checked on-chain.</p><span className="mono">ARC TESTNET / USDC</span></footer>
+    <ActivityNotification busy={busy} notice={notice} hash={txHash} confirmation={confirmedWrite} open={activityOpen} onOpen={() => setActivityOpen(true)} onClose={() => setActivityOpen(false)} />
   </div>;
 }
