@@ -1,804 +1,43 @@
-# RESHUFFLE
+# Reshuffle
 
-Swap tickets without selling first.
+**Swap tickets without selling them first.**
 
-*Every condition you sign is checked on-chain.*
+Reshuffle matches people who want different tickets and settles NFT ticket transfers and USDC payments together on Arc Testnet. Users sign the ticket requirements and payment limits they will accept. An exchange proceeds only when every participant's signed conditions are satisfied.
 
-The current demo is a single page at `/`: open the live event poster to use the workspace, then inspect receipts in place. [UI flow, contract mappings and validation](docs/UI_IMPLEMENTATION.md).
-
-**Target Arc bounty: Best DeFi/Onchain Finance Application.** [Current category and mainnet condition](#bounty-category-verification).
-
-**Target The Graph bounty: Best AI Tooling or AI Use Case with The Graph (From Scratch) · AI Use Case path.** Start Fresh requires the team's history declaration; [submission status and remaining confirmations](docs/SUBMISSION_STATUS.md).
-
-**A market for outcomes, not listings.**
-
-You never give up your tickets unless the whole replacement arrives.
-
-[Circle integration: products used, contract addresses, deployment transactions and design decisions](docs/CIRCLE_INTEGRATION.md).
-
-[Mainnet readiness: deployment tooling, network configuration, verification checklist and actual admin permissions](docs/MAINNET_READINESS.md). Local deployment rehearsal passed; official mainnet parameters and production release gates remain pending.
-
-**Public app:** [online2026.vercel.app](https://online2026.vercel.app/) · [Backend health](https://online2026.vercel.app/api/health).
-The first public check reached the frontend (200) but backend readiness returned 503.
-[Recorded result and production configuration follow-up](docs/SUBMISSION_STATUS.md).
-<!-- Video: TBD -->
-
----
-
-## Contents
-
-- [Judge access and hosting readiness](#judge-access-and-hosting-readiness)
-- [Ready-to-settle demo](#ready-to-settle-demo)
-- [The Graph: setup, live endpoint and agent](#the-graph)
-- [AI usage and planning artifacts](#ai-usage)
-- [The problem](#the-problem)
-- [The solution](#the-solution)
-- [High-level architecture](#high-level-architecture)
-- [Sponsor technology map](#sponsor-technology-map)
-- [Component flows](#component-flows)
-- [Technical reference](#technical-reference)
-- [Sequence diagrams](#sequence-diagrams)
-- [Sponsor tracks](#sponsor-tracks)
-- [App Kits evaluation](#app-kits-evaluation)
-- [Questions we expect](#questions-we-expect)
-- [Limitations](#limitations)
-- [Repository](#repository)
-
----
-
-## Judge access and hosting readiness
-
-**The backend now supports shared evidence, wallet-claim records and resumable signing jobs.**
-Hosted judge controls require an access code and an explicit list of editable demo intent
-hashes. The workspace's **Start here / judge the live demo** guide selects A+B, A+C, B+C or
-all three users from each prepared group and displays live availability and expiry.
-
-Judges need only the public URL to read live Graph data, run matching and inspect evidence.
-Give them the judging access code privately to change prepared budgets or revoke requests;
-keep all wallet keys and server credentials private. To settle or create their own request,
-they connect their own wallet on Arc Testnet and obtain test USDC from the
-[Circle faucet](https://faucet.circle.com/). No separate account registration is required.
-
-```sh
-npm run judge:setup
-npm run dev
-```
-
-Setup adds missing private access settings to ignored `.env.local` and preserves existing
-settings. Hosting still requires a running Next.js backend and persistent storage: use
-`STORAGE_BACKEND=redis` with `REDIS_REST_URL` / `REDIS_REST_TOKEN`, or explicitly configure
-one backend with a persistent volume. Ordinary production local-file storage fails closed.
-Persistent Upstash Redis is now connected to the existing Vercel project's production
-environment. Credential setup, state migration and full hosted acceptance remain pending.
-
-Before sharing the public URL, migrate existing local claims/evidence with
-`npm run storage:migrate`, publish fresh prepared groups with `npm run demo:catalog`, and
-run `npm run judge:check -- https://your-public-app.example`. The check asserts live pair
-rejections, three-user simulation, evidence retrieval and anonymous access denial without
-broadcasting a settlement. Repeat from another computer with the laptop off and after a
-host restart; those external checks require the hosted service to exist first.
-
-[Setup, secrets, migration, replenishment and recovery](docs/JUDGING_SETUP.md) ·
-[Environment template](.env.example) · [Backend routes](server/README.md).
-
-September 12 validation: production build and type check passed; 228 server/Graph tests and
-11 browser tests passed. Live checks verified 12 pair rejections and four three-user
-simulations, with all 16 evidence records unchanged after restarting the local production
-server. No settlement was broadcast. [Readiness evidence and verification limits](docs/checks/judging-readiness.json).
-Redis connectivity and two-process admission are now verified in the later follow-up below.
-Full hosted application acceptance and the external laptop-off check remain unverified.
-
-## Ready-to-settle demo
-
-**Sign-and-leave proof is confirmed: the participant browser and signing process exited before a separate solver settled six tickets at block 61378348.** [Real transaction](https://testnet.arcscan.app/tx/0xffd5f35dcac46cd52c6593d6c2a34a74b07ed4859c848b39ba09421e109d07c9) · [Evidence](deployments/offline-demo.json) · [Reproduction and proof boundaries](docs/DEMO_OFFLINE.md). Open `/demo/offline`. All three participant transaction nonces stayed unchanged; `settle(intents, legs)` required no new participant signatures. Browser closure is a local controlled-wallet observation, separately labeled from the chain evidence.
-
-**Act three is confirmed: an independent proposer submitted a non-adjacent allocation and the transaction reverted at block 61374887.** [Real failed transaction](https://testnet.arcscan.app/tx/0x087f78f9bdc54b5f9bb8f6939f2a4633ee1f554e8fc198cc75739b1b722279fe) · [Rejection and unchanged-state proof](deployments/act-three.json) · [Scene instructions](docs/DEMO_ACT_THREE.md). Open `/demo/act-three` to see decoded `SeatsNotAdjacent` and test valid/malicious allocations with live `eth_call`. The receipt confirms failure; replaying its exact calldata at the preceding block provides the named error bytes. The same signed intents pass with adjacent allocations.
-
-**Act two is confirmed: a pure buyer, two swappers and a pure seller settled an open chain in one transaction at block 61369696.** [Real transaction](https://testnet.arcscan.app/tx/0x6df107019a5bb2d47654a12cf594923adf5f3cfb6259ba3a49d870f79e9ce29e) · [Open-chain evidence, including both missing-endpoint searches](deployments/act-two.json) · [Scene instructions](docs/DEMO_ACT_TWO.md). Open `/demo/act-two` to compare the failed subset searches with the four-party settlement. It uses the same deployed contracts and solver as act one.
-
-**Act one is confirmed: three participants exchanged six tickets in one Arc Testnet settlement, at block 61301567.** [Real transaction](https://testnet.arcscan.app/tx/0xdc54e3971c04dc533b1ad3604cd29368cb67556d265fb093b60e146e5e6f3143) · [Six-transfer evidence](deployments/act-one.json) · [Scene and verification instructions](docs/DEMO_ACT_ONE.md). Open `/demo/act-one` in the running app to verify and display the completed exchange. The separate twelve-ticket `/demo` remains the interactive pending round.
-
-With the existing Arc deployment and local operator credentials configured:
-
-```bash
-npm run demo:prepare
-npm run dev
-```
-
-Open **[localhost:3000/demo](http://localhost:3000/demo)**. The first command prepares three signed, LIVE intents and twelve escrowed tickets, then verifies a three-participant candidate with the real solver and `eth_call`. It reuses an already-ready round without sending transactions. After settlement, run it again to prepare the next round using the same tickets and fresh nonces.
-
-The demo opens without a wallet and loads public market data once. A confirmed intent creation triggers one search of all live event intents through `/api/solve/pool`, after the commit is indexed. Further searches use **Matching → Check all intents**; **Refresh market** updates the displayed data. There is no periodic market refresh or matching retry. Each candidate contains two to four participants; matching has a 100-candidate / eight-second computation budget. An unfinished search without a candidate is labeled **Search paused**; a simulated match remains available when the candidate cap is reached. Pool sizes above the 256-intent service guard return an explicit error rather than being silently truncated. Checkboxes optionally select specific requests for testing. Submission requires a proposer wallet with Arc test USDC for gas; participants need not return or sign again. The seed command does **not** execute the settlement.
-
-For broader wishlist inventory, `npm run demo:inventory -- --broadcast` prepares 64 additional tickets across both sessions and all four sections, deposits them and commits 32 adjacent-pair swap offers. Reruns resume the same batch. Additional batches use a name, e.g. `npm run demo:inventory -- --broadcast batch-2`. A new name adds 64 tickets; an existing name resumes its saved batch. [Inventory setup and verification](docs/DEMO_INVENTORY.md) | [Public ticket IDs and transaction hashes](deployments/section-inventory.json).
-
-For seeded one-, two- and three-ticket requests with varied session/section conditions, see
-[demo replacement inventory and matching checks](docs/DEMO_REPLACEMENT_INVENTORY.md).
-
-For three distinct users whose selected requests require a circle, use the
-[one- and three-ticket circle groups](docs/CIRCLE_DEMO.md). Each group has verified pair
-rejections and a successful three-user simulation; settlement remains for the live demo.
-
-For asynchronous judging, host the Next.js frontend **and backend** and share its `/` URL.
-A shared on-chain round can be consumed once. Fresh circle groups can be published to the
-shared catalog without redeploying the frontend; changed event dates still require a new
-build and fresh signed intents. See [judging setup and recovery](docs/JUDGING_SETUP.md).
-The older dedicated `/demo` scene still uses its bundled manifest and
-[scene-specific setup](docs/DEMO_SETUP.md).
-
-## The Graph
-
-### Why an indexer is structurally required
-
-`IntentRegistry` stores commitment state and owner, plus nonce reservations; it does not store
-the full matching conditions in an enumerable pool. Those fields are emitted in
-`IntentCommitted`. This implementation relies on The Graph to reconstruct the live intent
-pool. The indexed data powers public ticket positions, standing intents, settlement history,
-backend discovery and the agent's diagnosis. RPC log reconstruction remains a development
-option; run the Graph demonstration with `READ_SOURCE=graph`.
-
-### What is indexed
-
-| Contract | Event | Entity effect |
-|---|---|---|
-| TicketNFT | `TicketMinted` | Ticket metadata and initial owner |
-| TicketNFT | `Transfer` | Current owner, escrow custody and depositor |
-| TicketNFT | `TicketRedeemedEvt` | Ticket redemption status |
-| IntentRegistry | `IntentCommitted` | All 12 signed fields, ordered offered IDs, LIVE state and commitment transaction |
-| IntentRegistry | `IntentRevoked` | REVOKED state and closing transaction |
-| Settlement | `Settled` | Settlement receipt; listed intents become SETTLED |
-
-The deployed schema has **Ticket, Intent and Settlement**. Escrow custody is derived from
-NFT transfers; there is no separate Escrow data source. `Settled` contains hashes and a
-participant count, so per-leg receipts and USDC net payments are decoded from transaction
-input and verified through RPC. They are not indexed in a `SettlementLeg` entity.
-[Schema](subgraph/schema.graphql) · [actual ABI audit](docs/graph-audit.txt).
-
-### Graph trust model
-
-1. **Hash binding:** the shared `hashIntent()` recomputes each indexed commitment and rejects
-   altered fields as `HASH_MISMATCH`. The registry key is the bare struct hash; the EIP-712
-   domain (`chainId` and `verifyingContract`) authenticates the signature at commit.
-2. **Freshness floor:** reads following a transaction use `block: { number_gte: receiptBlock }`.
-   The receipt raises a shared floor immediately, including for periodic refresh and the Agent
-   drawer. Timeouts retain **Indexing block #M** and offer retry; old responses cannot replace
-   newer state. The floor survives a same-tab reload. [Step 6-B / 8 behavior and tests](docs/GRAPH_6B_8.md).
-3. **Execution checks:** indexed discovery is followed by chain reads and `eth_call` simulation.
-   Settlement checks V0–V8 again in the real transaction. Simulation does not reserve state;
-   a later withdrawal can still make a proposal revert and cost its proposer gas.
-
-Read-only audit on September 12, 2026:
-
-```text
-comparing at block 61754713 (pinned to the indexed block)
-hash binding verified on 121 intents
-PASS — 1719 checks at block 61754713: 121 intents, 164 tickets
-```
-
-[Full output](docs/checks/step-11-parity.txt) · [what the checks cover](docs/graph-acceptance.md).
-This is evidence for that block, not a claim that the pool never changes.
-
-### Endpoint and query
-
-[Studio query endpoint: reshuffle v0.1.2](https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.2),
-network `arc-testnet`, chain ID `5042002`. Deployment:
-`QmcCXyzCr7YWjx1joA5mqNmnz4Byk5C34QMFS94FPnsVRL`.
-
-The browser uses the same-origin `/api/graph` proxy; any query key stays server-side. This
-small inspection query works in Studio with variables `{ "minBlock": 0 }`. After a write,
-replace `0` with its receipt block. It displays a sample, not the complete solver input.
-
-```graphql
-query InspectPool($minBlock: Int!) {
-  _meta(block: { number_gte: $minBlock }) {
-    block { number timestamp }
-    hasIndexingErrors
-  }
-  intents(first: 20, where: { state: LIVE }, block: { number_gte: $minBlock }) {
-    id owner eventId offered exactCount maxNetPay committedTx
-  }
-  tickets(first: 20, where: { escrowed: true }, block: { number_gte: $minBlock }) {
-    id sessionId sectionId row seat depositor
-  }
-}
-```
-
-The application's [PoolSnapshot query](shared/graph/queries.ts) reads one page and includes
-every signed field needed for hash binding. Use `getPoolSnapshot({ minBlock: 0n })` for the
-complete pool: it supplies independent cursors and pins later pages to the first block hash.
-The 20-row Studio query above is only an inspection sample.
-
-### Verified Graph solver and indexing measurement
-
-On 12 September 2026, a real ticket transfer confirmed at block **61762063** was observed in
-the index after **7.294 seconds** and five queries. This is one receipt-to-index observation
-including polling/network time, not a maximum delay. [Transaction and timing](docs/checks/graph-transfer-10.json).
-The public endpoint reports no indexing errors; the Studio screenshot's literal Synced label
-and full warning history remain unverified. [Step 4-A details](docs/graph-acceptance.md).
-
-`POST /api/solve/pool` accepts `{ "minBlock": "61762063" }`; `POST /api/solve` also takes
-two to four `intentHashes`. Both return `snapshotBlock`, `bounds`, `candidates` and `excluded`,
-alongside the chosen proposal and simulation evidence. Graph mode does not fall back to RPC
-logs for missing intents. An unmet floor returns 409; a hash unavailable in the searchable
-snapshot returns 422.
-
-```text
-pool source: subgraph @ block 61762525 — 74 searchable, 0 excluded
-pool source: subgraph @ block 61762563 — 2 of 2 requested hashes discovered
-```
-
-The live full-pool request found 100 candidates within the 4-participant / 100-candidate /
-2,000-ms bounds and simulated its chosen proposal successfully. Search took 146.233 ms;
-the whole HTTP request, including chain reads and simulation, took 19.101 seconds.
-[Full response](docs/checks/graph-solve-pool.json) · [Selected-intent response](docs/checks/graph-solve-selected.json)
-· [Server logs](docs/checks/graph-solver-server.txt) · [Reproduce Step 4-A / 6-C](docs/GRAPH_4A_6C.md).
-
-### Live Apply budget evidence (Steps 6-D / 8 / 10-B)
-
-On September 12, 2026, a real browser click changed the signed limit from **0 to −12 USDC**
-by revoking the old intent and committing a replacement with nonce **79**.
-
-| Transaction | Block | Receipt |
-|---|---:|---|
-| Revoke old intent | 61770769 | [0x0c477d9e…b3430](https://testnet.arcscan.app/tx/0x0c477d9ea7156fb418c17464f3fb49fd83b06d14bf38bafccbc9e570284b3430) |
-| Commit new intent | 61770778 | [0x3d9fd3d3…3000a](https://testnet.arcscan.app/tx/0x3d9fd3d353e564b9a48add42266480d059ad78ce820f9f07de81516b6e93000a) |
-
-New intent: `0xa8304a351bbbe67ffc6d767114e57eb6504f96339aec8166602de1f8ada30488`.
-The drawer followed this hash automatically, displayed **Indexing block #61770778** for
-**3.018 seconds**, and hid the old pool and answer until the refreshed snapshot passed its
-receipt floor. The answer changed from `SETTLEABLE` at **61770753** to
-`NOT_FOUND_WITHIN_BOUND` at **61771245**, with a working budget relaxation in its evidence.
-The latter answer was captured in a read-only retry after one HTTP 503; neither transaction
-was repeated. Both original clips run at 1× speed.
-
-[Receipts, screenshots and recording details](docs/GRAPH_APPLY_BUDGET.md) ·
-[Assertions](docs/checks/graph-budget/summary.json) ·
-[Transaction/indexing clip](docs/checks/graph-budget/apply-budget.webm) ·
-[Answer/evidence retry clip](docs/checks/graph-budget/read-only-retry.webm).
-
-### Run locally
-
-Install Node.js 22 or newer, then install dependencies from the repository root:
-
-```sh
-npm ci
-npm --prefix solver ci
-npm run setup:env
-```
-
-`setup:env` copies the tracked [.env.example](.env.example) to `.env.local` only when the
-destination does not exist. Existing settings are preserved. The template contains public
-testnet settings and empty credential fields; it is not loaded by the application itself.
-Next loads `.env.local` ahead of `.env`; CLI writers may load `.env` and `.env.seed`
-explicitly, so keep shared selections consistent. Teammates can read the market without
-receiving your private files; signing features need separately configured credentials.
-
-For public Graph reads and no-model diagnosis, these settings suffice; no wallet key is needed:
-
-```dotenv
-DEPLOYMENT=arc-testnet
-NEXT_PUBLIC_DEPLOYMENT=arc-testnet
-ARC_RPC=https://rpc.testnet.arc.io
-READ_SOURCE=graph
-SUBGRAPH_URL=https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.2
-```
-
-```sh
-npm run dev
-```
-
-Open `http://localhost:3000/`, open an event poster, then **Matching → Check all intents** and choose
-**Why no match?** on an intent. The workspace is readable without connecting a wallet.
-Signing or settlement connects when needed. Matching runs once after intent creation and
-on demand afterward; **Propose and settle** is a separate wallet transaction. The agent does not
-automatically execute a swap.
-
-The evidence can also be inspected without an Anthropic key or wallet:
-
-```text
-GET http://localhost:3000/api/agent/diagnose/<committed-intent-hash>
-GET http://localhost:3000/api/agent/diagnose/<committed-intent-hash>?minBlock=<receipt-block>
-```
-
-Use a full hash from the live pool. The endpoint returns named status, evidence, bounds,
-runtime and a deterministic sentence. `/api/agent/ask` also falls back to deterministic
-diagnosis when no model key is set. Model tool selection requires the key; final wording is
-selected from complete passages rendered from tool evidence.
-Each question selects one indexed block N. USDC balances and allowances are read with
-`blockNumber: N`; closed-intent lookup uses exact `block: { number: N }`. Cached capacity
-must belong to the same N across the baseline and every what-if. Unavailable historical
-state returns an error instead of substituting newer data. [Step 7-A / D implementation
-and live checks](docs/GRAPH_7A_7D.md).
-The built app returned HTTP 200 with `SETTLEABLE` at block 61756153 in the recorded
-[live diagnosis check](docs/checks/step-11-diagnose.json), without invoking a model or signing.
-For a production server use `npm run build` and `npm start`; configure shared Redis REST
-storage or an explicitly enabled persistent volume. [Hosting and data migration](docs/JUDGING_SETUP.md).
-
-### Environment variables
-
-| Variable | Consumer | Actual behavior |
-|---|---|---|
-| `DEPLOYMENT` | Deployment/subgraph CLI scripts | Selects `deployments/<network>.json`; default `arc-testnet` |
-| `NEXT_PUBLIC_DEPLOYMENT` | Next frontend and backend chain configuration | Selects generated public deployment record at build time; keep equal to `DEPLOYMENT` |
-| `SUBGRAPH_URL` | Backend and shared Graph client | Optional override of the selected deployment's recorded query endpoint; Arc Testnet defaults to the versioned Studio endpoint above |
-| `SUBGRAPH_API_KEY` | Backend | Optional query credential; never a `NEXT_PUBLIC_` value |
-| `SUBGRAPH_DEPLOY_KEY` | Deployment CLI | Deploying versions to Studio; not needed to run the app or query the existing subgraph |
-| `READ_SOURCE` | Backend market and solver discovery | `graph` or `rpc`; defaults to `graph` when an override or recorded subgraph URL exists. Local Anvil without a subgraph uses `rpc` |
-| `ARC_RPC` | Backend and CLI | RPC used for chain verification, capacity and simulation; defaults to selected deployment RPC in the backend |
-| `ARC_CHAIN_ID` | Backend consistency check / CLI | If set, must agree with the deployment; Arc Testnet is `5042002` |
-| `NEXT_PUBLIC_RPC_URL` | Browser chain configuration | Public RPC override; browser public reads use the same-origin transport |
-| `ANTHROPIC_API_KEY` | Agent narration only | Optional; diagnose needs no model key, ask uses a template if absent |
-| `AGENT_MODEL` | Agent narration | Defaults to `claude-sonnet-5`; verify access for the hosted account |
-| `AGENT_ASK_TIMEOUT_MS` | Agent request control | Overall ask deadline; default/max `60000`, positive integer overrides may shorten it |
-| `AGENT_DIAGNOSE_TIMEOUT_MS` | Agent request control | Overall diagnosis deadline; default/max `30000`, positive integer overrides may shorten it |
-| `AGENT_TRUST_PROXY` | Legacy Agent proxy option | `true` selects a controlled proxy in non-Vercel `auto` mode; Vercel automatically uses its own header |
-| `AGENT_RATE_LIMIT_STORE` | Agent admission | `auto` selects Redis in production or when its URL is set; memory is development-only. Production requires Redis even with persistent file storage |
-| `AGENT_IP_SOURCE` | Agent client identity | `auto` uses Vercel's platform IP. Other production hosts require `trusted-proxy` and an ingress that overwrites `X-Forwarded-For` with one verified IP |
-| `BUDGET_CAP_USDC` | Deterministic diagnosis | BUDGET relaxation ceiling, default `100`; USDC has 6 settlement decimals |
-| `JUDGE_CONTROLS_ENABLED` | Testnet judge routes | `true` enables hosted budget/revoke controls; enabled by default in development. Requires controlled participant keys |
-| `JUDGE_ACCESS_CODE` | Judge session route | Private access code of at least 24 characters; setup generates one. Sessions expire after one hour |
-| `JUDGE_ALLOWED_INTENT_HASHES` | Judge authorization | Comma-separated exact editable intent hashes; recorded budget replacements inherit their root's permission |
-| `STORAGE_BACKEND` | Evidence, claims, sessions, signing jobs and demo catalog | `redis` for hosted instances; `file` for development or an explicit persistent-volume backend |
-| `REDIS_REST_URL`, `REDIS_REST_TOKEN` | Server storage and Agent admission | HTTPS Redis REST endpoint and private bearer token; required for production Agent APIs, including persistent-file hosts; never exposed to the browser |
-| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`, or `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Provider-injected alternatives | Complete pairs recognized by storage, Agent and deployment preflight; explicit `REDIS_REST_*` takes precedence. Never mix credentials from different pairs |
-| `STORAGE_NAMESPACE` | Server storage | Stable namespace across releases; default `reshuffle-arc-testnet` |
-| `STORAGE_DIRECTORY`, `ALLOW_PERSISTENT_FILE_STORAGE` | File backend only | Explicit persistent directory and `true` opt-in for a production Node host; file storage is rejected on Vercel |
-| `DEMO_TICKETS_ENABLED` | Testnet issuer route | Enables hosted free-ticket claims; enabled by default in development |
-| `DEMO_ISSUER_PRIVATE_KEY`, `PRIVATE_KEY`, `SEED_*_PRIVATE_KEY` | Optional issuer/judge/local transaction tooling | Signing credentials, never public. Seed keys are read from `.env.seed`; none is required for ordinary public reads or diagnosis |
-| `USDC_ADDRESS`, `DEPLOYER_ADDRESS` | Legacy Arc transaction CLI | USDC must agree with the deployment; deployer address must match `PRIVATE_KEY`. They do not replace the Next app's contract manifest |
-| `NEXT_PUBLIC_SESSION_0_START`, `NEXT_PUBLIC_SESSION_1_START` | Browser event schedule | Demo sessions from the template; deadlines are eight hours before the selected session |
-| `ARC_MAINNET_RPC`, `ARC_MAINNET_PRIVATE_KEY` | Separate mainnet CLI only | Empty for testnet; configure only after the mainnet release gates are reviewed |
-
-The plan's `GRAPH_API_KEY`, `ARC_RPC_URL` and `NEXT_PUBLIC_READ_SOURCE` are examples; this
-implementation uses **`SUBGRAPH_API_KEY`, `ARC_RPC` and `READ_SOURCE`**. Addresses and deployment
-blocks come from the deployment records, not hand-edited environment variables. Regenerate
-public records with `npm run deployment:public` and rebuild when changing networks. Existing
-testnet signatures do not authorize intents on a different chain or registry.
-
-### Agent
-
-One indexed pool snapshot → deterministic supply/demand checks and solver reruns → optional
-Claude tool selection and evidence-bound answers. Tools are `diagnose_intent`, `what_if` and `pool_overview`.
-The guard requires `At Arc Testnet block #N, ` at the start and matches complete evidence
-passages, binding amounts to their direction and context. Model call IDs and token usage
-are returned for inspection. [Step 7-G / H implementation and acceptance](docs/GRAPH_7G_7H.md).
-Both Agent routes now enforce request limits: ask 12/minute with a 60-second overall
-deadline, diagnose 30/minute with a 30-second overall deadline. Production quotas use atomic
-Redis sliding windows per IP shared across instances and restarts. Vercel automatically uses
-its trusted IP header; other hosts require a controlled proxy. Development can use memory.
-Missing identity, Redis configuration or availability fails with `503 AgentRateLimitUnavailable`. Rejections
-return `429` with `Retry-After`; deadlines abort downstream I/O and return
-`504 AgentRequestTimeout`, including time spent on Redis admission.
-[Step 7-I behavior, deployment scope and tests](docs/GRAPH_7I.md).
-The agent module has no signing capability. Enabled testnet judge controls are a separate
-server feature that can sign for controlled participants.
-
-Diagnosis spends its search bound on candidates containing the selected intent. It tries
-single-condition changes to payment limit, adjacency, cohesion and accepted sections/sessions;
-it does not change event or exact ticket count. Hypotheticals are marked `submittable: false`
-and omit calldata. Acting on a change requires a newly signed commitment. The drawer's
-Evidence panel exposes the conditions tried and commitment transaction links.
-
-Grouping evidence identifies how many acceptable tickets were checked; a capped search is
-reported as incomplete. What-if inputs are validated at runtime. Candidate commitment links
-are bound to individual intent hashes, preserving separate commits from the same wallet.
-[Supply, input-validation and commitment-evidence fixes](docs/GRAPH_AGENT_INTEGRITY.md).
-
-The drawer validates each tool result against the selected intent and answer block. Its
-Evidence panel independently displays all what-if outcomes and pool statistics, with scoped
-input/output JSON; a pool-only answer never inherits an earlier diagnosis.
-[Step 8 evidence binding and display](docs/GRAPH_8_EVIDENCE.md).
-
-Each solver run is bounded by **4 participants, 100 candidates and a 2,000 ms timeout**.
-The real settlement service accepts at most four offered/received tickets per intent and
-256 searchable live intents. Ranking minimizes gross cash moved among candidates found,
-then participant count, then the ordered intent-hash set. These are configured limits,
-not measured performance claims. [Recording guide](docs/DEMO_GRAPH.md).
-
-### Graph limitations
-
-- No result means none found within the search bound. Single-condition trials do not
-  establish whether a combination of changes would work.
-- Diagnosis fixes USDC and closed-intent reads to its pool block. Historical availability
-  depends on RPC/Graph retention: a pruned Graph block returns `SubgraphHistoryUnavailable`
-  (503), and a failed historical USDC read returns `SnapshotCapacityReadError` (503).
-  Retry starts a new diagnosis; missing history is never replaced with `latest`.
-- UI, solver and Agent discovery paginate by entity ID, pinning every later page to the
-  first block hash. Reads stop with a named error after 100 page requests or 20 seconds,
-  never with a partial pool. Execution search retains its separate 256-intent service limit.
-  [Pagination behavior, boundary tests and live page traces](docs/GRAPH_PAGINATION.md).
-- The narration guard accepts only complete supported passages derived from tool outputs;
-  it does not validate unrestricted prose. Correct paraphrases fall back to deterministic
-  diagnosis. Guard acceptance does not prove tool selection is relevant or remove the
-  underlying indexer/solver bounds.
-- Without a model key, ask returns a baseline diagnosis rather than interpreting arbitrary
-  what-if questions. Live Anthropic acceptance **passed four scenarios with eight real model
-  calls**, all without guard fallback. The [record](docs/checks/graph-agent-model.json) includes
-  provider receipts and pinned evidence. The hosted demo still needs separate verification.
-- Adjacency is enforceable for issuer-native tickets with consecutive seat numbering;
-  external ticket systems are outside this demo.
-
-### Verification
-
-```sh
-npm test
-npm run docs:check
-npm --prefix solver test
-npm run deployment:check
-npm run subgraph:check
-npm run subgraph:parity
-npx tsc --noEmit
-```
-
-The Step 7-A / D follow-up passed **63 Graph/agent tests** and the production build, with
-[real Graph/RPC block traces](docs/checks/graph-diagnosis-block.json).
-The Step 7-G / H follow-up passed **95 Graph/agent tests** and the production build.
-The Step 7-I follow-up added **22 request-control tests**; its **128-test Graph/agent
-suite** and production build passed. [Captured output](docs/checks/graph-agent-requests-tests.txt).
-The shared-limit follow-up adds **15 regression tests**, with **277 server/Graph checks**,
-TypeScript, production build and changed-file ESLint passing. The later real Redis run
-passed shared quotas across two independent processes, separate IPs, spoof resistance,
-restart persistence and actual window recovery. Public two-IP acceptance remains separate.
-[Real Redis acceptance](docs/checks/graph-agent-rate-redis.json).
-[Configuration and assertion commands](docs/GRAPH_7I.md#deployment-acceptance).
-The later supply/input/commitment-evidence follow-up passes **186 Graph/agent checks**,
-**3 browser tests**, and the production build.
-[Regression details and output](docs/GRAPH_AGENT_INTEGRITY.md#verification).
-The Step 8 drawer follow-up passes **215 Graph/agent checks** (29 for drawer evidence)
-and **9 browser tests**. [Evidence scope and captured results](docs/GRAPH_8_EVIDENCE.md#verification).
-The pagination follow-up passes **258 server/Graph checks** (30 pagination cases),
-**12 browser tests** and the production build. Live Studio queries also passed with 50 rows
-per page. [Boundary tests and actual page traces](docs/GRAPH_PAGINATION.md#verification).
-`npm run agent:check:model -- --preflight` checks local key presence without network access;
-`npm run agent:check:model` runs the four live provider cases after configuration. Mocked
-SDK tests and no-model responses do not count as live provider acceptance.
-`npm run docs:check` checks the tracked environment template, first/repeated teammate setup,
-documentation links and the recorded model/budget/block evidence without provider calls.
-The [Step 11 follow-up](docs/STEP_11_REVIEW.md#current-status-after-the-follow-ups) also passed
-277 server/Graph regression checks.
-The real-provider follow-up passed diagnosis, a 30 USDC hypothetical, pool overview and
-conflicting instructions at blocks **61798055–61798133**, with **275 server/Graph regression
-checks** also passing. [Results and transport regression fix](docs/GRAPH_7G_7H.md#real-provider-follow-up).
-The earlier Step 11 run passed 32 Solidity tests, 32 Graph/agent checks, 29 solver tests, 11 deployment checks,
-36 manifest checks and 1,719 live parity checks. [Review scope and remaining gaps](docs/STEP_11_REVIEW.md).
-To rebuild the subgraph, install its dependencies with `npm --prefix subgraph ci`, then run
-`npm run subgraph:codegen` and `npm --prefix subgraph run build`. Querying the existing deployment
-does not require redeploying it.
-
-## AI usage
-
-AI coding assistance was used during development under user-provided product and UI
-instructions. The confirmed assisted work in this conversation includes
-`component/market/Market.tsx`, `lib/section-supply.ts`,
-`scripts/test-section-supply.mjs`, `scripts/seed-inventory.mjs`, `server/market.ts` and
-`docs/DEMO_INVENTORY.md` (ticket flow, availability and inventory tooling).
-For this step, Codex assisted with `README.md`, `server/README.md`,
-`docs/THE_GRAPH_SUBMISSION.md`, `docs/PLANNING_ARTIFACTS.md`, `docs/STEP_11_REVIEW.md`,
-the architecture export labels and verification records. Copied planning files preserve
-their supplied content; copying does not establish who originally authored them.
-
-The user supplied the requirements, corrections and Graph integration plan. This disclosure
-does not assign authorship to every earlier file: the team should complete any additional
-tool/file/asset attribution before submission. The application itself optionally uses Claude
-to narrate deterministic evidence; that runtime use is distinct from coding assistance.
-[Specifications, instructions and planning artifacts](docs/PLANNING_ARTIFACTS.md).
-The [provenance inventory](docs/PROVENANCE.md) identifies confirmed assistance, reused
-dependencies, user-supplied artwork and the outstanding author/source confirmations.
-
----
+[Public app](https://online2026.vercel.app/) · [Backend health](https://online2026.vercel.app/api/health) · [Demo guide](docs/JUDGING_SETUP.md)
 
 ## The problem
 
-### The user's version
+Changing tickets can mean selling the ones you have before securing replacements, or buying a second set first. A direct swap also fails when nobody wants exactly what you hold.
 
-> I bought Sunday tickets as a backup because I didn't know if I'd get the date I wanted. Then I got Tuesday. Now I'm stuck with three Sunday tickets, resale isn't open, and social media is full of scammers.
+For example, A holds Friday tickets and wants Saturday, B holds Saturday and wants Sunday, and C holds Sunday and wants Friday. No pair can swap, but all three can exchange together.
 
-That is a real 2026 post, and it is not rare. People buy backup tickets, get better ones, and are left holding the first set. Others need four seats together and end up buying extra tickets and reselling them just so a family can sit in one row.
+Reshuffle supports these multi-party exchanges, including requirements such as an exact ticket count, adjacent seats and a maximum extra payment. Buyers, sellers and unsold issuer inventory can also participate, so a closed cycle is not required.
 
-The intent already exists — it is written in forum comments:
+## How it works
 
-> *"HAVE: 4 Toronto, Sec 105. WANT: 4 Vancouver, together. Will pay difference."*
+1. **Set your requirements.** Choose the tickets to offer, acceptable sessions and sections, exact quantity, seating requirements, payment limit and expiry.
+2. **Deposit and authorize.** Deposit offered NFT tickets into escrow, approve USDC spending when needed, then sign and commit an EIP-712 intent.
+3. **Find a match.** The backend reads The Graph's indexed pool, runs the TypeScript solver, checks chain state and simulates a proposed settlement.
+4. **Settle together.** A proposer wallet submits one transaction. The contracts validate every condition and transfer tickets and net USDC amounts together, or revert the entire exchange.
 
-Users are already expressing conditional replacement in natural language. Mainstream resale workflows do not natively execute it — the condition stays a forum comment rather than something a system can act on.
+Participants do not need to return or sign the matched proposal. Their intents, escrowed tickets and payment capacity must still be valid at execution. Tickets can be withdrawn and intents revoked before settlement.
 
-### Why current systems can't help
+In the current UI, matching runs once after a new intent is committed and indexed, and on demand through **Matching → Check all intents**. Settlement is a separate wallet transaction; there is no continuous background matching or automatic execution.
 
-```mermaid
-flowchart LR
-    A["You hold<br/>Friday x2"] --> B["SELL<br/>on resale"]
-    B --> C{"Risk window<br/>is yours"}
-    C --> D["BUY<br/>Saturday x2"]
-    C -.->|"replacement gone"| E["Left with<br/>nothing"]
-    D -.->|"bought first"| F["Carrying<br/>two sets"]
+## Architecture
 
-    classDef bad fill:#FCEBEB,stroke:#A32D2D,stroke-width:1px,color:#501313
-    classDef decide fill:#FAEEDA,stroke:#BA7517,stroke-width:1px,color:#412402
-    class E,F bad
-    class C decide
-```
+![Reshuffle architecture](docs/diagrams/architecture.svg)
 
-Official exchange usually requires the same event, venue and date, with the replacement priced at or above the original. Changing dates often falls outside standard exchange eligibility, pushing the user back toward resale or manual support — a sale followed by a purchase.
-
-### And sometimes no bilateral trade exists
-
-```mermaid
-flowchart LR
-    A["A<br/>holds Friday<br/>wants Saturday"]
-    B["B<br/>holds Saturday<br/>wants Sunday"]
-    C["C<br/>holds Sunday<br/>wants Friday"]
-
-    A -. "✗ B doesn't want Friday" .-> B
-    B -. "✗ C doesn't want Saturday" .-> C
-    C -. "✗ A doesn't want Sunday" .-> A
-```
-
-No two people can trade. All three together can. Every pairwise negotiation fails, and the trade that works involves everyone at once.
-
-### The four pains, separated
-
-| # | Pain | Type |
-|---|---|---|
-| 1 | Replacement exposure — I want to *change*, not to speculate | user pain |
-| 2 | No direct counterparty — nobody wants exactly what I hold | matching problem |
-| 3 | Bundle constraints — not any two tickets, but a complete outcome | user pain |
-| 4 | Post-match coordination — a found solution stalls until every participant returns and approves *that exact proposal* | coordination problem |
-
-Most systems address some of 1–3. Number 4 is what makes the others usable in reality.
-
----
-
-## The solution
-
-Users sign the **outcome** they will accept, not an order.
-
-```mermaid
-flowchart TD
-    subgraph INTENT["Signed once, then you leave"]
-        direction TB
-        G["GIVE UP<br/>Friday A12, A13"]
-        R["ONLY IF I RECEIVE<br/>exactly 2 Saturday tickets<br/>same section, adjacent seats"]
-        P["AND PAY AT MOST<br/>30 USDC net"]
-        D["VALID UNTIL<br/>Friday 18:00"]
-        G --> R --> P --> D
-    end
-```
-
-A solver later composes many such intents — including buyers, sellers and unsold issuer inventory — into a reallocation where everyone's signed conditions hold at once. The contract verifies each condition independently and settles atomically.
-
-**Ordinary marketplace:** *How much do you want for your ticket?*
-**RESHUFFLE:** *What would have to be true for you to give it up?*
-
-### The property that drives the architecture
-
-```mermaid
-flowchart TD
-    A["Asynchronous execution"] --> B["User is not present<br/>at settlement"]
-    B --> C["No final approval step"]
-    C --> D["The solver is untrusted"]
-    D --> E["The outcome predicate must be<br/>independently enforceable on-chain"]
-
-    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
-    class E ok
-```
-
-This is why the contract checks session, section, count, cohesion, adjacency, budget, expiry and redemption status. Not to be thorough — because nobody is there to click *confirm*.
-
----
-
-## High-level architecture
-
-![RESHUFFLE architecture: Next.js frontend, Node.js solver and evidence backend, and four Arc Testnet contracts with USDC settlement and native gas.](docs/diagrams/architecture.svg)
-
-**Presentation downloads:** [4K PNG](docs/diagrams/architecture.png) · [Scalable SVG](docs/diagrams/architecture.svg) · [Export instructions](docs/diagrams/README.md).
-
-The backend discovers the live pool through The Graph, rechecks chain state, searches, simulates and verifies receipts; the submitting wallet broadcasts the settlement transaction. The read-only agent explains indexed conditions using solver evidence. RPC discovery remains available for local development. The confirmed USDC distribution groups payments by wallet and excludes gas from its zero-sum total. Testnet issuer and judge controls have separate server signing permissions; see the [backend boundaries](server/README.md).
-
-### Trust model
-
-| Layer | Responsibility | Trusted? |
-|---|---|---|
-| Frontend | Collect conditions, obtain one signature | No |
-| Backend | Read state, simulate, persist evidence and verify receipts | No — onchain execution revalidates the proposal |
-| Solver | Find a satisfying combination | **No** — the contract re-checks everything |
-| Arc RPC / planned subgraph | Discovery and state reads | **No** — chain state at execution is authoritative |
-| Settlement | Verify every signed condition | Yes — this is the trust anchor |
-
-### The issuer is a participant, not an operator
-
-Unsold inventory joins the same graph. This is what stops a reshuffle from requiring a closed cycle.
-
-```mermaid
-flowchart LR
-    V["Venue<br/>unsold Saturday"] -->|"Saturday"| A["A"]
-    A -->|"Friday, directly"| C["C"]
-    C -->|"Sunday"| B["B"]
-    B -->|"per venue's predicate"| V
-
-    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
-    class V ok
-```
-
-One issuer ticket does not complete a single upgrade — it makes a chain possible. The venue **injects an asset** into the graph, which frees A's Friday to go **directly to C** in the same settlement.
-
-Each ticket is received exactly once. A's Friday does not route through the venue and onward — V4 would reject that as a double receive.
-
----
-
-## Sponsor technology map
-
-```mermaid
-flowchart TB
-    subgraph ARC["ARC"]
-        direction TB
-        A1["Best DeFi / Onchain Finance<br/>conditional delivery plus<br/>multi-party net settlement"]
-        A2["Arc Testnet deployment<br/>escrow and stablecoin settlement<br/>with real transaction evidence"]
-        A3["USDC as native gas<br/>no separate gas token<br/>for users"]
-    end
-
-    subgraph GRAPH["THE GRAPH"]
-        direction TB
-        G1["AI Use Case, From Scratch<br/>live indexed data drives<br/>solver and agent decisions"]
-        G2["Intent pool discovery<br/>mappings cannot be<br/>enumerated on-chain"]
-        G3["Persistent intents<br/>new inventory makes an old<br/>intent satisfiable"]
-    end
-```
-
----
-
-## Component flows
-
-### 1. Intent creation
-
-```mermaid
-flowchart TD
-    A["User describes what they want<br/>in natural language"] --> B["Agent parses into<br/>structured conditions"]
-    B --> C{"User reviews<br/>the conditions"}
-    C -->|"edit"| B
-    C -->|"confirm"| D["Deposit tickets into escrow"]
-    D --> E["Sign EIP-712 intent<br/>no signature is needed when a<br/>matching settlement is later found"]
-    E --> F["Commit on-chain<br/>emit IntentCommitted"]
-    F --> G["User closes the tab"]
-
-    D -.->|"withdrawable at any time"| D
-
-    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
-    classDef decide fill:#FAEEDA,stroke:#BA7517,stroke-width:1px,color:#412402
-    class E ok
-    class C decide
-```
-
-### 2. Discovery and solving
-
-```mermaid
-flowchart TD
-    A["Fetch live intents<br/>from subgraph"] --> B["Verify freshness<br/>against chain state"]
-    B --> C["Search for valid reshuffles<br/>bounded by participants,<br/>candidates and timeout"]
-    C --> D{"Any found?"}
-    D -->|"no"| E["Report honestly:<br/>no solution found<br/>within the search bound"]
-    D -->|"yes"| F["Rank by published rule:<br/>min gross cash moved,<br/>ties to fewer participants"]
-    F --> G["eth_call simulate"]
-    G --> H{"Simulation<br/>passes?"}
-    H -->|"no"| C
-    H -->|"yes"| I["Submit propose plus execute<br/>in one transaction"]
-
-    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
-    class I ok
-```
-
-Simulation is immediately followed by submission, but `eth_call` and the real transaction are separate calls and do not lock state. A participant can withdraw or revoke in between. Settlement revalidates everything at execution, so any intervening change causes a clean revert with nothing half-moved; the proposer loses gas, which is why simulation runs first.
-
-### 3. Settlement validation
-
-The core of the project. Every guarantee is enforced here or not at all.
-
-```mermaid
-flowchart TD
-    S["settle intents, legs"] --> V0{"V0 shape: one leg per intent,<br/>no duplicate hashes,<br/>each intent hashes to its key?"}
-    V0 -->|"no"| E0["MalformedSettlement"]
-    V0 -->|"yes"| V1{"V1 state == LIVE,<br/>unexpired?<br/>no signature here"}
-    V1 -->|"no"| E1["IntentNotLive<br/>IntentExpired"]
-    V1 -->|"yes"| V2{"V2 every offered ticket<br/>escrowed by its owner<br/>AND eventId matches?"}
-    V2 -->|"no"| E2["TicketNotEscrowed<br/>WrongEvent"]
-    V2 -->|"yes"| V3{"V3 no ticket<br/>already redeemed?"}
-    V3 -->|"no"| E3["TicketRedeemed"]
-    V3 -->|"yes"| V4{"V4 exact bijection<br/>offered to received?"}
-    V4 -->|"no"| E4["ConservationViolated"]
-    V4 -->|"yes"| V5{"V5 each bundle satisfies<br/>its own predicate?"}
-    V5 -->|"no"| E5["SessionNotAccepted<br/>SectionNotAccepted<br/>CountMismatch<br/>NotSameSection<br/>SeatsNotAdjacent"]
-    V5 -->|"yes"| V6{"V6 each net payment<br/>within signed budget?"}
-    V6 -->|"no"| E6["BudgetExceeded"]
-    V6 -->|"yes"| V7{"V7 sum of<br/>netPayment is zero?"}
-    V7 -->|"no"| E7["PaymentImbalance"]
-    V7 -->|"yes"| V8{"V8 every NET DEBTOR:<br/>ownerNet covered by<br/>balance and allowance?"}
-    V8 -->|"no"| E8["InsufficientPaymentCapacity"]
-    V8 -->|"yes"| X["1 mark intents SETTLED<br/>2 settle USDC net<br/>3 release tickets<br/>4 emit — effects before interactions"]
-
-    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
-    classDef bad fill:#FCEBEB,stroke:#A32D2D,stroke-width:1px,color:#501313
-    class X ok
-    class E0,E1,E2,E3,E4,E5,E6,E7,E8 bad
-```
-
-Checks first, effects second, interactions last. Nothing transfers until every check passes, and intents are marked `SETTLED` **before** any transfer — `safeTransferFrom` calls into the recipient, so moving a ticket while its intent is still `LIVE` would open a reentrant window against stale state. A revert in any transfer rolls the marking back with it.
-
-### 4. Redemption
-
-```mermaid
-flowchart TD
-    A["Holder opens ticket"] --> B{"Caller is<br/>current owner?"}
-    B -->|"no"| C["Rejected<br/>previous holder fails here"]
-    B -->|"yes"| D{"Already<br/>redeemed?"}
-    D -->|"yes"| E["Rejected"]
-    D -->|"no"| F["redeem sets status<br/>permanently"]
-    F --> G["Ticket can never re-enter<br/>escrow or a reshuffle"]
-
-    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
-    classDef bad fill:#FCEBEB,stroke:#A32D2D,stroke-width:1px,color:#501313
-    classDef decide fill:#FAEEDA,stroke:#BA7517,stroke-width:1px,color:#412402
-    class G ok
-    class C,E bad
-    class B decide
-```
-
-A ticket sitting in escrow must be withdrawn first — revoke the intent, withdraw, then redeem.
-
----
-
-## Technical reference
-
-### Data model
-
-```mermaid
-classDiagram
-    class TicketMeta {
-        uint32 eventId
-        uint16 sessionId
-        uint16 sectionId
-        uint16 row
-        uint16 seat
-        uint8 status
-        note "one storage slot, one SLOAD per read"
-    }
-
-    class Intent {
-        address owner
-        uint256[] offered
-        uint32 eventId
-        uint256 sessionMask
-        uint256 sectionMask
-        uint8 exactCount
-        bool mustShareSession
-        bool mustShareSection
-        bool mustBeAdjacent
-        int256 maxNetPay
-        uint64 deadline
-        uint256 nonce
-    }
-
-    class Leg {
-        bytes32 intentHash
-        uint256[] receives
-        int256 netPayment
-        note "no participant field — recipient is intent.owner"
-    }
-
-    class IntentState {
-        uint8 NONE
-        uint8 LIVE
-        uint8 REVOKED
-        uint8 SETTLED
-    }
-
-    TicketMeta "n" --o "1" Intent : offered by tokenId
-    Intent "1" --> "1" Leg : matched by intentHash
-    TicketMeta "n" --o "1" Leg : received by tokenId
-    Intent "1" --> "1" IntentState : keyed by hash
-```
-
-`exactCount` is exact, never a minimum — a user asking for two seats must not receive three.
-
-`mustShareSection` is not implied by `sectionMask`. *Floor or Tier 1 are both acceptable* and *both my tickets must be in the same one* are different statements; two mask bits set does not imply cohesion.
-
-`maxNetPay` is signed: positive is a debit ceiling, negative is a credit floor. One field covers both payers and receivers.
+| Component | Responsibility |
+|---|---|
+| **Next.js frontend** | Ticket workspace, requirement selection, wallet interaction, matches and receipts |
+| **Next.js / Node.js backend** | Indexed market reads, solver requests, chain verification, simulation and receipt verification |
+| **TypeScript solver** | Bounded ticket reallocation search, payment feasibility and candidate ranking |
+| **The Graph** | Ticket inventory, committed intents and settlement history indexed from contract events |
+| **Arc Testnet contracts** | NFT ticket custody, signed commitments, condition checks and USDC settlement |
+| **Optional Claude assistant** | Evidence-based diagnosis and what-if explanations; no signing capability |
+| **Redis** | Shared hosted evidence, claims, sessions, signing jobs, demo catalog and agent rate limits |
 
 ### Contract call graph
 
@@ -861,238 +100,120 @@ flowchart TB
     class S2 decide
 ```
 
-`TicketNFT` keeps standard ERC-721 transfer semantics. Restricting `transferFrom` to
-`Settlement` would break `Escrow.deposit()`, whose caller is the escrow, not the settlement
-contract.
+### Arc Testnet
 
-The restriction lives one level up: **`Escrow.releaseBatch` is `onlySettlement`**. So the
-precise claim is *Settlement is the only actor that can instruct Escrow to release an escrowed
-ticket* — not *Settlement is the only actor that can transfer a TicketNFT*. Depositors can
-always withdraw their own tickets; what they cannot do is move an escrowed ticket to someone
-else without passing validation.
+Tickets are issuer-native ERC-721 NFTs. Four contracts handle the exchange:
 
-### Ticket lifecycle
+| Contract | Role |
+|---|---|
+| `TicketNFT` | Ticket metadata, ownership and redemption |
+| `Escrow` | Holds deposited tickets; permits depositor withdrawals and settlement-authorized releases |
+| `IntentRegistry` | Verifies EIP-712 signatures at commit and tracks intent state |
+| `Settlement` | Validates proposals and executes ticket delivery and USDC net payments |
 
-```mermaid
-stateDiagram-v2
-    [*] --> Minted : mint by registered issuer
-    Minted --> Escrowed : deposit
-    Escrowed --> Minted : withdraw, unconditional
-    Escrowed --> Reallocated : settle, V1 to V8 all pass
-    Reallocated --> Escrowed : new owner deposits again
-    Minted --> Redeemed : redeem by current owner
-    Redeemed --> [*] : terminal, can never re-enter escrow
+`settle(Intent[], Leg[])` requires no new participant signatures. It recomputes intent hashes and checks live state, expiry, escrow custody, redemption status, ticket conservation, received-bundle requirements, payment limits and payment capacity.
 
-    note right of Escrowed
-        V2 reads depositor(tokenId)
-        at settlement time, not at
-        commit time
-    end note
+USDC is used for both settlement and native transaction gas. Settlement payments sum to **exactly zero**, excluding gas. Positive `netPayment` means paying; negative means receiving. Each leg must satisfy `netPayment <= maxNetPay`, and balances and allowances are checked against each wallet's combined net debit.
 
-    note right of Redeemed
-        V3 rejects any leg
-        containing a redeemed ticket
-    end note
-```
+All transfers are in one transaction. A failed condition or transfer reverts the exchange; the submitting wallet still pays gas. Simulation does not reserve tickets or funds.
 
-A ticket in escrow cannot be redeemed. Revoke the intent, withdraw, then redeem.
+[Circle integration and deployment evidence](docs/CIRCLE_INTEGRATION.md) · [Admin permissions and mainnet readiness](docs/MAINNET_READINESS.md) · [App Kit evaluation — not integrated](docs/APP_KITS_EVALUATION.md)
 
-### Intent lifecycle
+<details>
+<summary>Settlement validation — V0–V8</summary>
 
 ```mermaid
-stateDiagram-v2
-    [*] --> None
-    None --> Live : commit with valid EIP-712 signature
-    Live --> Revoked : revoke by owner
-    Live --> Settled : settle succeeds
-    Live --> Live : deadline not yet passed
-    Revoked --> [*]
-    Settled --> [*]
-
-    note right of Live
-        V1 checks state == LIVE
-        and block.timestamp <= deadline.
-        An expired intent is rejected,
-        not silently filtered.
-    end note
-
-    note right of Settled
-        Terminal. The nonce is consumed,
-        so the same signature cannot
-        be replayed.
-    end note
-```
-
-### EIP-712 commitment
-
-```mermaid
-flowchart TB
-    subgraph D["Domain separator"]
-        direction TB
-        D1["name: RESHUFFLE"]
-        D2["version: 1"]
-        D3["chainId"]
-        D4["verifyingContract"]
-    end
-
-    subgraph H["Struct hash"]
-        direction TB
-        H1["INTENT_TYPEHASH"]
-        H2["owner, eventId"]
-        H3["keccak256 of offered[]"]
-        H4["sessionMask, sectionMask"]
-        H5["exactCount, cohesion flags"]
-        H6["maxNetPay, deadline, nonce"]
-    end
-
-    D --> DIG["digest = keccak256(<br/>0x1901, domainSeparator, structHash)"]
-    H --> DIG
-    DIG --> SIG["user signs once"]
-    SIG --> REC["ecrecover at COMMIT<br/>must equal intent.owner<br/>then state = LIVE"]
-    REC --> SET["at settlement: no signature.<br/>V0 rebinds the struct to its hash,<br/>V1 checks state == LIVE"]
-
-    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
-    class REC ok
-```
-
-**The signature is verified once, at commit.** `settle()` takes no signatures and performs no `ecrecover`; a `LIVE` entry in the registry is the proof of authorisation. What settlement must do is rebind — recompute the hash from the struct it was handed and require it to match the one presented (V0) — otherwise a solver could pair a live hash with a struct carrying looser bounds.
-
-**An intent signature authorizes one chain and one IntentRegistry.** Its EIP-712 domain is `{ name: "RESHUFFLE", version: "1", chainId, verifyingContract: intentRegistryAddress }`. The verifier is **IntentRegistry**, which authenticates `commit()`, not Settlement. Changing the chain ID or deploying a new Registry changes the signing digest: **all previously signed intents must be signed and committed again for the new deployment**. This is a correctness requirement, not an RPC configuration detail.
-
-Frontend signing uses the `chainId` and `IntentRegistry` address from `deployments/<network>.json`, selected by `NEXT_PUBLIC_DEPLOYMENT` and read through [`lib/deployment.ts`](lib/deployment.ts) and [`lib/config.ts`](lib/config.ts) and [`signAndCommitIntent`](lib/contracts.ts). Reconfigure both with the target deployment, rebuild the frontend, verify the wallet/RPC chain and Registry `DOMAIN_SEPARATOR`, and discard cached signatures/proposals for the previous domain before accepting new signatures. [Domain mapping and migration acceptance checklist](docs/MAINNET_READINESS.md#eip-712-domain-and-signature-migration).
-
-**Invalid on the new deployment does not mean revoked on the old one.** Old LIVE intents remain actionable on their original chain/Registry while their conditions remain valid; explicitly revoke them there if retiring that authorization. Switching RPC providers on the same chain with the same Registry does not change the domain. Replacing only Settlement while retaining the Registry does not rotate the EIP-712 domain either; that is a separate privileged configuration change.
-
-### V4 — conservation, in detail
-
-The check that stops entitlement being created or destroyed.
-
-```mermaid
-flowchart TB
-    A["Collect all offered ids<br/>across every Intent"] --> B["Collect all received ids<br/>across every Leg"]
-    B --> C{"len(offered) ==<br/>len(received)?"}
-    C -->|"no"| X["ConservationViolated"]
-    C -->|"yes"| D["Sort both id arrays<br/>in memory"]
-    D --> E{"any duplicate<br/>within either array?"}
-    E -->|"yes"| X
-    E -->|"no"| F["Walk both sorted arrays<br/>in lockstep"]
-    F --> G{"every position<br/>matches?"}
-    G -->|"no"| X
-    G -->|"yes"| J["Exact bijection proven"]
+flowchart TD
+    S["settle intents, legs"] --> V0{"V0 shape: one leg per intent,<br/>no duplicate hashes,<br/>each intent hashes to its key?"}
+    V0 -->|"no"| E0["MalformedSettlement"]
+    V0 -->|"yes"| V1{"V1 state == LIVE,<br/>unexpired?<br/>no signature here"}
+    V1 -->|"no"| E1["IntentNotLive<br/>IntentExpired"]
+    V1 -->|"yes"| V2{"V2 every offered ticket<br/>escrowed by its owner<br/>AND eventId matches?"}
+    V2 -->|"no"| E2["TicketNotEscrowed<br/>WrongEvent"]
+    V2 -->|"yes"| V3{"V3 no ticket<br/>already redeemed?"}
+    V3 -->|"no"| E3["TicketRedeemed"]
+    V3 -->|"yes"| V4{"V4 exact bijection<br/>offered to received?"}
+    V4 -->|"no"| E4["ConservationViolated"]
+    V4 -->|"yes"| V5{"V5 each bundle satisfies<br/>its own predicate?"}
+    V5 -->|"no"| E5["SessionNotAccepted<br/>SectionNotAccepted<br/>CountMismatch<br/>NotSameSection<br/>SeatsNotAdjacent"]
+    V5 -->|"yes"| V6{"V6 each net payment<br/>within signed budget?"}
+    V6 -->|"no"| E6["BudgetExceeded"]
+    V6 -->|"yes"| V7{"V7 sum of<br/>netPayment is zero?"}
+    V7 -->|"no"| E7["PaymentImbalance"]
+    V7 -->|"yes"| V8{"V8 every NET DEBTOR:<br/>ownerNet covered by<br/>balance and allowance?"}
+    V8 -->|"no"| E8["InsufficientPaymentCapacity"]
+    V8 -->|"yes"| X["1 mark intents SETTLED<br/>2 settle USDC net<br/>3 release tickets<br/>4 emit — effects before interactions"]
 
     classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
     classDef bad fill:#FCEBEB,stroke:#A32D2D,stroke-width:1px,color:#501313
-    class J ok
-    class X bad
+    class X ok
+    class E0,E1,E2,E3,E4,E5,E6,E7,E8 bad
 ```
 
-Length equality alone is insufficient — it would admit a proposal that duplicates one ticket and drops another, which is why duplicates must be rejected inside each array before the two are compared.
+</details>
 
-Solidity has no memory mapping, so *use a scratch map* is not an implementable instruction. Sort and compare, or do a bounded O(n²) duplicate check at demo scale.
-
-### V5 — per-participant predicate, in detail
-
-Runs once per leg. Bitmask operations rather than array scans.
+<details>
+<summary>Data model — TicketMeta, Intent and Leg</summary>
 
 ```mermaid
-flowchart TB
-    A["For leg L with intent I"] --> B{"len(L.receives)<br/>== I.exactCount?"}
-    B -->|"no"| E1["CountMismatch"]
-    B -->|"yes"| C["Load TicketMeta<br/>for each received id"]
-    C --> D{"every m.eventId<br/>== I.eventId?"}
-    D -->|"no"| E2["WrongEvent"]
-    D -->|"yes"| F{"(1 shl m.sessionId)<br/>and I.sessionMask != 0<br/>for all?"}
-    F -->|"no"| E3["SessionNotAccepted"]
-    F -->|"yes"| G{"(1 shl m.sectionId)<br/>and I.sectionMask != 0<br/>for all?"}
-    G -->|"no"| E4["SectionNotAccepted"]
-    G -->|"yes"| H{"I.mustShareSession?"}
-    H -->|"yes"| H2{"all sessionId equal<br/>to the first?"}
-    H2 -->|"no"| E5["NotSameSession"]
-    H -->|"no"| J
-    H2 -->|"yes"| J{"I.mustShareSection?"}
-    J -->|"yes"| J2{"all sectionId equal<br/>to the first?"}
-    J2 -->|"no"| E6["NotSameSection"]
-    J -->|"no"| K
-    J2 -->|"yes"| K{"I.mustBeAdjacent?"}
-    K -->|"no"| OK["Predicate satisfied"]
-    K -->|"yes"| L{"same session AND section<br/>AND row?"}
-    L -->|"no"| E7["SeatsNotAdjacent"]
-    L -->|"yes"| M["Sort seats ascending"]
-    M --> N{"seat[i+1] - seat[i]<br/>== 1 for all i?"}
-    N -->|"no"| E7
-    N -->|"yes"| OK
+classDiagram
+    class TicketMeta {
+        uint32 eventId
+        uint16 sessionId
+        uint16 sectionId
+        uint16 row
+        uint16 seat
+        uint8 status
+        note "one storage slot, one SLOAD per read"
+    }
 
-    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
-    classDef bad fill:#FCEBEB,stroke:#A32D2D,stroke-width:1px,color:#501313
-    class OK ok
-    class E1,E2,E3,E4,E5,E6,E7 bad
+    class Intent {
+        address owner
+        uint256[] offered
+        uint32 eventId
+        uint256 sessionMask
+        uint256 sectionMask
+        uint8 exactCount
+        bool mustShareSession
+        bool mustShareSection
+        bool mustBeAdjacent
+        int256 maxNetPay
+        uint64 deadline
+        uint256 nonce
+    }
+
+    class Leg {
+        bytes32 intentHash
+        uint256[] receives
+        int256 netPayment
+        note "no participant field — recipient is intent.owner"
+    }
+
+    class IntentState {
+        uint8 NONE
+        uint8 LIVE
+        uint8 REVOKED
+        uint8 SETTLED
+    }
+
+    TicketMeta "n" --o "1" Intent : offered by tokenId
+    Intent "1" --> "1" Leg : matched by intentHash
+    TicketMeta "n" --o "1" Leg : received by tokenId
+    Intent "1" --> "1" IntentState : keyed by hash
 ```
 
-Adjacency implies **same session, same section, same row and consecutive seats** — all four, independently of the cohesion flags. Someone who accepts Saturday or Sunday and wants adjacent seats does not mean Saturday row A seat 10 beside Sunday row A seat 11; seat numbers are only comparable within one session, section and row.
+</details>
 
-It is checkable only because we issue the tickets and guarantee seat numbers are consecutive integers within a row. It does not generalise to arbitrary venues.
+### The Graph
 
-### V6 to V8 — money
+`IntentRegistry` records commitments but does not store an enumerable pool of full matching conditions. The Graph reconstructs that pool from events and exposes three entities: `Ticket`, `Intent` and `Settlement`.
 
-```mermaid
-flowchart TB
-    A["For each Leg"] --> B{"netPayment<br/><= I.maxNetPay?<br/>one comparison,<br/>both directions"}
-    B -->|"no"| X1["BudgetExceeded"]
-    B -->|"yes"| E["accumulate total"]
-    E --> F{"sum of all<br/>netPayment == 0<br/>exactly?"}
-    F -->|"no"| X2["PaymentImbalance"]
-    F -->|"yes"| G["ownerNet = SIGNED sum<br/>of that owner's legs<br/>+80 and −30 nets to +50"]
-    G --> H{"for every NET DEBTOR:<br/>balanceOf and allowance<br/>>= ownerNet?"}
-    H -->|"no"| X3["InsufficientPaymentCapacity"]
-    H -->|"yes"| I["Safe to transfer"]
+The backend verifies indexed intent hashes, waits for the required receipt block after writes, and pins paginated reads to one snapshot. Chain state at execution remains authoritative. Per-leg ticket allocations and USDC payments are decoded from transaction input and verified through RPC, not indexed as a separate `SettlementLeg` entity.
 
-    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
-    classDef bad fill:#FCEBEB,stroke:#A32D2D,stroke-width:1px,color:#501313
-    class I ok
-    class X1,X2,X3 bad
-```
+[Live subgraph: reshuffle v0.1.1](https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1) · [Schema](subgraph/schema.graphql) · [Graph verification](docs/graph-acceptance.md)
 
-`netPayment <= maxNetPay` is a **single** comparison, correct in both directions: positive is a debit ceiling, negative is a credit floor, and receiving more makes `netPayment` more negative. Splitting it into a payer branch and a receiver branch inverts the receiver case — a draft of this spec did exactly that, accepting anyone who received *less* than their floor.
-
-Integer USDC, no rounding tolerance — the sum is exactly zero or the proposal is rejected.
-
-Capacity is checked on the owner's **signed net position**, not per leg and not on the sum of positive legs. An owner holding legs of `+80` and `-30` nets to `+50` and needs 50, not 80 — anything else contradicts the phrase *net settlement*. One address may hold several intents, and an issuer normally does, so a per-leg check would also pass two `+80` debits against a 100 USDC balance and then fail mid-transfer.
-
-Routing is specified rather than left open: **pull every debit into the settlement contract, then push every credit**, two deterministic passes in owner order. `Σ ownerNet == 0` follows from V7, so the passes balance exactly. Pairwise debtor-to-creditor routing would require inventing a matching, which is an arbitrary choice no implementation should be left to make.
-
-Approval is a spending allowance, not a reservation. A user can spend their balance elsewhere after signing, which is why V8 reads live state rather than trusting a commitment.
-
-### Solver internals
-
-```mermaid
-flowchart TB
-    A["Query subgraph<br/>live intents + escrow state"] --> B["Filter by eventId<br/>and unexpired deadline"]
-    B --> C["Build candidate graph<br/>node = intent<br/>edge = this bundle could satisfy that predicate"]
-    C --> D["Enumerate reallocations<br/>within caps:<br/>maxParticipants, maxCandidates, timeout"]
-    D --> E{"Candidate<br/>satisfies every<br/>predicate locally?"}
-    E -->|"no"| D
-    E -->|"yes"| F["Solve payment vector<br/>subject to per-participant<br/>maxNetPay and sum == 0"]
-    F --> G{"Feasible?"}
-    G -->|"no"| D
-    G -->|"yes"| H["Add to candidate set"]
-    H --> I{"Caps<br/>exhausted?"}
-    I -->|"no"| D
-    I -->|"yes"| J["Rank: min gross cash moved<br/>ties to fewer participants<br/>then smallest intent-hash set"]
-    J --> K["Re-verify freshness<br/>against chain state"]
-    K --> L["eth_call simulate"]
-    L --> M["Submit propose + execute<br/>in one transaction"]
-
-    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
-    classDef decide fill:#FAEEDA,stroke:#BA7517,stroke-width:1px,color:#412402
-    class M ok
-    class E,G,I decide
-```
-
-This is a combinatorial exchange and clearing it is NP-hard. The search is bounded and the caps are published. *No solution found* means *none found within the search bound*, not *none exists*.
-
-The solver duplicates the contract's constraint logic so proposals do not fail on-chain, but that duplication is an optimisation, not a guarantee — a different solver could submit anything, and V1–V8 still refuse it.
-
-### Subgraph schema
+<details>
+<summary>Subgraph schema — Ticket, Intent and Settlement</summary>
 
 ```mermaid
 erDiagram
@@ -1139,14 +260,51 @@ erDiagram
     }
 ```
 
-This shows the deployed [schema](subgraph/schema.graphql). Ticket custody lives on `Ticket`;
-all signed fields and the original offered-ticket order live on `Intent`. Settlement records
-link to the affected intents. `Settled` emits no per-leg payment data, so there is no
-`SettlementLeg` entity. [Indexed events and receipt boundary](#what-is-indexed).
+</details>
 
-The subgraph supplies discovery and prefiltering. Chain state at execution is authoritative.
+### Matching and assistant APIs
 
----
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/solve/pool` | Search the indexed pool within the configured limits |
+| `POST /api/solve` | Evaluate two to four selected intent hashes |
+| `GET /api/agent/diagnose/<intent-hash>` | Return deterministic diagnosis, evidence and search bounds |
+| `POST /api/agent/ask` | Answer questions using optional Claude tool selection and evidence-bound responses |
+
+**The matching solver is project code, not an external AI matching API.** Claude can select `diagnose_intent`, `what_if` and `pool_overview` tools; it does not authorize or execute swaps. Without an Anthropic key, the assistant returns deterministic diagnosis rather than interpreting arbitrary what-if questions.
+
+Diagnosis and what-if checks use one indexed block, including USDC capacity reads. Hypothetical changes cannot be submitted as settlements; changing actual requirements requires a newly signed commitment. Separate testnet issuer and judge routes may sign for controlled demo wallets, but the agent cannot.
+
+[Backend reference](server/README.md) · [Agent implementation and evidence](docs/GRAPH_7G_7H.md)
+
+<details>
+<summary>Solver internals</summary>
+
+```mermaid
+flowchart TB
+    A["Query subgraph<br/>live intents + escrow state"] --> B["Filter by eventId<br/>and unexpired deadline"]
+    B --> C["Build candidate graph<br/>node = intent<br/>edge = this bundle could satisfy that predicate"]
+    C --> D["Enumerate reallocations<br/>within caps:<br/>maxParticipants, maxCandidates, timeout"]
+    D --> E{"Candidate<br/>satisfies every<br/>predicate locally?"}
+    E -->|"no"| D
+    E -->|"yes"| F["Solve payment vector<br/>subject to per-participant<br/>maxNetPay and sum == 0"]
+    F --> G{"Feasible?"}
+    G -->|"no"| D
+    G -->|"yes"| H["Add to candidate set"]
+    H --> I{"Caps<br/>exhausted?"}
+    I -->|"no"| D
+    I -->|"yes"| J["Rank: min gross cash moved<br/>ties to fewer participants<br/>then smallest intent-hash set"]
+    J --> K["Re-verify freshness<br/>against chain state"]
+    K --> L["eth_call simulate"]
+    L --> M["Submit propose + execute<br/>in one transaction"]
+
+    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
+    classDef decide fill:#FAEEDA,stroke:#BA7517,stroke-width:1px,color:#412402
+    class M ok
+    class E,G,I decide
+```
+
+</details>
 
 ## Sequence diagrams
 
@@ -1235,229 +393,162 @@ sequenceDiagram
     Note over A,SET: The venue injected an asset. Each ticket received exactly once — V4 holds.
 ```
 
----
+## Demo evidence
 
-## Sponsor tracks
+The repository records these Arc Testnet transactions. Demo scenes display the transactions and their supporting evidence.
 
-### Bounty category verification
+| Scenario | App route | Transaction | Evidence |
+|---|---|---|---|
+| Three participants exchange six tickets | `/demo/act-one` | [Confirmed settlement](https://testnet.arcscan.app/tx/0xdc54e3971c04dc533b1ad3604cd29368cb67556d265fb093b60e146e5e6f3143) | [Record](deployments/act-one.json) |
+| Buyer, two swappers and seller settle an open chain | `/demo/act-two` | [Confirmed settlement](https://testnet.arcscan.app/tx/0x6df107019a5bb2d47654a12cf594923adf5f3cfb6259ba3a49d870f79e9ce29e) | [Record](deployments/act-two.json) |
+| Non-adjacent allocation is rejected with `SeatsNotAdjacent` | `/demo/act-three` | [Reverted transaction](https://testnet.arcscan.app/tx/0x087f78f9bdc54b5f9bb8f6939f2a4633ee1f554e8fc198cc75739b1b722279fe) | [Record](deployments/act-three.json) |
+| Separate solver settles after participant signing processes exit | `/demo/offline` | [Confirmed settlement](https://testnet.arcscan.app/tx/0xffd5f35dcac46cd52c6593d6c2a34a74b07ed4859c848b39ba09421e109d07c9) | [Record](deployments/offline-demo.json) |
 
-Checked on 2026-09-13: the [official prize page](https://ethglobal.com/events/ethonline2026/prizes#arc)
-lists **Best DeFi/Onchain Finance Application**. Its $2,500 mainnet portion requires actual
-deployment by September 30; the readiness package does not substitute for deployment.
-“Launch on Testnet & Push to Mainnet” is not a separate listed prize. If the team belongs in
-Continuity, the corresponding Arc category is **Best DeFi or Agentic Application**, and
-The Graph has a separate **Continuity** AI track. The [submission record](docs/SUBMISSION_STATUS.md)
-keeps team eligibility and dashboard selections unconfirmed until evidenced. [Mainnet release gates](docs/MAINNET_READINESS.md).
+## Run locally
 
-| Sponsor | Track | Why |
-|---|---|---|
-| **Arc** | Best DeFi/Onchain Finance Application | Conditional delivery and multi-party net settlement for non-fungible entitlements. Ticket delivery determines whether payment is permitted; every participant's debits and credits correspond within one settlement |
-| **The Graph** | Best AI Tooling or AI Use Case with The Graph (From Scratch), AI Use Case path | Live indexed data drives the solver and the agent. Change a budget and the answer changes, because the pool is re-queried |
+Use **Node.js 22 or newer**. Foundry is needed for Solidity development and tests.
 
-### App Kits evaluation
-
-**Evaluated on 2026-09-09; not integrated.** App Kit's [Send](https://docs.arc.io/app-kit/send) supports USDC transfers on Arc Testnet. The reviewed [public API](https://docs.arc.io/app-kit/references/sdk-reference) does not provide a drop-in module for our NFT custody, signed seat conditions and multi-owner net settlement. Individual sends would not preserve the existing transaction's combined payment and ticket checks.
-
-We retain Escrow and Settlement for that execution path. Bridge and Unified Balance could support future wallet funding; currency conversion and treasury yield are outside this demo's scope. This is our response to the Arc track's relevance criterion, not a claim of App Kits usage. See the [capability comparison, official sources and presentation answer](docs/APP_KITS_EVALUATION.md), including an assessment of Arc's separate ERC-8183 escrow example.
-
-### How Arc is load-bearing
-
-```mermaid
-flowchart TD
-    A{"Every ticket condition<br/>satisfied?"} -->|"no"| B["No payment occurs at all"]
-    A -->|"yes"| C["USDC nets across all participants"]
-    C --> D["A −50 · D −100<br/>B +120 · C +30<br/>sum equals zero"]
-
-    classDef bad fill:#FCEBEB,stroke:#A32D2D,stroke-width:1px,color:#501313
-    classDef decide fill:#FAEEDA,stroke:#BA7517,stroke-width:1px,color:#412402
-    class B bad
-    class A decide
+```sh
+npm ci
+npm --prefix solver ci
+npm run setup:env
 ```
 
-Money is not appended at the end. Delivery gates payment, and every participant's cash position resolves in the same settlement.
+### Environment setup
 
-### How The Graph is load-bearing
+**Running your own instance? Configure your own environment variables and supply any credentials required for the features you enable. Private credentials are not included in this repository.** Visitors to the hosted app do not need to upload an environment file or provide Arc / The Graph API keys.
 
-Intents live in a Solidity mapping, and mappings cannot be enumerated on-chain. A contract cannot see the pool. Events are what make discovery possible.
+`npm run setup:env` creates `.env.local` from [.env.example](.env.example) without overwriting an existing file. Edit the generated file using this format:
 
-More importantly, intents are **persistent**:
+```dotenv
+# Arc Testnet — public settings, not private credentials
+DEPLOYMENT=arc-testnet
+NEXT_PUBLIC_DEPLOYMENT=arc-testnet
+ARC_CHAIN_ID=5042002
+# Keep this public RPC, or replace it with your own Arc Testnet provider URL.
+ARC_RPC=https://rpc.testnet.arc.io
 
-```mermaid
-flowchart LR
-    M["Monday<br/>intent signed"] --> N["No solution<br/>found"]
-    N --> T["Tuesday<br/>venue releases<br/>20 tickets"]
-    T --> S["Subgraph indexes<br/>new inventory"]
-    S --> R["The same intent<br/>becomes satisfiable"]
-    R --> X["Settles, with the user<br/>doing nothing"]
+# The Graph — use the existing subgraph, or your own compatible deployment.
+READ_SOURCE=graph
+SUBGRAPH_URL=https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1
+# Add YOUR query API key only if your chosen endpoint requires authentication.
+SUBGRAPH_API_KEY=
 
-    classDef ok fill:#E1F5EE,stroke:#0F6E56,stroke-width:1px,color:#04342C
-    class X ok
+# Optional: add YOUR Anthropic API key for model-assisted questions.
+ANTHROPIC_API_KEY=
 ```
 
-The market changes around a standing intent. That is what live indexed data is for.
+The public settings above support market reads, matching and deterministic diagnosis without a wallet private key or Graph query key. Use `SUBGRAPH_API_KEY`, not `GRAPH_API_KEY`; never prefix a secret with `NEXT_PUBLIC_`.
 
-*The subgraph is discovery and prefiltering. Chain state at execution is the source of truth — balances and allowances move, and an indexer lags.*
+<details>
+<summary>Optional credentials for deploying contracts or a subgraph</summary>
 
----
+Only configure these when using the corresponding deployment tools. Uncomment and replace the placeholders with your own values; they are not needed to run the app against the existing deployment.
 
-## Questions we expect
+```dotenv
+# Arc transaction CLI — use a dedicated testnet wallet, never a real-funds wallet.
+# PRIVATE_KEY=0xYOUR_TESTNET_WALLET_PRIVATE_KEY
+# DEPLOYER_ADDRESS=0xYOUR_MATCHING_WALLET_ADDRESS
 
-**Isn't this just a multi-party NFT swap?**
-Multi-party barter exists — NeoSwap did it in 2022 with budgets, reserve prices and combinatorial optimisation. Its documented flow is: bring items to a room, bid on the specific items you see, receive a proposed trade, then every participant approves *that proposal* before it can execute. Their AI-recommended trades follow the same shape. We scope the comparison to that documented flow; their litepaper describes always-on rebalancing as future work, and we make no claim about later products. Ours is: sign an outcome predicate once, and any future combination inside those bounds needs no further approval. Proposal authorisation versus outcome authorisation.
+# The Graph deployment CLI — your Subgraph Studio deploy key, not a query key.
+# SUBGRAPH_DEPLOY_KEY=YOUR_SUBGRAPH_STUDIO_DEPLOY_KEY
+```
 
-To be precise about what that does and does not buy: it removes the post-match round trip, not the need for participants to exist. And it is one signature *per intent* — you sign again if the intent expires, is revoked, or changes.
+Next.js loads `.env.local`, but CLI scripts may explicitly load `.env`; seed-wallet keys are read from `.env.seed`. Put credentials in the environment loaded by the relevant command. Contract addresses come from `deployments/<network>.json`, not these credentials. See [deployment configuration](docs/MAINNET_READINESS.md) and [demo setup](docs/DEMO_SETUP.md) before deploying or seeding.
 
-**Isn't this CoW Protocol?**
-CoW clears fungible tokens at a uniform price. Tickets are non-fungible and carry per-person bundle constraints — four seats must share a session and a section. No uniform clearing price exists, so what gets verified is not a price but each participant's declared conditions.
+</details>
 
-**Isn't this Seaport criteria orders?**
-Seaport can express "any NFT matching this criterion", and that part is genuinely not new — predicate-based orders are established. Nor is Seaport limited to two parties: `matchOrders` settles any number of orders together, and zones allow custom validation around fulfilment. Seaport is a general settlement engine, and a sufficiently determined team could build something like this on top of it.
+**Keep secrets private:** keep `.env`, `.env.local` and `.env.seed` out of Git. Only commit templates with public settings and empty credential fields. For hosting, configure credentials in the server's environment settings rather than uploading private files to the repository. Never ask app users to submit wallet private keys.
 
-The difference is what the predicate is about, and what is first-class. A criteria order constrains *which asset may fill one side of my order*. An intent here constrains *the outcome of this settlement for me* — the bundle I must receive, its internal relationships (same session, same section, adjacent seats), and the maximum cash I will part with. Relational bundle constraints and per-participant cash bounds are the primitives, not something assembled from them.
+### Start the app
 
-> You don't sign the asset you want. You sign the post-settlement outcome you're willing to accept.
+```sh
+npm run dev
+```
 
-**Hasn't the theory been done?**
-Yes, and we cite it. Top Trading Cycles dates to 1974; kidney exchange is its best-known application; a 2026 Imperial paper studies exactly this for Wimbledon ballot winners, including price differences between courts and dates. Matching-market research shows the reallocation can be improved. We made the conditional replacement executable — signed predicates, on-chain enforcement, asynchronous settlement, issuer inventory as a standing participant.
+Open `http://localhost:3000/` and select an event poster. Use **Matching → Check all intents** to search, or **Why no match?** to inspect an intent.
 
-**What if there's no cycle?**
-Buyers and sellers participate in the same pool, so a chain can terminate in cash at either end. Issuer inventory can start one. A closed cycle is one solution shape, not a requirement.
+Creating an intent or submitting a settlement requires connecting a wallet on **Arc Testnet, chain ID `5042002`**, with test USDC from the [Circle faucet](https://faucet.circle.com/). Users sign through their wallet; no wallet private key needs to be entered in the app's environment file.
 
-**Two solutions are both valid — who picks?**
-The contract checks conditions; it does not rank. Selection is the solver's, and the rule is published: minimise gross cash moved — `sum of max(netPayment, 0)` — with ties breaking toward fewer participants, then toward the lexicographically smallest ordered set of intent hashes — a hash comparison rather than gas, so ranking is deterministic from the inputs alone. Gross rather than net, because V7 forces the net total to zero on every valid settlement, so a net objective would rank nothing. The interface separates *your limit*, *what you actually paid*, and *why this candidate*. We never call a result optimal — the search is bounded.
+### Prepare the interactive demo
 
-**How do I know the solver isn't cheating me?**
-You don't have to. The contract validates the final state against the predicate you signed. A malicious solver can propose anything; V1–V8 refuse it. Try it in the demo.
+With the existing Arc deployment and local operator credentials configured:
 
-**What if someone withdraws before settlement?**
-The transaction reverts. Nobody is half-traded — that is EVM default behaviour, not our contribution. The proposer loses gas, which is why simulation runs first. Withdrawal is unconditional and immediate, by design.
+```sh
+npm run demo:prepare
+npm run dev
+```
 
-**Doesn't signing in advance lock my funds?**
-No. ERC-20 approval is a spending allowance, not a reservation, and escrowed tickets can be withdrawn at any time. You need not be online at settlement, but settlement still requires your intent, tickets and payment capacity to remain valid.
+Open `/demo`. Preparation creates or reuses a pending round with three signed intents and twelve escrowed tickets, then checks it with the solver and `eth_call`. It does **not** submit settlement. Rerun after a round is consumed to prepare fresh intents.
 
-**Does this work with my Ticketmaster tickets?**
-No. Only tickets issued by contracts in our registry. Minting an NFT from a PDF transfers nothing. This is a post-allocation reshuffling layer for issuer-native tickets, not a replacement for existing platforms.
+[Interactive demo setup](docs/DEMO_SETUP.md) · [Additional inventory](docs/DEMO_INVENTORY.md) · [Three-user circle groups](docs/CIRCLE_DEMO.md)
 
-**Couldn't a centralised platform just do this?**
-Yes. A sufficiently motivated ticketing platform could search its own inventory, reserve a replacement, take back the old tickets, net the cash and commit — no blockchain required. We do not claim otherwise. The difference is who may propose a solution and who decides whether it executes: there, the platform's search, rules and settlement must all be trusted; here, anyone may propose, and a signed predicate plus the contract decide whether the proposal is allowed to execute. Discovery can be permissionless; authorisation does not have to trust the solver.
+### Hosting
 
-**Why do tickets have to be NFTs?**
-They are not mathematically required — a database can run an atomic transaction, check seat adjacency and update ownership, and we said above that a centralised platform could do all of this. What changes is *who is the authority*. With a database, our backend performs the final reallocation and users trust that it did so correctly. With issuer-native onchain tickets, ticket state and transfer are enforceable by the same settlement contract that validates the signed predicates, so nobody has to trust our backend — including us.
+Deploy both the Next.js frontend **and backend**. On-chain contracts do not replace the solver, agent or evidence services.
 
-**What stops scalpers?**
-Nothing here. This reallocates tickets that have already been sold; it creates no seats and prevents no bot from buying them in the first place.
+```sh
+npm run build
+npm start
+```
 
-**What about the atomicity guarantee?**
-A single transaction reverting wholesale is EVM default behaviour, so we don't claim it as an innovation. The contribution is verifying that a reshuffle satisfies every participant's own signed conditions before it executes.
+Hosted instances use `STORAGE_BACKEND=redis` with `REDIS_REST_URL` and `REDIS_REST_TOKEN`, or a supported provider-injected credential pair. Production agent APIs require Redis; local-file storage is rejected on Vercel.
 
----
+For prepared judge controls, configure a private access code and an explicit allowlist of editable intent hashes. Public reads do not require this code. See the [hosting, migration and judging guide](docs/JUDGING_SETUP.md) before sharing a deployment.
 
-## Limitations
+## Contracts
 
-Named, not hidden.
+**Network:** Arc Testnet · **Chain ID:** `5042002`
 
-| Limitation | Status |
+| Contract | Address |
 |---|---|
-| **Cold start** | Reshuffles need density of compatible intent. Buyers, sellers and issuer inventory reduce the dependency; they do not remove it. A constructed cycle is not evidence of market demand |
-| **Issuer trust is centralised** | Only registered issuer contracts are recognised. Their permissions are published |
-| **No incentive-compatibility claim** | Conditions are self-reported. Users may misreport |
-| **Bounded search** | *No solution found* is not *no solution exists*. Participant, candidate and timeout caps are published |
-| **Unaudited** | Demonstration only. Do not deposit real assets |
-| **Adjacency depends on us issuing** | Seat numbers are consecutive integers within a row by construction. This does not generalise to arbitrary venues |
-| **The Graph is not the only possible discovery mechanism** | Mappings cannot be enumerated on-chain, but RPC logs could be indexed by other means. This implementation relies on The Graph |
+| TicketNFT | [`0xb2490568bb27c9c38588e3b5511ee3980892cce4`](https://testnet.arcscan.app/address/0xb2490568bb27c9c38588e3b5511ee3980892cce4) |
+| Escrow | [`0x07ab57380db7df630fab2d3d3a1019a5a890b018`](https://testnet.arcscan.app/address/0x07ab57380db7df630fab2d3d3a1019a5a890b018) |
+| IntentRegistry | [`0x479b4455f494679dcdd6f6f32e93e08682deda75`](https://testnet.arcscan.app/address/0x479b4455f494679dcdd6f6f32e93e08682deda75) |
+| Settlement | [`0x75872168f2d6ae13c7d9258159e59025fd9b5eae`](https://testnet.arcscan.app/address/0x75872168f2d6ae13c7d9258159e59025fd9b5eae) |
 
----
+## Tests
+
+```sh
+forge build
+forge test -vvvv
+npm test
+npm --prefix solver test
+npm run deployment:check
+npm run subgraph:check
+npm run subgraph:parity
+npm run docs:check
+npx tsc --noEmit
+```
+
+Parity checks use the configured Graph and RPC endpoints. To build the subgraph locally:
+
+```sh
+npm --prefix subgraph ci
+npm run subgraph:codegen
+npm --prefix subgraph run build
+```
+
+[Verification records](docs/STEP_11_REVIEW.md) · [Local settlement gas measurements](docs/gas/README.md)
 
 ## Repository
 
 ```text
-src/                   Four Solidity contracts
+src/                   Solidity contracts
 script/                Foundry deployment and seeding
 scripts/               Deployment, evidence and verification tools
-test/                  Solidity validation and rejection tests
-solver/src/            TypeScript bounded search and validation
-shared/                Shared intent hashing and Graph snapshot client
-subgraph/              Schema, generated manifest and event mappings
-server/                Market adapters, solver, receipts and read-only agent
-app/api/               Next.js backend route handlers
-component/market/      Interactive ticket workspace and agent drawer
+test/                  Solidity tests
+solver/src/            TypeScript matching and validation
+shared/                Intent hashing and Graph snapshot client
+subgraph/              Schema and event mappings
+server/                Market, solver, receipts and agent services
+app/api/               Next.js API routes
+component/market/      Ticket workspace and agent drawer
 lib/                   Frontend models, configuration and API clients
-deployments/           Chain records and public transaction evidence
-docs/                  Specifications, demo guides and submission package
+deployments/           Chain records and transaction evidence
+docs/                  Technical references, demo guides and submission details
 ```
 
-### Build
+### AI disclosure
 
-```bash
-forge build
-forge test -vvvv
-forge test --gas-report
-forge script script/Deploy.s.sol --rpc-url $ARC_RPC --broadcast
-```
-
-`foundry.toml` sets `evm_version = "paris"` — a current workaround for the documented open PUSH0 compatibility issue on Arc Testnet. Arc's chain docs describe the execution environment as Prague, so treat this as a present-state workaround and re-test before any mainnet deployment. Gas estimation on some USDC writes is also unreliable, so deployment scripts pass explicit gas limits.
-
-### Deployment
-
-| Contract | Address | Network |
-|---|---|---|
-| TicketNFT | [0xb2490568bb27c9c38588e3b5511ee3980892cce4](https://testnet.arcscan.app/address/0xb2490568bb27c9c38588e3b5511ee3980892cce4) | Arc Testnet |
-| Escrow | [0x07ab57380db7df630fab2d3d3a1019a5a890b018](https://testnet.arcscan.app/address/0x07ab57380db7df630fab2d3d3a1019a5a890b018) | Arc Testnet |
-| IntentRegistry | [0x479b4455f494679dcdd6f6f32e93e08682deda75](https://testnet.arcscan.app/address/0x479b4455f494679dcdd6f6f32e93e08682deda75) | Arc Testnet |
-| Settlement | [0x75872168f2d6ae13c7d9258159e59025fd9b5eae](https://testnet.arcscan.app/address/0x75872168f2d6ae13c7d9258159e59025fd9b5eae) | Arc Testnet |
-
-### Measured settlement gas
-
-Measured on **2026-09-10** with `forge test --gas-report`: **32 tests passed, 0 failed**. Each row below comes from a separate successful test's **`Settlement.settle` function row**, with exactly one call (min = average = median = max). The test body's total gas, which includes preparing the tickets and intents, is not used.
-
-| Successful scenario | Participants / intents | Tickets transferred | Optional constraints enabled¹ | Measured `settle` gas | Raw report |
-|---|---:|---:|---:|---:|---|
-| Two-party exchange; participants absent after commit | 2 / 2 | 2 | 0 | **208,016** | [Report](docs/gas/test_settles_without_participant_online.txt) |
-| Buyer → swapper → seller | 3 / 3 | 4 | 4 | **291,716** | [Report](docs/gas/test_buyer_seller_chain_completes.txt) |
-| Three-party adjacent-pair reshuffle | 3 / 3 | 6 | 6 | **378,779** | [Report](docs/gas/test_three_way_reshuffle_succeeds.txt) |
-| Seeded three-party reshuffle, four tickets each | 3 / 3 | 12 | 9 | **561,664** | [Report](docs/gas/test_seed_is_live_then_settles_without_participants.txt) |
-
-¹ Count of enabled `mustShareSession`, `mustShareSection` and `mustBeAdjacent` predicates, summed across intents. The rows enable respectively `(0, 0, 0)`, `(0, 2, 2)`, `(0, 3, 3)` and `(3, 3, 3)` in that order. Mandatory checks such as validity, event/masks, exact count, budget, conservation and payment capacity still run; they are not included in this optional-constraint count. These are different workloads, not an isolated measurement of each additional predicate's cost.
-
-Environment: **Forge 1.8.1, Solidity 0.8.36, Paris EVM, via IR, optimizer enabled with 200 runs**. These are local Foundry measurements using `MockUSDC`; separate mint/approval/deposit/commit calls are excluded from the `settle` row. They are not Arc receipt `gasUsed` or a USDC fee quote. Arc's native USDC implementation and actual transaction state can produce different costs.
-
-[Full passing suite report](docs/gas/full-suite.txt) · [Exact commands, fixtures and measurement scope](docs/gas/README.md). The full suite's aggregate `settle` statistics include expected reverts, so they are not presented as successful-settlement costs.
-
----
-
-## Prior art
-
-We build on existing work and say so.
-
-| Work | What it established |
-|---|---|
-| Shapley & Scarf (1974), Top Trading Cycles | Multi-party reallocation from endowments |
-| Roth et al., kidney exchange | All-or-nothing multi-way chains in practice |
-| Haugh (2026), *From Luck to Choice: The Wimbledon Ballot and Matching Markets* | Ticket reallocation with price differences between dates and courts |
-| NeoSwap | Multi-party NFT barter with budgets and combinatorial optimisation |
-| Seaport | Criteria-based orders — bidding on any item matching a predicate |
-| CoW Protocol | Signed intents cleared in batches, coincidence of wants |
-
-None of them combines persistent outcome predicates, asynchronous multi-party clearing without re-approval, issuer inventory as a standing participant, and net cash settlement over non-fungible bundles. That combination is what this implements.
-
-
-<!-- BEGIN ARC SETTLEMENTS -->
-## Confirmed Arc Testnet settlements
-
-Ten demonstration settlements on Arc Testnet (chain ID 5042002), using the same 12 tickets across three controlled test wallets. Each round commits fresh signed conditions; the backend searches current chain state and simulates before the local runner submits. These are repeatable integration demonstrations, not evidence of organic market demand.
-
-| Round | Block | Confirmed transaction |
-| --- | --- | --- |
-| 1 | 61266588 | [0xb729bccb47a92fd5775f0f1974818058a0e20282d76389575e1f9cbc1a4146bb](https://testnet.arcscan.app/tx/0xb729bccb47a92fd5775f0f1974818058a0e20282d76389575e1f9cbc1a4146bb) |
-| 2 | 61266673 | [0xec86d53308e935a71325ee62a8dd1af9a7aa7f82fbcf0d735e1e93b739114dd3](https://testnet.arcscan.app/tx/0xec86d53308e935a71325ee62a8dd1af9a7aa7f82fbcf0d735e1e93b739114dd3) |
-| 3 | 61266753 | [0x30c51121dc88e05bb94bdc164555f29131ecce314b303e12638a48596df7df07](https://testnet.arcscan.app/tx/0x30c51121dc88e05bb94bdc164555f29131ecce314b303e12638a48596df7df07) |
-| 4 | 61266819 | [0xe15a4645a810d7a88b384df7b73fcf0233e1af6dd946807147c28deb0e727859](https://testnet.arcscan.app/tx/0xe15a4645a810d7a88b384df7b73fcf0233e1af6dd946807147c28deb0e727859) |
-| 5 | 61266894 | [0x6642c04d38c1c9423f3109261a4ed26da68266beed7f39211eaabda8c8db2d04](https://testnet.arcscan.app/tx/0x6642c04d38c1c9423f3109261a4ed26da68266beed7f39211eaabda8c8db2d04) |
-| 6 | 61266967 | [0x3d613f3e32f01ee35a5829343bbc6db73bec31cdba0e7e6ae14337ea23b604c8](https://testnet.arcscan.app/tx/0x3d613f3e32f01ee35a5829343bbc6db73bec31cdba0e7e6ae14337ea23b604c8) |
-| 7 | 61267051 | [0x8fb078b9743c3e3f107162505ef1b66a54eb0c9c2f81d6c8a1a135b4176e09a3](https://testnet.arcscan.app/tx/0x8fb078b9743c3e3f107162505ef1b66a54eb0c9c2f81d6c8a1a135b4176e09a3) |
-| 8 | 61267118 | [0x9b64f8b52f88affce9fb6f49b06b09e14ccbb8af8dec2ba0cf992570a4efdf38](https://testnet.arcscan.app/tx/0x9b64f8b52f88affce9fb6f49b06b09e14ccbb8af8dec2ba0cf992570a4efdf38) |
-| 9 | 61267198 | [0x3979f0de503bf45d352be0d90eb8ba9a841099c47841f1271ad0797dea063122](https://testnet.arcscan.app/tx/0x3979f0de503bf45d352be0d90eb8ba9a841099c47841f1271ad0797dea063122) |
-| 10 | 61267278 | [0x3875f8f525e7bd826898a0f8f6b7838e79f3caa83cd742fe024c21fac90f2296](https://testnet.arcscan.app/tx/0x3875f8f525e7bd826898a0f8f6b7838e79f3caa83cd742fe024c21fac90f2296) |
-
-Full per-round proposals, exclusions, simulation results and verified receipts: [settlement evidence](deployments/settlements/). Backend setup: [server documentation](server/README.md).
-<!-- END ARC SETTLEMENTS -->
+AI coding assistance was used during development. The [planning artifacts](docs/PLANNING_ARTIFACTS.md) and [provenance inventory](docs/PROVENANCE.md) record confirmed assistance, dependencies, supplied artwork and outstanding attribution confirmations. Optional Claude use inside the application is separate from development assistance.
