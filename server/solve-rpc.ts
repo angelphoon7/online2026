@@ -1,12 +1,22 @@
 import 'server-only';
 import { createPublicClient, custom } from 'viem';
 import { readArcRpc } from './arc-read-rpc';
+import { retryAfterSeconds } from '@/shared/retry-after';
 
-// Only solver reads use this transport. Signing and broadcasts retain their wallet path.
-export function solverReadClient(rpc: string, chainId: number) {
+// Solver and fallback market reads use this transport. Signing and broadcasts retain their wallet path.
+export function solverReadClient(rpc: string, chainId: number, rateLimitRetries = 0) {
   return createPublicClient({ transport: custom({
     async request({ method, params }) {
-      const response = await readArcRpc({ jsonrpc: '2.0', id: 1, method, params: (params ?? []) as unknown[] }, rpc, chainId);
+      let response: Response;
+      for (let attempt = 0; ; attempt++) {
+        response = await readArcRpc({ jsonrpc: '2.0', id: 1, method, params: (params ?? []) as unknown[] }, rpc, chainId);
+        const delay = retryAfterSeconds(response.headers.get('Retry-After')) * 1000;
+        if (response.status !== 429 || attempt >= rateLimitRetries || delay > 2000) break;
+        // A brief upstream cooldown need not discard the whole market scan. Longer
+        // limits return to the caller; never retry before the provider permits it.
+        await response.body?.cancel();
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
       const body = await response.json();
       if (body.error || !response.ok) throw Object.assign(new Error(body.error?.message ?? 'Arc read unavailable'), {
         code: body.error?.code ?? -32603, data: body.error?.data,

@@ -13,10 +13,9 @@ import { join } from 'node:path';
 // lib/chain-reads.ts and every component stays untouched; only the source changes. The RPC
 // implementation remains as the fallback for local Anvil, which Studio cannot index.
 //
-// Why this is the change that matters: the RPC path reads every ticket individually and scans
-// log ranges in 10k-block windows, pacing itself with 750ms and 1100ms sleeps to stay under
-// Arc's rate limits, and it refuses outright past 1000 tickets or 2M blocks ("Demo discovery
-// bound exceeded; configure an indexer"). That bound is the thing an indexer removes.
+// The RPC fallback batches ticket reads and scans bounded log ranges. It still refuses
+// past 1000 tickets or 2M blocks ("Demo discovery bound exceeded; configure an indexer").
+// The indexer removes that discovery bound and supplies searchable indexed entities.
 //
 // This is DISCOVERY. Nothing here is trusted on its own: every intent is re-hashed against the
 // id it was published under (trust rule 1), and settlement still re-reads registry state,

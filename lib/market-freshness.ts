@@ -47,7 +47,10 @@ export class MarketFreshness {
     const minimum = ticket.market && BigInt(ticket.market.blockNumber) > ticket.floor ? BigInt(ticket.market.blockNumber) : ticket.floor;
     const promise = (async () => {
       try {
-        if (ticket.indexingBlock !== null && ticket.market?.source !== 'rpc') await this.wait(minimum);
+        // On reload the source is unknown. Let /api/market enforce the saved floor
+        // using the configured source, rather than contacting Graph before RPC mode
+        // has had a chance to load. Known Graph snapshots still wait after writes.
+        if (ticket.indexingBlock !== null && ticket.market?.source === 'graph') await this.wait(minimum);
         if (!this.current(ticket.revision)) return false;
         const market = await this.read(fresh || ticket.indexingBlock !== null, minimum);
         if (!this.current(ticket.revision)) return false;

@@ -6,6 +6,13 @@ Local development temporarily uses `READ_SOURCE=rpc` in ignored `.env.local` whi
 The Graph's query quota is exhausted. This fallback is for local work; it does not
 complete the Graph integration required for submission.
 
+The RPC fallback batches contract reads through Arc's deployed Multicall contract and
+keeps a local event-history checkpoint in ignored `.data/rpc-market/` during development.
+Restarts check that checkpoint's block hash and reread current ticket and intent state;
+they do not display saved custody data as current. A throttled history scan resumes from
+its completed pages. The first full scan can still take longer than later opens.
+Saved receipt-block floors remain enforced in RPC mode without first waiting for Graph.
+
 - [ ] Restore a working Graph query endpoint and sufficient query allowance. Do not
   rely on the Studio development endpoint's daily quota for the submitted demo.
 - [ ] Reduce duplicate queries and share short-lived public snapshots while preserving

@@ -90,6 +90,23 @@ test('custom RPC configuration and other networks do not silently use public tes
   assert.equal(fetch.mock.callCount(), 2);
 });
 
+test('historical log range rejection skips an incompatible provider without repeating it', async t => {
+  fresh(t);
+  const calls: { url: string; method: string }[] = [];
+  t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+    const body = JSON.parse(init.body as string); calls.push({ url, method: body.method });
+    if (url === primary) return new Response('', { status: 429, headers: { 'Retry-After': '30' } });
+    if (body.method === 'eth_chainId') return ok('0x4cef52');
+    if (url === alternate) return Response.json({ error: { code: 35, message: 'range unsupported' } }, { status: 400 });
+    return Response.json({ result: [] });
+  });
+  const logs = { ...read, method: 'eth_getLogs', params: [{ fromBlock: '0x1', toBlock: '0x100' }] };
+  assert.deepEqual((await (await readArcRpc(logs, primary, 5042002)).json()).result, []);
+  assert.deepEqual((await (await readArcRpc(logs, primary, 5042002)).json()).result, []);
+  assert.equal(calls.filter(call => call.url === alternate && call.method === 'eth_getLogs').length, 1);
+  assert.equal(calls.filter(call => call.url === last && call.method === 'eth_getLogs').length, 2);
+});
+
 test('consumed nonce history costs at most two reads and never scans sequential values', async () => {
   const calls: bigint[] = [];
   const nonce = await findUnusedIntentNonce(0n, async value => { calls.push(value); return value < 1_000_000n; }, () => 1n << 200n);

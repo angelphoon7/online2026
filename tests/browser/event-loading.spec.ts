@@ -1,5 +1,6 @@
 // API fixtures only. Exercise the loading lifecycle without wallets, providers or writes.
 import { test, expect, type Page } from '@playwright/test';
+import deployment from '../../deployments/public/arc-testnet.json';
 
 async function fixture(page: Page, statuses: number[], retryAfter = '1') {
   await page.clock.install();
@@ -74,4 +75,27 @@ test('leaving the loading dialog cancels its retries and allows reopening', asyn
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('#events')).toBeVisible();
+});
+
+test('saved transaction block opens RPC fallback without contacting the exhausted Graph', async ({ page }) => {
+  const floorKey = `reshuffle:read-floor:${deployment.chainId}:${deployment.contracts.IntentRegistry.toLowerCase()}`;
+  await page.addInitScript(key => sessionStorage.setItem(key, '100'), floorKey);
+  let graphCalls = 0, marketCalls = 0;
+  await page.route('**/api/**', async route => {
+    const url = new URL(route.request().url());
+    if (url.pathname === '/api/graph') { graphCalls++; return route.fulfill({ status: 429, json: { error: 'Daily Graph quota exhausted' } }); }
+    if (url.pathname === '/api/market') {
+      marketCalls++; expect(url.searchParams.get('minBlock')).toBe('100');
+      return route.fulfill({ json: { blockNumber: '101', timestamp: '1789232809', source: 'rpc',
+        tickets: [], intents: [], settlements: [], defaultHashes: [], hashMismatched: [] } });
+    }
+    if (url.pathname === '/api/demo/reset' || url.pathname === '/api/demo/session') return route.fulfill({ json: { enabled: false, authenticated: false } });
+    return route.fulfill({ status: 500, json: { error: 'Unexpected fixture request' } });
+  });
+  await page.goto('/#workspace');
+  await expect(page.locator('#workspace')).toBeVisible();
+  await expect(page.getByText('VIA DIRECT RPC READS', { exact: false })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Loading', exact: false })).toHaveCount(0);
+  expect(marketCalls).toBe(1); expect(graphCalls).toBe(0);
+  expect(await page.evaluate(key => sessionStorage.getItem(key), floorKey)).toBe('100');
 });

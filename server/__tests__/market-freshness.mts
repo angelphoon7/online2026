@@ -12,6 +12,7 @@ function deferred<T>() { let resolve!: (value: T) => void; let reject!: (error: 
 test('timeout retains receipt floor; retry, periodic and reconnect reads use that floor', async () => {
   const reads: bigint[] = [], waits: bigint[] = []; let fail = true;
   const state = new MarketFreshness(async (_, floor) => { reads.push(floor); return snapshot(floor); }, async floor => { waits.push(floor); if (fail) throw new SubgraphLagTimeout(floor, 9n, 90); });
+  await state.refresh(); reads.length = 0;
   state.requireBlock(10n);
   assert.equal(await state.refresh(), false); assert.deepEqual(reads, []);
   assert.equal(state.getSnapshot().floor, 10n); assert.equal(state.getSnapshot().indexingBlock, 10n);
@@ -30,6 +31,7 @@ test('pre-transaction response cannot overwrite post-transaction pool', async ()
 test('overlapping receipts and stale wait errors never lower or clear the new floor', async () => {
   const old = deferred<void>();
   const state = new MarketFreshness(async (_, floor) => snapshot(floor), async floor => { if (floor === 20n) await old.promise; });
+  await state.refresh();
   state.requireBlock(20n); const previous = state.refresh();
   state.requireBlock(30n); state.requireBlock(25n);
   old.reject(new Error('Old wait failed')); await previous;
@@ -38,8 +40,24 @@ test('overlapping receipts and stale wait errors never lower or clear the new fl
 });
 test('successful meta wait does not permit an old entity snapshot', async () => {
   const state = new MarketFreshness(async () => snapshot(9n), async () => 10n);
+  await state.refresh();
   state.requireBlock(10n); assert.equal(await state.refresh(), false);
   assert.equal(state.getSnapshot().indexingBlock, 10n); assert.match(state.getSnapshot().error, /^SnapshotTooOld:/);
+});
+
+test('restored receipt floor reaches RPC mode without first waiting for an unavailable Graph', async () => {
+  const reads: bigint[] = [];
+  const state = new MarketFreshness(async (_, floor) => {
+    reads.push(floor); return { ...snapshot(floor), source: 'rpc' };
+  }, async () => { throw new Error('Graph quota exhausted'); });
+  state.requireBlock(100n);
+  assert.equal(await state.refresh(), true);
+  assert.equal(state.getSnapshot().market?.source, 'rpc');
+  assert.equal(state.getSnapshot().floor, 100n);
+  assert.equal(state.getSnapshot().indexingBlock, null);
+  state.requireBlock(110n);
+  assert.equal(await state.refresh(), true);
+  assert.deepEqual(reads, [100n, 110n]);
 });
 test('agent rejects old revisions, pending indexing and responses below receipt floor', async () => {
   const state = new MarketFreshness(async (_, floor) => snapshot(floor), async () => {});

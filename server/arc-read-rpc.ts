@@ -6,6 +6,7 @@ type Upstream = { status: number; headers: Headers; body: { result?: unknown; er
 const headers = { 'Cache-Control': 'no-store' };
 const cooldowns = new Map<string, number>();
 const verified = new Map<string, number>();
+const unsupported = new Map<string, number>();
 const pending = new Map<string, Promise<Upstream>>();
 
 function endpoints(primary: string, chainId: number) {
@@ -47,6 +48,7 @@ export async function readArcRpc(read: Read, primary: string, chainId: number) {
   const providers = endpoints(primary, chainId);
   for (const url of providers) {
     if ((cooldowns.get(url) ?? 0) > Date.now()) continue;
+    if ((unsupported.get(`${url}:${read.method}`) ?? 0) > Date.now()) continue;
     try {
       const verificationKey = `${chainId}:${url}`;
       if (url !== primary && (verified.get(verificationKey) ?? 0) <= Date.now()) {
@@ -59,6 +61,13 @@ export async function readArcRpc(read: Read, primary: string, chainId: number) {
       const response = await request(url, read);
       if (throttle(url, response)) continue;
       if (response.status >= 500 || response.status === 408) continue;
+      // dRPC's free endpoint can reject historical log filters accepted by Arc and
+      // QuickNode. Try the next provider; this is not a contract execution revert.
+      if (read.method === 'eth_getLogs' && response.status === 400 && response.body?.error?.code === 35) {
+        if (unsupported.size >= 16) unsupported.delete(unsupported.keys().next().value!);
+        unsupported.set(`${url}:${read.method}`, Date.now() + 60000);
+        continue;
+      }
       if (response.status < 200 || response.status >= 300) return unavailable(read.id, -32000);
       const body = response.body;
       if (body?.error) return Response.json({ jsonrpc: '2.0', id: read.id, error: {
