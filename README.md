@@ -107,7 +107,7 @@ npm run dev
 
 Open **[localhost:3000/demo](http://localhost:3000/demo)**. The first command prepares three signed, LIVE intents and twelve escrowed tickets, then verifies a three-participant candidate with the real solver and `eth_call`. It reuses an already-ready round without sending transactions. After settlement, run it again to prepare the next round using the same tickets and fresh nonces.
 
-The demo opens without a wallet and automatically searches all live event intents through `/api/solve/pool`, retrying after public-state refreshes while the page is open. Each candidate contains two to four participants; the full pool is searched within a 100-candidate / two-second budget. Results show when that budget is reached. Pool sizes above the 256-intent service guard return an explicit error rather than being silently truncated. Checkboxes optionally switch to manual selection for testing. Submission requires a proposer wallet with Arc test USDC for gas; participants need not return or sign again. The seed command does **not** execute the settlement.
+The demo opens without a wallet and loads public market data once. A confirmed intent creation triggers one search of all live event intents through `/api/solve/pool`, after the commit is indexed. Further searches use **Matching → Check all intents**; **Refresh market** updates the displayed data. There is no periodic market refresh or matching retry. Each candidate contains two to four participants; the full pool is searched within a 100-candidate / two-second budget. Results show when that budget is reached. Pool sizes above the 256-intent service guard return an explicit error rather than being silently truncated. Checkboxes optionally select specific requests for testing. Submission requires a proposer wallet with Arc test USDC for gas; participants need not return or sign again. The seed command does **not** execute the settlement.
 
 For broader wishlist inventory, `npm run demo:inventory -- --broadcast` prepares 64 additional tickets across both sessions and all four sections, deposits them and commits 32 adjacent-pair swap offers. Reruns resume the same batch. Additional batches use a name, e.g. `npm run demo:inventory -- --broadcast batch-2`. A new name adds 64 tickets; an existing name resumes its saved batch. [Inventory setup and verification](docs/DEMO_INVENTORY.md) | [Public ticket IDs and transaction hashes](deployments/section-inventory.json).
 
@@ -286,10 +286,10 @@ SUBGRAPH_URL=https://api.studio.thegraph.com/query/1760168/reshuffle/v0.1.1
 npm run dev
 ```
 
-Open `http://localhost:3000/`, open an event poster, then **Check all intents** and choose
+Open `http://localhost:3000/`, open an event poster, then **Matching → Check all intents** and choose
 **Why no match?** on an intent. The workspace is readable without connecting a wallet.
-Signing or settlement connects when needed. The automatic search finds candidates while the
-page is open; **Propose and settle** is a separate wallet transaction. The agent does not
+Signing or settlement connects when needed. Matching runs once after intent creation and
+on demand afterward; **Propose and settle** is a separate wallet transaction. The agent does not
 automatically execute a swap.
 
 The evidence can also be inspected without an Anthropic key or wallet:

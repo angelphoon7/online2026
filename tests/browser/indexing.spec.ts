@@ -57,6 +57,7 @@ async function fixture(page: Page, partial = false, solverStatus = 200) {
   });
   await page.goto('/#workspace');
   await expect(page.locator('.workspace-section').getByText(/ARC BLOCK 100/)).toBeVisible();
+  await page.getByRole('button', { name: 'Matching', exact: true }).click();
   return { control, market };
 }
 
@@ -69,6 +70,7 @@ async function applyBudget(page: Page) {
 
 test('RPC rate limit remains distinct from an unmatched request and retry recovers without signing', async ({ page }) => {
   const { control } = await fixture(page, false, 429);
+  await page.getByRole('button', { name: /Check all intents/ }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'Arc RPC is temporarily rate-limited' })).toBeVisible();
   await expect(page.getByText('Solver unreachable', { exact: false })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Waiting for a match' })).toHaveCount(0);
@@ -84,7 +86,7 @@ test('receipt floor survives errors, stale responses, agent hash changes and rel
   await page.clock.install();
   const { control, market } = await fixture(page);
   control.holdMarket = true;
-  await page.clock.fastForward(30_000);
+  await page.getByRole('button', { name: 'Refresh market', exact: true }).click();
   await expect.poll(() => !!control.oldMarket).toBe(true);
   await page.getByRole('button', { name: 'Ask the agent', exact: true }).click();
   const drawer = page.getByRole('dialog', { name: 'Settlement agent' });
@@ -138,7 +140,7 @@ test('partial budget failure retains revoke receipt and waits before showing the
   control.graphError = false; control.graphBlock = 200; control.block = 200;
   await page.getByRole('button', { name: 'Retry indexing' }).first().click();
   await expect(page.locator('.workspace-stack')).toBeVisible();
-  await page.getByRole('button', { name: /Intent pool \(/ }).click();
+  await page.getByRole('button', { name: /Intent Pool \(/ }).click();
   await expect(page.locator(`.pool-list a[href$="${intent(A, owner('1')).commitTx}"]`)).toHaveCount(1); // only B remains live
 });
 
@@ -281,6 +283,7 @@ test('judge sign-in unlocks controls and signing out hides editable intents', as
     return route.fulfill({ json: { enabled: true, configured: true, authenticated } });
   });
   await page.reload();
+  await page.getByRole('button', { name: 'Matching', exact: true }).click();
   await page.getByText('Judge controls / access', { exact: true }).click();
   await page.getByLabel('Judge access code', { exact: true }).fill('wrong');
   await page.getByRole('button', { name: 'Unlock judge controls' }).click();
@@ -309,8 +312,8 @@ test('a market above 1000 intents exposes its final request and opens that exact
   const { control } = await fixture(page);
   control.extraIntents = Array.from({ length: 1001 }, (_, n) => intent(`0x${(n + 1).toString(16).padStart(64, '0')}`, owner('3')));
   const last = control.extraIntents.at(-1)!;
-  await page.clock.fastForward(30_000);
-  const openPool = page.getByRole('button', { name: 'Intent pool (1003)', exact: true });
+  await page.getByRole('button', { name: 'Refresh market', exact: true }).click();
+  const openPool = page.getByRole('button', { name: 'Intent Pool (1003)', exact: true });
   await expect(openPool).toBeVisible();
   await openPool.click();
   await expect(page.locator('.pool-list .pool-row')).toHaveCount(1003);

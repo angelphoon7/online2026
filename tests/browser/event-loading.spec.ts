@@ -52,7 +52,7 @@ test('event keeps its quarter-ring loading state through failures and opens auto
 test('loading waits through Retry-After and recovers without exposing provider errors', async ({ page }) => {
   const { control, dialog } = await fixture(page, [429, 200], '60');
   await expect(dialog.getByText(/SubgraphRateLimited|private provider/)).toHaveCount(0);
-  // Both dialog retries and ordinary 30-second prefetch polling must obey the same cooldown.
+  // Initial-load retries must obey the provider cooldown.
   await page.clock.runFor(55000);
   expect(control.reads).toBe(1);
   await expect(dialog).toBeVisible();
@@ -66,8 +66,8 @@ test('leaving the loading dialog cancels its retries and allows reopening', asyn
   await dialog.getByRole('button', { name: 'Back to Events' }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('#events')).toBeVisible();
-  await page.clock.runFor(15000);
-  expect(control.reads, 'No dialog retry after leaving; page prefetch resumes at 30 seconds').toBe(1);
+  await page.clock.runFor(120000);
+  expect(control.reads, 'Leaving cancels loading retries and no periodic refresh runs').toBe(1);
   await page.locator('.poster-live').click();
   await expect(dialog).toBeVisible();
   await expect.poll(async () => { await page.clock.runFor(500); return control.responses; }).toBe(2);

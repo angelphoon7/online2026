@@ -70,7 +70,8 @@ export default function Market() {
   const [searchDetailsOpen, setSearchDetailsOpen] = useState(false);
   const [matchDetailsOpen, setMatchDetailsOpen] = useState(false);
   const [selected, setSelected] = useState<Hex[]>([]);
-  const [automatic, setAutomatic] = useState(true);
+  const [wholePool, setWholePool] = useState(true);
+  const [matchAfterCommit, setMatchAfterCommit] = useState(false);
   const [proposal, setProposal] = useState<SettlementProposal | null>(null);
   const [evidence, setEvidence] = useState<SolveEvidence | null>(null);
   const [solverError, setSolverError] = useState('');
@@ -138,10 +139,11 @@ export default function Market() {
 
   const runSolver = useCallback(async (hashes: Hex[], wholePool = false) => {
     const snapshot = freshness.getSnapshot();
-    if (snapshot.indexingBlock !== null || activeAction.current) return;
+    if (snapshot.indexingBlock !== null || activeAction.current || searchInFlight.current) return;
     const version = ++searchVersion.current;
     searchInFlight.current = true;
     setSolving(true); setSolverError('');
+    if (wholePool) setSelected(snapshot.market ? automaticSelection(snapshot.market) : []);
     try {
       if (!wholePool && (hashes.length < 2 || hashes.length > 4)) throw new Error('Select 2–4 live intents for this bounded search.');
       // The floor carries into the search: after one of our writes the pool must not be
@@ -163,29 +165,27 @@ export default function Market() {
     try { const saved = sessionStorage.getItem(key); if (saved && /^\d+$/.test(saved) && BigInt(saved) > freshness.getSnapshot().floor) freshness.requireBlock(BigInt(saved)); } catch {}
     return freshness.subscribe(() => { try { sessionStorage.setItem(key, freshness.getSnapshot().floor.toString()); } catch {} });
   }, [freshness]);
-  useEffect(() => { void Promise.resolve().then(() => refresh()); const timer = setInterval(() => void refresh(), 30000); return () => clearInterval(timer); }, [refresh]);
+  useEffect(() => { void Promise.resolve().then(() => refresh()); }, [refresh]);
   useEffect(() => {
     if (!unavailableMatch || busy) return;
     const timer = setTimeout(() => {
       searchVersion.current++; searchInFlight.current = false;
-      setSolving(false); setProposal(null); setEvidence(null); setSolverError('');
+      setSolving(false); setProposal(null); setEvidence(null);
+      setSolverError('This match is no longer available. Check all intents to search again.');
     }, 0);
     return () => clearTimeout(timer);
   }, [unavailableMatch, busy]);
   useEffect(() => {
-    if (!automatic || !market || busy || indexingBlock !== null) return;
+    // A confirmed commit queues one search. If its read-back is delayed, keep it queued
+    // until the receipt's freshness floor is satisfied; other refreshes never queue work.
+    if (!matchAfterCommit || !market || busy || indexingBlock !== null) return;
     const timer = setTimeout(() => {
       if (searchInFlight.current) return;
-      const hashes = automaticSelection(market);
-      setSelected(hashes);
-      // Keep the reviewed candidate and its evidence together. Public reads continue,
-      // but only search again when it is unavailable or the user requests a new search.
-      if (readyMatch) return;
-      if (hashes.length >= 2) void runSolver(hashes, true);
-      else { searchVersion.current++; setSolving(false); setProposal(null); setEvidence(null); setSolverError(''); }
+      setMatchAfterCommit(false);
+      void runSolver([], true);
     }, 0);
     return () => clearTimeout(timer);
-  }, [automatic, market, account, busy, indexingBlock, readyMatch, runSolver]);
+  }, [matchAfterCommit, market, busy, indexingBlock, runSolver]);
   useEffect(() => {
     void jsonFetch<{ enabled: boolean; operator?: string }>('/api/demo/reset').then(d => { setResetEnabled(d.enabled); setOperator(d.operator ?? ''); }).catch(() => {});
   }, []);
@@ -264,7 +264,7 @@ export default function Market() {
   const judged = (block: string, notice: string, hashes: Hex[]) => {
     noteReceipt(BigInt(block), hashes);
     void refresh(true);
-    setProposal(null); setEvidence(null); setAutomatic(true);
+    setProposal(null); setEvidence(null); setWholePool(true);
     setNotice(notice);
   };
   const applyJudgeBudget = (hash: Hex, usdc: number) => operate('Apply budget', async () => {
@@ -386,8 +386,10 @@ export default function Market() {
     }
     committed(ready);
     searchVersion.current++; searchInFlight.current = false; setSolving(false);
-    setReceipt(null); setProposal(null); setEvidence(null); setAutomatic(true);
-    setNotice('Intent committed. Matching will start automatically as soon as the refreshed pool includes your request.'); await refreshWritten();
+    setReceipt(null); setProposal(null); setEvidence(null); setWholePool(true);
+    setMatchAfterCommit(true);
+    // track() already refreshed at the confirmed commit block. Reuse that read-back.
+    setNotice('Intent committed. Matching will run once after your request is indexed.');
   });
   const openReceipt = async (hash: Hex) => {
     const result = await getSettlementReceipt(hash);
@@ -417,7 +419,7 @@ export default function Market() {
         const expected = { siphon: 'PaymentImbalance', count: 'CountMismatch', adjacency: 'SeatsNotAdjacent' }[malicious];
         if (actual?.name !== expected) throw new Error(`This state does not isolate ${expected}. ${actual?.name ?? 'Refresh the pool and try again.'}`);
       } else {
-        if (!payload || !readyMatch || matchUnavailable(payload, evidence, freshness.getSnapshot().market)) throw new Error('This match is no longer available. Searching for another match.');
+        if (!payload || !readyMatch || matchUnavailable(payload, evidence, freshness.getSnapshot().market)) throw new Error('This match is no longer available. Check all intents to search again.');
         // Validate exactly what was reviewed, without re-running a search that could
         // change its tickets or payments. Simulation does not reserve chain state.
         await simulate(payload, address);
@@ -436,7 +438,11 @@ export default function Market() {
     } catch (e) {
       if (!broadcast) {
         const named = namedRejection(e); setRejection(named); setStatus(named ? 'simulation rejected' : 'idle');
-        if (!malicious && isSimulationRejection(e)) { setProposal(null); setEvidence(null); void refresh(); }
+        if (!malicious && isSimulationRejection(e)) {
+          setProposal(null); setEvidence(null);
+          setSolverError('This match failed the latest check. Check all intents to search again.');
+          void refresh();
+        }
       }
       throw e;
     }
@@ -452,7 +458,7 @@ export default function Market() {
       if (d.state === 'failed') throw new Error('Demo preparation failed. Inspect the local operator script log.');
       if (d.state === 'complete') {
         if (!d.verifiedBlock) throw new Error('Demo verification block is unavailable. Inspect the operator report.');
-        setAutomatic(true); await indexed({ blockNumber: BigInt(d.verifiedBlock) });
+        setWholePool(true); await indexed({ blockNumber: BigInt(d.verifiedBlock) });
         setNotice('Demo preparation confirmed. Public state refresh requested at its verification block.'); return;
       }
     }
@@ -467,7 +473,7 @@ export default function Market() {
   const walletLabel = (address: string) => equal(address, account) ? 'You' : participants.includes(address.toLowerCase()) ? `Wallet ${participants.indexOf(address.toLowerCase()) + 1}` : truncateAddress(address);
   const disabled = !!busy || wallet.isConnecting || indexingBlock !== null;
   const replacementIds = receipt && account ? receivedTickets(receipt, account) : [];
-  const selectIntent = (hash: Hex) => { setAutomatic(false); searchVersion.current++; searchInFlight.current = false; setSolving(false); setSelected(s => s.includes(hash) ? s.filter(h => h !== hash) : [...s, hash]); setProposal(null); setEvidence(null); setSolverError(''); };
+  const selectIntent = (hash: Hex) => { setWholePool(false); searchVersion.current++; searchInFlight.current = false; setSolving(false); setSelected(s => s.includes(hash) ? s.filter(h => h !== hash) : [...s, hash]); setProposal(null); setEvidence(null); setSolverError(''); };
 
   return <div className={`reshuffle-ui ${currentView !== 'home' ? 'page-market' : 'page-home'}`}>
     <header className={`site-header ${currentView !== 'home' ? 'is-market' : ''}`}>
@@ -574,7 +580,7 @@ export default function Market() {
             </button>
             {[{ name: 'INTERLUDE', photo: sarahPoster, alt: 'Sarah Kang in Seoul concert poster' }, { name: 'ENCORE', photo: taylorPoster, alt: 'Taylor Swift The Eras Tour concert poster' }].map(({ name, photo, alt }, n) => <div key={name} className="poster poster-inert" aria-disabled="true"><span className="poster-top mono">UPCOMING PROGRAMME / 0{n + 2}</span><span className="poster-photo"><Image src={photo} alt={alt} fill sizes="(max-width: 720px) 84vw, 28vw" /></span><span className="poster-title">{name}</span><span className="poster-sub">Event details to be announced</span><span className="poster-dates mono">VENUE & DATES UNANNOUNCED</span><span className="poster-status">No live intents</span></div>)}
           </div>
-          <p id="event-preload-status" className="quiet" role="status" aria-live="polite">{market ? `Ticket positions and intent commitments loaded for all deployed events / Arc block ${market.blockNumber}.` : readError ? 'Loading event data. We’ll keep trying automatically. You can open the event while you wait.' : 'Loading public ticket positions and intent commitments. You can open the event while its data loads.'}</p>
+          <p id="event-preload-status" className="quiet" role="status" aria-live="polite">{market ? `Ticket positions and intent commitments loaded for all deployed events / Arc block ${market.blockNumber}.` : readError ? 'Event data could not be loaded. Retry public reads when you are ready.' : 'Loading public ticket positions and intent commitments. You can open the event while its data loads.'}</p>
           <p className="quiet">Event names are demo presentation labels. Session IDs and ticket metadata come from the deployed contracts; no venue dates or prices are recorded on-chain.</p>
           {readError && <p role="alert" className="read-error">{readError} <button onClick={() => void refresh(true)}>Retry public reads</button></p>}
         </section>
@@ -599,6 +605,8 @@ export default function Market() {
                   <span className="workspace-block-source">/ {market.source === 'graph' ? 'VIA THE GRAPH' : 'VIA DIRECT RPC READS'}</span>
                 </>}</p>
                 <nav className="workspace-nav" aria-label="Workspace navigation">
+                  <button type="button" onClick={() => setWorkflowView('matching')}>Matching</button>
+                  <button type="button" disabled={disabled || solving} onClick={() => void refresh(true)}>Refresh market</button>
                   <button type="button" aria-haspopup="dialog" aria-expanded={poolOpen} onClick={() => setPoolOpen(true)}>{indexingBlock !== null ? 'Intent pool: indexing' : `Intent Pool (${live.length})`}</button>
                   <button type="button" aria-haspopup="dialog" aria-expanded={seatMapOpen} onClick={() => setSeatMapOpen(true)}>Seat Map</button>
                   <button type="button" aria-haspopup="dialog" aria-expanded={historyOpen} onClick={() => setHistoryOpen(true)}>Past Settlements <span className="mono">({getSettlements(market).length})</span></button>
@@ -608,7 +616,7 @@ export default function Market() {
               <PoolDialog open={poolOpen} onClose={() => setPoolOpen(false)}>
                 {indexingBlock !== null ? <p role="status">{indexingMessage(indexingBlock)} {INDEXING_PENDING}</p> : <>
                 <p className="mono">{live.length} {POOL_LABEL}</p><p className="quiet">{POOL_NOTE}</p><div className="pool-list">{live.map((i, index) => <article key={i.hash} className="pool-row"><label><input type="checkbox" checked={selected.includes(i.hash)} disabled={disabled} onChange={() => selectIntent(i.hash)} /><span>{walletLabel(i.owner)} <span className="mono">/ Request {index + 1}</span></span></label><p>{condition(restoreIntent(i))}</p><details className="wallet-details"><summary>Wallet and transaction details</summary><a className="hash" href={`${EXPLORER}/address/${i.owner}`} target="_blank" rel="noreferrer">{i.owner}</a><a className="mono" href={`${EXPLORER}/tx/${i.commitTx}`} target="_blank" rel="noreferrer">Commit {i.commitTx.slice(0, 10)}… ↗</a></details><button className="text-button" onClick={() => { setAgentHash(i.hash); setAgentOpen(true); setPoolOpen(false); }}>Why no match?</button>{equal(i.owner, account) && <button disabled={disabled} onClick={() => void action('Revoke intent', async address => { await track(await revokeIntent(address, i.hash)); await refreshWritten(); setProposal(null); setEvidence(null); })}>Revoke my intent</button>}</article>)}</div>{!live.length && <p>No live requests yet. Submit an intent to join the pool.</p>}{!!market.hashMismatched.length && <p className="quiet" role="status">{market.hashMismatched.length} indexed {market.hashMismatched.length === 1 ? 'request is' : 'requests are'} excluded from this pool: the indexed fields do not re-hash to the id they were committed under, so they are not shown. <span className="mono">{market.hashMismatched.map(h => `${h.slice(0, 10)}…`).join(' ')}</span></p>}
-                <div className="pool-dialog-actions">{!automatic && <><button className="secondary" disabled={disabled} onClick={() => { setAutomatic(true); setPoolOpen(false); }}>Resume automatic matching</button><button className="primary" disabled={disabled || solving || selected.length < 2 || selected.length > 4} onClick={() => { void runSolver(selected); setPoolOpen(false); }}>Search selected requests ({selected.length}/4)</button></>}</div>
+                <div className="pool-dialog-actions"><button className="secondary" disabled={disabled || solving || matchAfterCommit} onClick={() => { setWholePool(true); setWorkflowView('matching'); setPoolOpen(false); void runSolver([], true); }}>Check all intents</button>{!wholePool && <button className="primary" disabled={disabled || solving || matchAfterCommit || selected.length < 2 || selected.length > 4} onClick={() => { setWorkflowView('matching'); void runSolver(selected); setPoolOpen(false); }}>Search selected requests ({selected.length}/4)</button>}</div>
                 </>}
               </PoolDialog>
               {indexingBlock !== null && <section className="activity" aria-live="polite">
@@ -621,11 +629,11 @@ export default function Market() {
               <div className="workspace-stack">
                 {workflowView === 'intent' ? <IntentBuilder onConnect={async () => { await wallet.connect(); await refresh(true); }} connectionError={wallet.error} market={market} account={account} approved={approved} busy={disabled} seatMapOpen={seatMapOpen} onSeatMapClose={() => setSeatMapOpen(false)} onComplete={() => setWorkflowView('matching')} onCustody={custody} onDepositSelected={depositSelected} onSign={sign} onDemo={claimDemo} onApprove={() => action('Approve tickets', async address => { await track(await approveNFTsForEscrow(address)); setApproved(true); })} /> : <>
                 <button type="button" className="back-nav-btn" onClick={() => setWorkflowView('intent')}>← Back to request</button>
-                {request && <MatchingStatus request={request} selected={selected} solving={solving} error={readError || solverError} proposal={unavailableMatch ? null : proposal} evidence={evidence} automatic={automatic} resume={() => setAutomatic(true)} busy={disabled} />}
-                <section className="workspace-panel matching-panel"><div className="panel-heading"><h2>Matching</h2><span className="eyebrow">{readyMatch && !solving ? 'Ready to settle' : automatic ? 'Automatic search' : 'Manual search'}</span></div>
-                  <div className="solver-actions"><button className="secondary" disabled={solving || disabled || (automatic ? live.length < 2 : selected.length < 2 || selected.length > 4)} onClick={() => void runSolver(selected, automatic)}>{solving ? 'Reading and searching…' : automatic ? 'Check all intents' : 'Run solver'} <span className="mono">({automatic ? `${live.length} in pool` : `${selected.length}/4`})</span></button><button className="text-button" onClick={() => { setAgentHash(current => current ?? request?.hash ?? live[0]?.hash ?? null); setAgentOpen(true); }}>Ask the agent</button>{resetEnabled && equal(account, operator) && <button className="text-button" disabled={disabled} onClick={() => void reset()}>Reset demo</button>}</div>
-                  <p className="quiet">{readyMatch && !solving ? 'Your match stays here while you review. Availability updates in the background.' : automatic ? 'Searching live requests automatically. Each candidate includes two to four participants.' : 'Manual search is on. Choose 2–4 requests, then Run solver.'}</p>{!automatic && !request && <button className="text-button" disabled={disabled} onClick={() => setAutomatic(true)}>Resume automatic matching</button>}
-                  {solving && <p className="quiet" role="status">Checking current intents and ticket availability...</p>}{evidence?.pool && <details className="search-details" open={searchDetailsOpen} onToggle={event => setSearchDetailsOpen(event.currentTarget.open)}><summary>Search details and evidence</summary><p className="quiet mono">{evidence.pool.liveIntents} live requests / {evidence.pool.searchableIntents} within ticket-count limits / {evidence.pool.excludedIntents} excluded with reasons. Maximum 4 participants per candidate, 100 candidates, 2-second search budget. <a href={`/api/evidence/${evidence.id}`} target="_blank" rel="noreferrer">View search evidence and exclusion reasons</a></p></details>}{evidence?.search && !solving && <p className="quiet">{evidence.search.termination === 'complete' ? 'Search completed within the configured bounds.' : 'Search budget reached. Further combinations may remain unchecked.'}</p>}{solverError && <p role="alert">{solverError}</p>}{evidence && !proposal && !solving && <div className="matching-empty" role="status"><h3>Waiting for a match</h3><p>{EMPTY_RESULT}. New requests may make a swap possible; you can wait or try another selection.</p>{evidence.candidatesExcluded.some(i => /capacity|allowance/i.test(i.reason)) && <p>Insufficient USDC balance or allowance for a candidate. Update spending capacity before settling.</p>}</div>}
+                {request && <MatchingStatus request={request} selected={selected} solving={solving} error={readError || solverError} proposal={unavailableMatch ? null : proposal} evidence={evidence} wholePool={wholePool} />}
+                <section className="workspace-panel matching-panel"><div className="panel-heading"><h2>Matching</h2><span className="eyebrow">{readyMatch && !solving ? 'Ready to settle' : wholePool ? 'All live requests' : 'Selected requests'}</span></div>
+                  <div className="solver-actions"><button className="secondary" disabled={solving || disabled || matchAfterCommit || (!wholePool && (selected.length < 2 || selected.length > 4))} onClick={() => void runSolver(selected, wholePool)}>{solving ? 'Reading and searching…' : wholePool ? 'Check all intents' : 'Run solver'}{!wholePool && <span className="mono"> ({selected.length}/4)</span>}</button><button className="text-button" onClick={() => { setAgentHash(current => current ?? request?.hash ?? live[0]?.hash ?? null); setAgentOpen(true); }}>Ask the agent</button>{resetEnabled && equal(account, operator) && <button className="text-button" disabled={disabled} onClick={() => void reset()}>Reset demo</button>}</div>
+                  <p className="quiet">{readyMatch && !solving ? 'Your match stays here while you review. Availability is checked again before settlement.' : wholePool ? 'Matching runs once after you create an intent. Click Check all intents whenever you want to search again.' : 'Choose 2–4 requests, then Run solver.'}</p>{!wholePool && <button className="text-button" disabled={disabled || solving || matchAfterCommit} onClick={() => { setWholePool(true); void runSolver([], true); }}>Check all intents</button>}
+                  {solving && <p className="quiet" role="status">Checking current intents and ticket availability...</p>}{evidence?.pool && <details className="search-details" open={searchDetailsOpen} onToggle={event => setSearchDetailsOpen(event.currentTarget.open)}><summary>Search details and evidence</summary><p className="quiet mono">{evidence.pool.liveIntents} live requests / {evidence.pool.searchableIntents} within ticket-count limits / {evidence.pool.excludedIntents} excluded with reasons. Maximum 4 participants per candidate, 100 candidates, 2-second search budget. <a href={`/api/evidence/${evidence.id}`} target="_blank" rel="noreferrer">View search evidence and exclusion reasons</a></p></details>}{evidence?.search && !solving && <p className="quiet">{evidence.search.termination === 'complete' ? 'Search completed within the configured bounds.' : 'Search budget reached. Further combinations may remain unchecked.'}</p>}{solverError && <p role="alert">{solverError}</p>}{evidence && !proposal && !solving && <div className="matching-empty" role="status"><h3>Waiting for a match</h3><p>{EMPTY_RESULT}. New requests may make a swap possible; click Check all intents to search again.</p>{evidence.candidatesExcluded.some(i => /capacity|allowance/i.test(i.reason)) && <p>Insufficient USDC balance or allowance for a candidate. Update spending capacity before settling.</p>}</div>}
                   {proposal && <div className="candidate"><p className="eyebrow">{solving ? 'Rechecking previous match' : readyMatch ? 'Candidate found - awaiting settlement' : 'Candidate needs rechecking'}</p><p className="quiet">{solving ? 'The previous result stays visible while current conditions are checked. Settlement is unavailable until this search finishes.' : evidence?.simulationResult?.success ? 'A candidate is not a completed swap. Propose and settle submits it for on-chain validation.' : 'This candidate has not passed simulation and cannot be submitted yet.'}</p><div className="panel-heading"><strong>{settlementShape(proposal)}</strong><span className="mono">{proposal.candidatesFound} candidates</span></div><details className="search-details" open={matchDetailsOpen} onToggle={event => setMatchDetailsOpen(event.currentTarget.open)}><summary>Why this match?</summary><p className="quiet">{RANKING_RULE}. Ties: fewer participants, then ordered intent hashes. Source block <span className="mono">{evidence?.source.blockNumber}</span>.</p></details><table className="net-table"><thead><tr><th>Participant</th><th>USDC net</th></tr></thead><tbody>{proposal.legs.map(l => <tr key={l.intentHash}><td><a href={`${EXPLORER}/address/${l.owner}`} title={l.owner} target="_blank" rel="noreferrer">{walletLabel(l.owner)}</a></td><td className="mono">{l.netPayment > 0n ? '−' : l.netPayment < 0n ? '+' : ''}{formatUSDC(l.netPayment < 0n ? -l.netPayment : l.netPayment)}</td></tr>)}</tbody><tfoot><tr><td>Σ</td><td className="mono">{formatUSDC(proposal.legs.reduce((n, l) => n - l.netPayment, 0n))}</td></tr></tfoot></table></div>}
                   <button className="primary full" disabled={disabled || solving || !readyMatch} onClick={() => void settle()}>Propose and settle <span>↗</span></button><p className="quiet">When a match is ready, click Propose and settle and confirm the transaction in your wallet. The proposer pays gas in USDC. Participants do not sign their intents again. Your swap is complete only after the receipt confirms success.</p>
                   <JudgeControls freshness={freshness} busy={disabled} label={walletLabel} onBudget={applyJudgeBudget} onRevoke={revokeJudgeIntent} />

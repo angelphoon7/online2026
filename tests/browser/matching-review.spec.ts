@@ -81,11 +81,14 @@ async function fixture(page: Page, options: { noMatch?: boolean; solverBlock?: n
   });
   await page.goto('/#workspace');
   await expect(page.locator('.workspace-section').getByText(/ARC BLOCK 100/)).toBeVisible();
+  await page.getByRole('button', { name: 'Matching', exact: true }).click();
   await expect(page.getByRole('button', { name: /Check all intents/ })).toBeEnabled();
+  expect(control.poolCalls).toBe(0);
+  await page.getByRole('button', { name: /Check all intents/ }).click();
   return { control, market, solveResult };
 }
 
-test('ready match stays stable through background reads and submits exactly the reviewed candidate', async ({ page }) => {
+test('ready match stays stable through manual refreshes and submits exactly the reviewed candidate', async ({ page }) => {
   const { control, market } = await fixture(page);
   const candidate = page.locator('.candidate');
   const settle = page.getByRole('button', { name: 'Propose and settle' });
@@ -93,7 +96,7 @@ test('ready match stays stable through background reads and submits exactly the 
   await candidate.getByText('Why this match?', { exact: true }).click();
   const reviewed = await candidate.innerText();
   control.holdRead = true;
-  await page.clock.fastForward(30_000);
+  await page.getByRole('button', { name: 'Refresh market', exact: true }).click();
   await expect.poll(() => !!control.pendingRead).toBe(true);
   await expect(settle).toBeEnabled();
   await expect(page.getByText('Reading and searching', { exact: false })).toHaveCount(0);
@@ -118,19 +121,23 @@ test('ready match stays stable through background reads and submits exactly the 
 
   for (const block of ['102', '103']) {
     market.blockNumber = block;
-    await page.clock.fastForward(30_000);
+    await page.getByRole('button', { name: 'Refresh market', exact: true }).click();
     await expect(page.locator('.workspace-section').getByText(new RegExp(`ARC BLOCK ${block}`))).toBeVisible();
     await expect(settle).toBeEnabled();
   }
   expect(control.poolCalls).toBe(1);
   expect(await candidate.innerText()).toBe(reviewed);
+  const reads = control.marketReads;
+  await page.clock.fastForward(120_000);
+  expect(control.marketReads).toBe(reads);
+  expect(control.poolCalls).toBe(1);
 });
 
 test('temporary public read failure does not replace a ready match with an error or restart the solver', async ({ page }) => {
   const { control } = await fixture(page);
   control.readFailure = true;
   const reads = control.marketReads;
-  await page.clock.fastForward(30_000);
+  await page.getByRole('button', { name: 'Refresh market', exact: true }).click();
   await expect.poll(() => control.marketReads).toBeGreaterThan(reads);
   await expect(page.getByRole('button', { name: 'Propose and settle' })).toBeEnabled();
   await expect(page.getByRole('region', { name: 'Your swap request' })).toContainText('Match found - awaiting settlement');
@@ -139,7 +146,7 @@ test('temporary public read failure does not replace a ready match with an error
 });
 
 for (const change of ['revoked', 'settled', 'expired', 'withdrawn', 'redeemed'] as const) {
-  test(`${change} candidate resumes matching after a newer public snapshot`, async ({ page }) => {
+  test(`${change} candidate is cleared by refresh and matching waits for a button click`, async ({ page }) => {
     const { control, market, solveResult } = await fixture(page);
     if (change === 'revoked') market.intents[0].state = 2;
     if (change === 'settled') market.intents[0].state = 3;
@@ -148,10 +155,12 @@ for (const change of ['revoked', 'settled', 'expired', 'withdrawn', 'redeemed'] 
     if (change === 'redeemed') market.tickets[0].status = 1;
     market.blockNumber = '101'; control.solverBlock = 101;
     control.noMatch = true; control.holdSearch = true;
-    await page.clock.fastForward(30_000);
-    await expect.poll(() => !!control.pendingSearch).toBe(true);
+    await page.getByRole('button', { name: 'Refresh market', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Propose and settle' })).toBeDisabled();
     await expect(page.locator('.candidate')).toHaveCount(0);
+    expect(control.poolCalls).toBe(1);
+    await page.getByRole('button', { name: /Check all intents/ }).click();
+    await expect.poll(() => !!control.pendingSearch).toBe(true);
     await expect(page.getByText('Checking current intents and ticket availability...', { exact: true })).toBeVisible();
     await control.pendingSearch!.fulfill({ json: solveResult() });
     await expect(page.getByRole('heading', { name: 'Waiting for a match', exact: true }).last()).toBeVisible();
@@ -163,22 +172,27 @@ test('a lagging snapshot cannot discard a newer solver result', async ({ page })
   const { market, control } = await fixture(page, { solverBlock: 102 });
   market.blockNumber = '101';
   market.intents[0].state = 2;
-  await page.clock.fastForward(30_000);
+  await page.getByRole('button', { name: 'Refresh market', exact: true }).click();
   await expect(page.locator('.workspace-section').getByText(/ARC BLOCK 101/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Propose and settle' })).toBeEnabled();
   expect(control.poolCalls).toBe(1);
 });
 
-test('unmatched requests keep retrying and stop repeat searches once a match appears', async ({ page }) => {
+test('unmatched requests remain idle until manual matching checks the latest pool', async ({ page }) => {
   const { control, market } = await fixture(page, { noMatch: true });
   await expect(page.locator('.matching-empty')).toBeVisible();
   control.noMatch = false; market.blockNumber = '101'; control.solverBlock = 101;
-  await page.clock.fastForward(30_000);
+  const reads = control.marketReads;
+  await page.clock.fastForward(120_000);
+  expect(control.marketReads).toBe(reads);
+  expect(control.poolCalls).toBe(1);
+  await expect(page.locator('.matching-empty')).toBeVisible();
+  await page.getByRole('button', { name: /Check all intents/ }).click();
   await expect(page.getByRole('button', { name: 'Propose and settle' })).toBeEnabled();
   expect(control.poolCalls).toBe(2);
   market.blockNumber = '102';
-  await page.clock.fastForward(30_000);
-  await expect(page.locator('.workspace-section').getByText(/ARC BLOCK 102/)).toBeVisible();
+  await page.clock.fastForward(120_000);
+  expect(control.marketReads).toBe(reads);
   expect(control.poolCalls).toBe(2);
 });
 
@@ -186,10 +200,11 @@ test('live simulation rejection discards the candidate without submitting a tran
   const { control } = await fixture(page);
   control.rejectSimulation = true; control.noMatch = true;
   await page.getByRole('button', { name: 'Propose and settle' }).click();
-  await expect(page.locator('.matching-empty')).toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: 'This match failed the latest check' })).toBeVisible();
   await expect(page.locator('.candidate')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Propose and settle' })).toBeDisabled();
   expect(control.simulations.length).toBeGreaterThan(0);
   expect(control.transactions).toHaveLength(0);
   expect(control.selectedCalls).toBe(0);
+  expect(control.poolCalls).toBe(1);
 });

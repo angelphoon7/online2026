@@ -12,7 +12,9 @@ type Transaction = { to: string; data: Hex; value?: Hex };
 type WalletRequest = { method: string; params?: unknown[] };
 
 async function fixture(page: Page, options: { offeredSection?: number; allowance?: bigint; deposited?: boolean; cancelApproval?: boolean; cancelSignature?: boolean; throttle?: 'once' | 'always'; retryAfter?: number; usedNonces?: bigint } = {}) {
-  const control = { transactions: [] as Transaction[], calls: [] as string[], throttledReads: 0, blockReadTimes: [] as number[], nonceReads: [] as bigint[], preSignGraphReads: 0, signed: null as { message: { maxNetPay: string; offered: string[]; nonce: string } } | null };
+  const control = { transactions: [] as Transaction[], calls: [] as string[], throttledReads: 0, blockReadTimes: [] as number[], nonceReads: [] as bigint[], preSignGraphReads: 0,
+    marketReads: 0, graphReads: 0, poolCalls: 0, poolFloors: [] as string[], marketBlock: 100, graphBlock: 100, receiptBlock: 100, graphError: false, poolFailure: false,
+    signed: null as { message: { maxNetPay: string; offered: string[]; nonce: string } } | null };
   const tickets = [1, 2].map(id => ({ tokenId: String(id), eventId: 1, sessionId: 0, sectionId: options.offeredSection ?? 0, row: 1, seat: id, status: 0,
     owner: options.deposited === false ? owner : deployment.contracts.Escrow, depositor: options.deposited === false ? zero : owner }));
   await page.exposeFunction('paymentWalletRequest', async ({ method, params = [] }: WalletRequest) => {
@@ -39,14 +41,23 @@ async function fixture(page: Page, options: { offeredSection?: number; allowance
   await page.route('**/api/**', async route => {
     const path = new URL(route.request().url()).pathname;
     const json = (body: unknown) => route.fulfill({ json: body });
-    if (path === '/api/market') return json({ blockNumber: '100', timestamp: '1789232809', source: 'graph', tickets, intents: [], settlements: [], defaultHashes: [], hashMismatched: [] });
+    if (path === '/api/market') {
+      control.marketReads++;
+      return json({ blockNumber: String(control.marketBlock), timestamp: '1789232809', source: 'graph', tickets, intents: [], settlements: [], defaultHashes: [], hashMismatched: [] });
+    }
     if (path === '/api/demo/reset' || path === '/api/demo/session') return json({ enabled: false, authenticated: false });
     if (path === '/api/demo/scenarios') return json({ batch: 'fixture', snapshotBlock: '100', lagSeconds: 0, groups: [] });
     if (path === '/api/graph') {
+      control.graphReads++;
       if (!control.signed) control.preSignGraphReads++;
-      return json({ data: { _meta: { block: { number: 100, timestamp: '1789232809' }, hasIndexingErrors: false } } });
+      return json({ data: { _meta: { block: { number: control.graphBlock, timestamp: '1789232809' }, hasIndexingErrors: control.graphError } } });
     }
-    if (path === '/api/solve/pool') return json({ id: 'fixture', proposal: null, source: { kind: 'subgraph', blockNumber: '100', snapshotBlock: '100' }, candidatesFound: 0, candidatesExcluded: [], intentsConsidered: 0, chosen: null });
+    if (path === '/api/solve/pool') {
+      control.poolCalls++;
+      control.poolFloors.push(route.request().postDataJSON().minBlock ?? '0');
+      if (control.poolFailure) return route.fulfill({ status: 429, json: { code: 'SubgraphRateLimited', error: 'The Graph is temporarily rate-limited.' } });
+      return json({ id: 'fixture', proposal: null, source: { kind: 'subgraph', blockNumber: String(control.marketBlock) }, candidatesFound: 0, candidatesExcluded: [], intentsConsidered: 0, chosen: null });
+    }
     if (path === '/api/rpc') {
       const body = route.request().postDataJSON();
       if (body.method === 'eth_getBlockByNumber') control.blockReadTimes.push(Date.now());
@@ -70,7 +81,7 @@ async function fixture(page: Page, options: { offeredSection?: number; allowance
         else if (selector === toFunctionSelector('depositor(uint256)')) result = `0x${(options.deposited === false ? zero : owner).slice(2).padStart(64, '0')}`;
         else if (selector === toFunctionSelector('allowance(address,address)')) result = word(options.allowance ?? 0n);
         else throw new Error(`Unexpected contract read: ${selector}`);
-      } else if (body.method === 'eth_getTransactionReceipt') result = { transactionHash: txHash, transactionIndex: '0x0', blockHash: `0x${'b'.repeat(64)}`, blockNumber: '0x64', from: owner, to: deployment.usdc,
+      } else if (body.method === 'eth_getTransactionReceipt') result = { transactionHash: txHash, transactionIndex: '0x0', blockHash: `0x${'b'.repeat(64)}`, blockNumber: `0x${control.receiptBlock.toString(16)}`, from: owner, to: deployment.usdc,
         cumulativeGasUsed: '0x10000', gasUsed: '0x10000', effectiveGasPrice: '0x1', contractAddress: null, logs: [], logsBloom: `0x${'0'.repeat(512)}`, status: '0x1', type: '0x2' };
       else throw new Error(`Unexpected RPC: ${body.method}`);
       return json({ jsonrpc: '2.0', id: body.id, result });
@@ -88,6 +99,82 @@ async function selectTickets(page: Page, section: number) {
   await page.getByRole('checkbox', { name: 'Offer ticket 1', exact: true }).check();
   await page.getByRole('checkbox', { name: 'Offer ticket 2', exact: true }).check();
 }
+
+test('home, events and workspace stay idle until the user refreshes or checks matching', async ({ page }) => {
+  await page.clock.install();
+  const control = await fixture(page);
+  for (const hash of ['#home', '#events', '#workspace']) {
+    await page.evaluate(hash => { location.hash = hash; }, hash);
+    await page.clock.fastForward(120_000);
+    expect(control.marketReads).toBe(1);
+    expect(control.graphReads).toBe(0);
+    expect(control.poolCalls).toBe(0);
+  }
+  await page.getByRole('button', { name: 'Refresh market', exact: true }).click();
+  await expect.poll(() => control.marketReads).toBe(2);
+  expect(control.poolCalls).toBe(0);
+  await page.getByRole('button', { name: 'Matching', exact: true }).click();
+  // Even an empty cached pool must allow checking for newly created requests.
+  await page.getByRole('button', { name: 'Check all intents', exact: true }).click();
+  await expect(page.locator('.matching-empty')).toBeVisible();
+  expect(control.poolCalls).toBe(1);
+});
+
+test('a confirmed intent searches once, reuses its read-back, and waits for manual matching thereafter', async ({ page }) => {
+  await page.clock.install();
+  const control = await fixture(page);
+  await selectTickets(page, 2);
+  await page.locator('.sign-intent').click();
+  await expect(page.locator('.matching-empty')).toBeVisible();
+  expect(control.poolCalls).toBe(1);
+  expect(control.marketReads).toBe(2);
+  expect(control.graphReads).toBe(1);
+  expect(control.poolFloors).toEqual(['100']);
+  await page.clock.fastForward(120_000);
+  expect(control.poolCalls).toBe(1);
+  expect(control.marketReads).toBe(2);
+  expect(control.graphReads).toBe(1);
+  await page.getByRole('button', { name: 'Check all intents', exact: true }).click();
+  await expect.poll(() => control.poolCalls).toBe(2);
+  expect(control.transactions).toHaveLength(2);
+});
+
+test('the one search waits for the confirmed commit block and survives an indexing retry', async ({ page }) => {
+  await page.clock.install();
+  const control = await fixture(page);
+  control.receiptBlock = 200; control.graphError = true;
+  await selectTickets(page, 2);
+  await page.locator('.sign-intent').click();
+  // The approval receipt also shows indexing. Wait until the commit read-back fails.
+  await expect(page.locator('.activity-toast-copy strong')).toHaveText('Intent committed. Matching will run once after your request is indexed.');
+  await expect(page.getByRole('alert').filter({ hasText: 'SubgraphIndexingError' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retry indexing', exact: true })).toBeVisible();
+  expect(control.poolCalls).toBe(0);
+  expect(control.marketReads).toBe(1);
+  control.graphError = false; control.graphBlock = 200; control.marketBlock = 200;
+  await page.getByRole('button', { name: 'Retry indexing', exact: true }).click();
+  await expect(page.locator('.matching-empty')).toBeVisible();
+  expect(control.poolFloors).toEqual(['200']);
+  await page.getByRole('button', { name: 'Refresh market', exact: true }).click();
+  await expect.poll(() => control.marketReads).toBe(3);
+  await page.clock.fastForward(120_000);
+  expect(control.poolCalls).toBe(1);
+});
+
+test('a failed post-commit search does not retry until the matching button is clicked', async ({ page }) => {
+  await page.clock.install();
+  const control = await fixture(page);
+  control.poolFailure = true;
+  await selectTickets(page, 2);
+  await page.locator('.sign-intent').click();
+  await expect(page.getByRole('alert').filter({ hasText: 'rate-limited' })).toBeVisible();
+  await page.clock.fastForward(120_000);
+  expect(control.poolCalls).toBe(1);
+  control.poolFailure = false;
+  await page.getByRole('button', { name: 'Check all intents', exact: true }).click();
+  await expect(page.locator('.matching-empty')).toBeVisible();
+  expect(control.poolCalls).toBe(2);
+});
 
 test('fixed upgrade difference is approved and included unchanged in the committed intent', async ({ page }) => {
   const control = await fixture(page);
@@ -170,6 +257,7 @@ test('cancelled USDC approval never signs or submits the intent', async ({ page 
   await expect.poll(() => control.transactions.length).toBe(1);
   expect(control.signed).toBeNull();
   expect(control.calls).not.toContain('eth_signTypedData_v4');
+  expect(control.poolCalls).toBe(0);
 });
 
 test('a short Arc throttle retries the pre-sign read and completes approval and intent creation', async ({ page }) => {
@@ -215,6 +303,7 @@ test('cancelling signing after approval immediately reads back its receipt floor
   expect(control.transactions).toHaveLength(1);
   expect(control.transactions[0].to.toLowerCase()).toBe(deployment.usdc.toLowerCase());
   expect(control.signed).toBeNull();
+  expect(control.poolCalls).toBe(0);
 });
 
 test('JSON-RPC throttling honors Retry-After before retrying and never repeats the wallet approval', async ({ page }) => {
