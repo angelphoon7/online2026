@@ -598,7 +598,7 @@ export default function Market() {
               >
                 <span className="poster-top mono">RESHUFFLE PRESENTS / EVENT 1</span>
                 <span className="poster-photo"><Image src={maydayPoster} alt="Mayday concert poster" fill sizes="(max-width: 720px) 84vw, 28vw" /></span>
-                <span className="poster-title">AFTER<br />HOURS</span>
+                <span className="poster-title">AFTER HOURS</span>
                 <span className="poster-sub">Demo concert · issuer-native tickets</span>
                 <span className="poster-dates mono">{sessions.length ? sessions.map(n => `SESSION ${n}`).join(' / ') : 'READING SESSIONS'}</span>
                 <span className="poster-status"><span className="mono">{market ? `${live.length} ${POOL_LABEL}` : 'Reading live intents…'}</span><span>Open workspace ↗</span></span>
@@ -835,7 +835,6 @@ export default function Market() {
               <div hidden={indexingBlock !== null}>
               <div className="workspace-stack">
                 {workflowView === 'intent' ? <IntentBuilder onConnect={async () => { await wallet.connect(); await refresh(true); }} connectionError={wallet.error} market={market} account={account} approved={approved} busy={disabled} seatMapOpen={seatMapOpen} onSeatMapClose={() => setSeatMapOpen(false)} onComplete={() => setWorkflowView('matching')} onCustody={custody} onDepositSelected={depositSelected} onSign={sign} onDemo={claimDemo} onApprove={() => action('Approve tickets', async address => { await track(await approveNFTsForEscrow(address)); setApproved(true); })} /> : <>
-                <button type="button" className="back-nav-btn" onClick={() => setWorkflowView('intent')}>← Back to request</button>
                 {request && <MatchingStatus request={request} selected={selected} solving={solving} error={readError || solverError} proposal={unavailableMatch ? null : proposal} evidence={evidence} wholePool={wholePool} />}
                 <section className="workspace-panel matching-panel"><div className="panel-heading"><h2>Matching</h2><span className="eyebrow">{readyMatch && !solving ? 'Ready to settle' : wholePool ? 'All live requests' : 'Selected requests'}</span></div>
                   <div className="solver-actions"><button className="secondary" disabled={solving || disabled || matchAfterCommit || (!wholePool && (selected.length < 2 || selected.length > 4))} onClick={() => void runSolver(selected, wholePool)}>{solving ? 'Reading and searching…' : wholePool ? 'Check all intents' : 'Run solver'}{!wholePool && <span className="mono"> ({selected.length}/4)</span>}</button><button className="text-button" onClick={() => { setAgentHash(current => current ?? request?.hash ?? live[0]?.hash ?? null); setAgentOpen(true); }}>Ask the agent</button>{resetEnabled && equal(account, operator) && <button className="text-button" disabled={disabled} onClick={() => void reset()}>Reset demo</button>}</div>

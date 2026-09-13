@@ -58,18 +58,12 @@ try {
   await call('Page.enable');
   await call('Runtime.enable');
 
-  // 1. Visit home first
-  await call('Page.navigate', { url: 'http://localhost:3000/' });
-  await delay(2000);
-
-  // Click Tickets in the nav
-  await call('Runtime.evaluate', {
-    expression: `Array.from(document.querySelectorAll('.two-line-nav-item')).find(b => b.textContent.includes('Tickets'))?.click()`
-  });
-  await delay(1000);
+  // 1. Visit #tickets
+  await call('Page.navigate', { url: 'http://localhost:3000/#tickets' });
+  await delay(1500);
   const ticketsShot = await call('Page.captureScreenshot', { format: 'png' });
   await writeFile(path.join(folder, 'tickets_view.png'), Buffer.from(ticketsShot.data, 'base64'));
-  console.log('Saved tickets_view.png after clicking Tickets');
+  console.log('Saved tickets_view.png');
 
   // 2. Visit #events
   await call('Page.navigate', { url: 'http://localhost:3000/#events' });
